@@ -1,124 +1,94 @@
-# 🔐 PassGuard — Password Strength Analyzer
+# Password Strength Analyzer
 
-> **CyberSecurity Internship — Assignment 1**  
-> A tool that evaluates the strength of user-entered passwords.
-
-![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
-![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)
-![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
-
-## 📋 Assignment Description
-
-Develop a tool that evaluates the strength of user-entered passwords.
-
-### Key Features
-
-- ✅ Check password **length**, **complexity**, and **uniqueness**
-- ✅ Suggest **stronger password alternatives**
-- ✅ Integrated with a local **database to prevent reuse** of old passwords
-
-### Expected Outcome
-
-Learn about **password security** and **basic cryptography concepts**.
+**Thiranex Internship — Cyber Security Domain**
+Intern: Kaartikey Kusshwaha | ID: THX-JUN1026-793
 
 ---
 
-## 🚀 Features
+## What it does
 
-### Core Analysis
-- **Real-time password strength scoring** (0–100 scale)
-- **11 security criteria checks** including length, complexity, common passwords, keyboard patterns, sequential characters, and reuse detection
-- **Shannon entropy calculation** for measuring password randomness
-- **Estimated crack time** based on modern GPU brute-force speeds (10 billion guesses/sec)
+A command-line tool that evaluates the strength of user-entered passwords using real cybersecurity concepts.
 
-### Password Intelligence
-- **Common password database** — checks against 60+ frequently breached passwords
-- **Leet speak detection** — identifies passwords like `p@$$w0rd` that are disguised common passwords
-- **Keyboard pattern detection** — flags patterns like `qwerty`, `asdf`, `1qaz2wsx`
-- **Sequential character detection** — catches `abc`, `123`, `cba`, etc.
-
-### Password Generation
-- **Stronger alternatives generator** — provides enhanced, random, and passphrase-style suggestions
-- **One-click password generation** — creates cryptographically diverse 18-character passwords
-- **Copy to clipboard** functionality
-
-### History & Reuse Prevention
-- **Local password history database** (via `localStorage`)
-- **Reuse detection with visual warnings** — shake animation + alert when a previously used password is entered
-- **Hash-based storage** — passwords are stored as hashes, not plaintext
-- Stores up to 20 most recent entries with timestamps and scores
-
-### UI/UX
-- **Dark cybersecurity-themed design** with glassmorphism effects
-- **Animated background** with floating particles and gradient glows
-- **Real-time analysis** with smooth animations and transitions
-- **Responsive design** — works on desktop, tablet, and mobile
-- **Security best practices guide** — 6 tip cards for password education
+### Features
+- Real-time strength scoring (0–100) with visual bar
+- Entropy calculation in bits (H = L × log₂N)
+- Estimated GPU brute-force crack time
+- 10-point criteria checklist (length, complexity, patterns)
+- Contextual improvement suggestions
+- SHA-256 hashing demonstration
+- Strong password generator using `secrets` (cryptographically secure)
+- SQLite database to detect and warn about reused passwords
 
 ---
 
-## 🛠️ Tech Stack
+## How to run
 
-| Technology | Purpose |
-|------------|---------|
-| HTML5 | Semantic structure |
-| CSS3 | Styling, animations, glassmorphism |
-| Vanilla JavaScript | Analysis engine, DOM manipulation |
-| localStorage API | Password history database |
-| Google Fonts | Inter & JetBrains Mono typography |
+**Requirements:** Python 3.10 or higher. No external libraries needed.
 
----
-
-## 📂 Project Structure
-
+```bash
+python password_analyzer.py
 ```
-assign-1/
-├── index.html       # Main application page
-├── styles.css       # Complete design system & styling
-├── analyzer.js      # Password analysis engine & UI logic
-└── README.md        # Documentation
+
+Then choose from the menu:
+```
+1 -> Analyze a password
+2 -> Generate a strong password
+3 -> Exit
 ```
 
 ---
 
-## 🔧 How to Run
+## Project structure
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/<your-username>/password-strength-analyzer.git
-   ```
-2. Open `index.html` in any modern browser.
-
-> No build tools, frameworks, or server required — it's a pure frontend application.
-
----
-
-## 🔒 Security Concepts Demonstrated
-
-- **Password Entropy** — Shannon entropy calculation measuring information density per character
-- **Brute-Force Estimation** — Time-to-crack based on character pool size and password length
-- **Common Password Attacks** — Detection of dictionary words and breach database entries
-- **Pattern Recognition** — Keyboard walks, sequential characters, and repeated characters
-- **Leet Speak Substitution** — Reverse-mapping common substitutions (@ → a, 3 → e, etc.)
-- **Password Hashing** — Hash-based history storage (simulated, not production-grade)
-- **Password Reuse Prevention** — Local database tracking to prevent credential reuse
+```
+password_strength_analyzer/
+├── password_analyzer.py   # Main script — all logic lives here
+├── test_analyzer.py       # Unit tests
+├── requirements.txt       # Dependency notes (stdlib only)
+├── README.md              # This file
+└── password_history.db    # Auto-created on first run (SQLite)
+```
 
 ---
 
-## 📸 Screenshots
+## Cybersecurity concepts covered
 
-Open the application in your browser to see the full interface with:
-- Password input with visibility toggle
-- Real-time strength meter and scoring
-- Detailed security criteria checklist
-- Character composition analysis with bar charts
-- Crack time estimation
-- Intelligent suggestions
-- Stronger password alternatives with copy-to-clipboard
-- Password history with reuse warnings
+| Concept | Where used |
+|---|---|
+| SHA-256 hashing | `hashlib.sha256()` — passwords stored as hashes, never plaintext |
+| Password entropy | `math.log2(charset_size) * length` — measures unpredictability in bits |
+| Brute-force estimation | `2^entropy / 10^10` — assumes 10B guesses/sec (modern GPU) |
+| Secure randomness | `secrets` module uses `os.urandom()` — not predictable like `random` |
+| Reuse detection | SQLite stores SHA-256 digests; plaintext is never written to disk |
+| Pattern analysis | Regex checks for sequential (123, abc) and repeated (aaa) patterns |
+| Common password list | Checks against 35 known breached passwords |
 
 ---
 
-## 📄 License
+## Assignment checklist
 
-This project is created for educational purposes as part of a CyberSecurity Internship program.
+- [x] Check password length, complexity, and uniqueness
+- [x] Suggest stronger password alternatives
+- [x] Integrate with a database to prevent reuse of old passwords (optional — done)
+
+---
+
+## Example output
+
+```
+Strength   : STRONG
+Score      : ████████████████████████░░░░░░░░░░░  75/100
+Length     : 9 characters
+Entropy    : 58.99 bits
+Crack time : 1 years  (GPU brute-force, offline)
+SHA-256    : 849f1575ccfbf3a4d6cf00e6…
+
+Criteria checklist:
+  ✔  8+ characters
+  ✖  12+ characters
+  ✔  Uppercase letters  (A-Z)
+  ✔  Lowercase letters  (a-z)
+  ✔  Numeric digits     (0-9)
+  ✔  Special characters (!@#…)
+  ...
+```

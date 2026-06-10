@@ -1,0 +1,20 @@
+# Password Strength Analyzer — Dependencies
+# ==========================================
+# This project uses ONLY Python standard library modules.
+# No pip install is required.
+#
+# Standard library modules used:
+#   re        — regular expressions for pattern matching
+#   math      — entropy calculation (math.log2)
+#   hashlib   — SHA-256 password hashing
+#   sqlite3   — local database for password reuse detection
+#   secrets   — cryptographically secure random generation
+#   string    — character sets for password generation
+#   sys       — system exit
+#   getpass   — hidden password input in terminal
+#
+# Python version required: 3.10 or higher
+#   (uses match-case style type hints: str | None)
+#
+# To run:
+#   python password_analyzer.py
