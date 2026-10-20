@@ -1,4 +1,6 @@
 import json
+from contextlib import contextmanager
+import pytest
 from zipfile import ZipFile
 
 from fastapi.testclient import TestClient
@@ -6,6 +8,8 @@ from fastapi.testclient import TestClient
 from backend import companion_status as status
 from backend.security import digest
 from test_platform import PASSWORD, invited, post, system
+from test_companions import envelope
+from test_sharing import setup_identity,create,payload
 
 
 def connect(client):
@@ -84,3 +88,60 @@ def test_packaged_version_uses_the_archive_and_rejects_missing_or_oversized_meta
     assert status.packaged_version(package) is None
     with ZipFile(package,'w') as archive:archive.writestr('manifest.json','[]')
     assert status.packaged_version(package) is None
+
+
+def test_single_revocation_is_account_scoped_csrf_protected_and_preserves_other_tokens(system):
+    app,client,_=system
+    first=connect(client)
+    first_id=client.get('/api/companions').json()['connections'][0]['id']
+    second=connect(client);extension=TestClient(app)
+    assert extension.get('/api/companion/vault',headers=headers(first)).status_code==200
+    assert extension.get('/api/companion/vault',headers=headers(second)).status_code==200
+    other=invited(app,client)
+    assert post(other,'/companions/'+first_id+'/revoke',{}).status_code==404
+    assert client.post('/api/companions/'+first_id+'/revoke',json={}).status_code==403
+    assert extension.post('/api/companions/'+first_id+'/revoke',headers=headers(first),json={}).status_code==403
+    assert extension.post('/api/companions/'+first_id+'/revoke',headers={'Authorization':'Bearer '+first},json={}).status_code==401
+    assert post(client,'/companions/not-an-id/revoke',{}).status_code==404
+    with app.state.store.connect() as c:
+        before=[tuple(row) for row in c.execute('SELECT * FROM vault_spaces ORDER BY id')]
+    assert post(client,'/companions/'+first_id+'/revoke',{}).status_code==200
+    assert extension.get('/api/companion/vault',headers=headers(first)).status_code==401
+    assert extension.get('/api/companion/vault',headers=headers(second)).status_code==200
+    assert len(client.get('/api/companions').json()['connections'])==1
+    assert post(client,'/companions/'+first_id+'/revoke',{}).status_code==404
+    with app.state.store.connect() as c:
+        assert [tuple(row) for row in c.execute('SELECT * FROM vault_spaces ORDER BY id')]==before
+        assert c.execute("SELECT count(*) FROM entities WHERE kind='companion_status'").fetchone()[0]==1
+
+
+@pytest.mark.parametrize('kind',['personal','shared'])
+@pytest.mark.parametrize('write',[False,True])
+def test_actual_vault_routes_recheck_revocation_after_initial_bearer_lookup(system,monkeypatch,kind,write):
+    app,client,_=system
+    if kind=='personal':
+        vault=post(client,'/vaults',{'name':'Race fixture'}).json()['id']
+        assert post(client,'/vault?vault_id='+vault,{'revision':0,'envelope':envelope()}).status_code==200
+        endpoint='/api/vault?vault_id='+vault
+    else:
+        vault=create(client,setup_identity(client));endpoint='/api/team-vaults/'+vault
+    paired=post(client,'/companions',{'kind':kind,'vault_id':vault,'label':'Race browser','password':PASSWORD})
+    assert paired.status_code==200
+    token=paired.json()['token'];browser=TestClient(app)
+    before=client.get(endpoint).json();original=app.state.store.connect;armed=True
+    @contextmanager
+    def revoke_after_lookup(write=False):
+        nonlocal armed
+        with original(write=write) as c:yield c
+        if not write and armed:
+            armed=False
+            # The auth function has its row; revoke before the vault-use transaction.
+            with original(write=True) as c:c.execute('DELETE FROM companions WHERE token=?',(digest(token),))
+    monkeypatch.setattr(app.state.store,'connect',revoke_after_lookup)
+    if write:
+        response=browser.post('/api/companion/vault',headers=headers(token),json={'revision':before['revision'],'envelope':envelope() if kind=='personal' else payload(vault)})
+    else:response=browser.get('/api/companion/vault',headers=headers(token))
+    assert response.status_code==401,response.text
+    assert armed is False
+    assert client.get(endpoint).json()==before
+    assert 'ciphertext' not in response.text

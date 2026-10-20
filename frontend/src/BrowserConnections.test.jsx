@@ -31,3 +31,32 @@ it('refreshes after connection creation or revocation without exposing the token
   await waitFor(()=>expect(api).toHaveBeenCalledTimes(2));
   expect(api.mock.calls).toEqual([['/companions'],['/companions']]);
 });
+it('reviews an exact connection before disconnecting and keeps the other connection visible',async()=>{
+  let revoked=false;
+  const other={...connection,id:'other-opaque-id',label:'Other browser'};
+  vi.mocked(api).mockImplementation(async(path,body)=>{
+    if(body){revoked=true;return {ok:true};}
+    return {download_version:'0.12.7',connections:revoked?[other]:[connection,other]};
+  });
+  render(<BrowserConnections/>);
+  fireEvent.click(await screen.findByRole('button',{name:'Disconnect Acceptance browser',exact:true}));
+  expect(api.mock.calls.some(([,body])=>body)).toBe(false);
+  expect(screen.getByText(/cannot erase plaintext/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Keep this connection'}));
+  expect(screen.queryByRole('button',{name:'Confirm disconnect Acceptance browser'})).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Disconnect Acceptance browser',exact:true}));
+  fireEvent.click(screen.getByRole('button',{name:'Confirm disconnect Acceptance browser',exact:true}));
+  expect(await screen.findByRole('status')).toHaveTextContent('Other browser connections and encrypted vault data are retained');
+  expect(screen.queryByText('Acceptance browser',{selector:'strong'})).not.toBeInTheDocument();
+  expect(screen.getByText('Other browser',{selector:'strong'})).toBeInTheDocument();
+  expect(api).toHaveBeenCalledWith('/companions/opaque-id/revoke',{});
+});
+it('does not claim disconnection when the server rejects the action',async()=>{
+  vi.mocked(api).mockImplementation(async(path,body)=>{if(body)throw new Error('Sign in required');return {download_version:'0.12.7',connections:[connection]};});
+  render(<BrowserConnections/>);
+  fireEvent.click(await screen.findByRole('button',{name:'Disconnect Acceptance browser',exact:true}));
+  fireEvent.click(screen.getByRole('button',{name:'Confirm disconnect Acceptance browser',exact:true}));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Sign in required');
+  expect(screen.getByText('Acceptance browser',{selector:'strong'})).toBeInTheDocument();
+  expect(screen.queryByRole('status')).not.toBeInTheDocument();
+});

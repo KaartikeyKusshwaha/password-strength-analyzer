@@ -1,4 +1,22 @@
-# Development verification — 0.13.1
+# Development verification — 0.13.2
+
+## Individual connection revocation — 21 October 2026
+
+Browser & devices now prepares a named one-connection disconnection with a Keep
+option. Account session/CSRF, account isolation, retained other grants/data and
+transactional report/lease cleanup are implemented. Vault/action operations
+recheck a current scoped bearer in their use transaction. Forty focused backend
+and eight focused UI/operator cases passed, including actual personal/shared
+route interleavings and rollback after a forced token-deletion failure. This
+does not retract previously delivered plaintext. See COMPANION_CONNECTION_REPORTS.md.
+
+Full regression: 327 backend tests passed (one existing TestClient warning),
+194 frontend tests across 42 files passed, and production build passed. After
+a fresh encrypted backup, the local app was restarted as 0.13.2. Integrity,
+schema 9, ten compared record groups and encryption key matched; contact-report
+entities are excluded from the comparison. The served index matches the build
+and the live revoke endpoint rejects unauthenticated requests. No owner
+connection was revoked for this smoke check. Actual visual acceptance is pending.
 
 ## Browser connection reports — 21 October 2026
 

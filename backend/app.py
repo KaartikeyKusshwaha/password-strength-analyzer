@@ -31,6 +31,7 @@ from .sharing import TeamPayload
 from .vault_activity import record_connection_revocations, record_action_cancellations, invalidate_ownership
 from .posture import Report as PostureReport
 from . import companion_status
+from .browser_access import require_connection
 
 ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(ROOT / ".env")
@@ -318,7 +319,7 @@ def create_app(settings=None):
             app.state.watch_service.stop()
             executor.shutdown(wait=True, cancel_futures=True)
 
-    app = FastAPI(title="SentinelOps", version="0.13.1", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title="SentinelOps", version="0.13.2", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.store, app.state.settings = store, settings
     app.state.cipher, app.state.executor = cipher, executor
     app.state.agent_transport = None
@@ -530,15 +531,17 @@ def create_app(settings=None):
                 Store.event(c,'personal:'+session['user'],session['user'],'vault.archived' if body.archived else 'vault.restored',identifier)
             return vault_metadata(find_vault(c,session['user'],identifier))
 
-    def read_vault(user, identifier="", browser=False):
+    def read_vault(user, identifier="", browser=False, connection=None):
         with store.connect() as c:
+            if browser:require_connection(c,connection)
             row = find_vault(c,user,identifier)
             if row and browser:
                 must(not row['archived'] and row['browser_enabled'], 'Browser access to this vault is disabled', 403)
         return {"revision": row['revision'], "envelope": json.loads(row['payload']), "vault":vault_metadata(row)} if row else {"revision":0,"envelope":None}
 
-    def write_vault(user, body, identifier="", browser=False):
+    def write_vault(user, body, identifier="", browser=False, connection=None):
         with store.connect(write=True) as c:
+            if browser:require_connection(c,connection)
             row = find_vault(c,user,identifier)
             if not row:
                 row = create_vault_record(c,user,VaultProperties(name='Personal'),True)
@@ -581,7 +584,7 @@ def create_app(settings=None):
         if connection['kind']=='shared':
             value = shared_companions['read'](connection)
         else:
-            value = read_vault(connection['user'],connection['vault_id'],True)
+            value = read_vault(connection['user'],connection['vault_id'],True,connection)
         companion_status.record_read(store,connection,request.headers.get(companion_status.HEADER))
         return value
 
@@ -593,7 +596,7 @@ def create_app(settings=None):
             must(isinstance(body.envelope,TeamPayload),'A shared vault envelope is required',422)
             return shared_companions['write'](connection,body.revision,body.envelope)
         must(isinstance(body.envelope,(VaultEnvelope,VaultEnvelopeV2)),'A personal vault envelope is required',422)
-        return write_vault(connection['user'], body, connection['vault_id'], True)
+        return write_vault(connection['user'], body, connection['vault_id'], True,connection)
 
     @app.get("/api/companions")
     def companions(session=Depends(auth)):
@@ -734,6 +737,18 @@ def create_app(settings=None):
             c.execute("DELETE FROM companions WHERE user=?", (session["user"],))
             Store.event(c, session["workspace"], session["user"], "companion.revoked_all", session["user"])
         return {"ok": True}
+
+    @app.post('/api/companions/{identifier}/revoke')
+    def revoke_one_companion(identifier: str,session=Depends(auth)):
+        must(re.fullmatch(r'[a-f0-9]{64}',identifier),'Browser connection not found',404)
+        with store.connect(write=True) as c:
+            connection=next((dict(row) for row in c.execute('SELECT * FROM companions WHERE user=? AND expires>?',(session['user'],time.time()))
+                             if hmac.compare_digest(companion_status.identifier(row['token']),identifier)),None)
+            must(connection,'Browser connection not found',404)
+            record_connection_revocations(c,[connection],session['user'])
+            c.execute('DELETE FROM companions WHERE token=? AND user=?',(connection['token'],session['user']))
+            Store.event(c,'personal:'+session['user'],session['user'],'companion.revoked_one',identifier)
+        return {'ok':True,'note':'This connection is revoked. Other browser connections and encrypted vault data are retained. Cached plaintext cannot be erased remotely.'}
 
     @app.get("/api/me")
     def me(session=Depends(auth)):

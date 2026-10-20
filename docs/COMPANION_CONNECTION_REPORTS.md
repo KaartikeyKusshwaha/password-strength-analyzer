@@ -1,4 +1,4 @@
-# Browser connection reports — app 0.13.1 / companion 0.12.7
+# Browser connection control and reports — app 0.13.2 / companion 0.12.7
 
 Browser & devices lists the signed-in user's active browser tokens with expiry,
 last successful encrypted-vault contact and reported client version. Creating
@@ -27,7 +27,48 @@ different versions from absent reports and retains visible stale-data errors
 after failed refreshes. It refreshes every 15 seconds while the tab is visible
 and after local token creation/revocation.
 
-## Verification on 21 October 2026
+## Disconnect one browser
+
+Each active connection now has a reviewable Disconnect action. The signed-in
+account can revoke only its own exact opaque connection ID, with the normal
+session/CSRF protections. A bearer token cannot call this account endpoint;
+another account receives the same not-found result as an unknown connection.
+The ID is not the bearer token or its stored authentication hash.
+
+Revoking one connection clears its contact report and interrupts only work leased
+to that connection, in the same transaction as token deletion. Lease credentials
+are cleared, while encrypted approvals and per-item progress remain intact.
+Other tokens and work leased elsewhere stay active. An interrupted plan needs
+an explicit resume and a fresh lease on another permitted connection. Pending
+replacement passwords remain encrypted in their vault for reconciliation.
+
+Personal/shared vault reads and writes, account-action reads, claims and results
+recheck the current token and its scope inside the transaction that uses it.
+This closes the gap where an earlier bearer lookup succeeded before revocation
+but the later operation started afterward. A read already authorized before
+revocation or plaintext cached on a device cannot be remotely retracted.
+
+API: POST /api/companions/{opaque-id}/revoke. The normal UI first identifies the
+exact named connection and explains the effect, with a Keep option. Failures do
+not claim disconnection or hide the connection. Revoke all remains available.
+
+The 0.13.2 focused checks passed: 40 backend cases and eight UI/operator cases.
+They cover two-browser isolation, explicit resume, preserved staged progress,
+transaction rollback after a forced deletion failure, account/CSRF isolation and
+real personal/shared route interleavings that revoke after the initial bearer
+lookup. Actual visual acceptance remains pending while browser control is disabled.
+
+The full 0.13.2 run passed 327 backend tests (one existing TestClient warning)
+and 194 frontend tests across 42 files; the app build passed. A fresh encrypted
+backup preceded the local restart. SQLite integrity, schema 9, encryption key
+and ten compared account/vault/sharing/connection/session/action/application
+record groups matched. Application-entity comparisons exclude contact reports.
+The served index matches the build and the new endpoint rejects unauthenticated
+requests. The live owner's connections were preserved; revocation tests used
+isolated fixtures. Ignored evidence: data/upgrade-0.13.2-baseline.json and
+data/upgrade-0.13.2-result.json. The companion package remains 0.12.7.
+
+## Reporting milestone verification on 21 October 2026 (0.13.1)
 
 - Focused API/auth/privacy/revocation checks: 29 passed. Coverage includes bad
   tokens, cross-account isolation, bearer-only endpoint isolation, legacy and

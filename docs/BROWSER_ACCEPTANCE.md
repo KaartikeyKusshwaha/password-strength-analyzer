@@ -1,4 +1,12 @@
-# Browser acceptance — SentinelOps 0.13.1 / companion 0.12.7
+# Browser acceptance — SentinelOps 0.13.2 / companion 0.12.7
+
+Individual browser disconnection now has an exact named confirmation and Keep
+option. Automated account isolation, other-connection preservation, lease
+interruption/resume and revocation-interleaving cases pass. The new action has
+not been clicked in actual Edge because browser control remains unavailable.
+The full 327-backend/194-frontend regressions and build passed. The backed-up
+local app runs 0.13.2; protected-record comparisons and an unauthenticated-route
+rejection smoke check passed. That HTTP check does not replace the UI case.
 
 The local app now includes account-private connection contact/version reports.
 The encrypted-backup/restart and HTTP header checks passed; data preservation

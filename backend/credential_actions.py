@@ -11,6 +11,7 @@ from fastapi import Depends,HTTPException,Request
 from pydantic import BaseModel,ConfigDict,Field,field_validator
 
 from .store import Store,canonical,now
+from .browser_access import require_connection
 
 
 class Body(BaseModel):
@@ -88,6 +89,7 @@ def register(app,store,auth,companion_auth,throttle):
         return row
 
     def browser_job(c,connection,identifier):
+        require_connection(c,connection)
         row=require(c.execute('SELECT * FROM credential_actions WHERE id=? AND user=? AND vault_id=? AND kind=?',(identifier,connection['user'],connection['vault_id'],connection['kind'])).fetchone())
         require(row['kind']=='personal' or row['workspace']==connection['workspace'])
         scope(c,connection['user'],connection['kind'],connection['vault_id'],connection['workspace'])
@@ -126,6 +128,7 @@ def register(app,store,auth,companion_auth,throttle):
     def browser_actions(request: Request):
         connection=companion_auth(request)
         with store.connect(write=True) as c:
+            require_connection(c,connection)
             expire(c,connection['user']);scope(c,connection['user'],connection['kind'],connection['vault_id'],connection['workspace'])
             return {'actions':[public(row) for row in c.execute('SELECT * FROM credential_actions WHERE user=? AND kind=? AND vault_id=? ORDER BY created_at DESC LIMIT 50',(connection['user'],connection['kind'],connection['vault_id']))]}
 

@@ -34,6 +34,12 @@ def record_connection_revocations(c, connections, actor):
     seen = set()
     for row in connections:
         forget_connection_status(c,row)
+        # Stop only work leased to this connection. Preserve encrypted plans and
+        # per-item progress; another browser needs an explicit resume.
+        actions=c.execute("SELECT id,workspace,user FROM credential_actions WHERE user=? AND lease_connection=? AND status IN ('running','awaiting_confirmation')",(row['user'],row['token'])).fetchall()
+        c.execute("UPDATE credential_actions SET status='interrupted',lease_hash=NULL,lease_connection=NULL,lease_expires=NULL WHERE user=? AND lease_connection=? AND status IN ('running','awaiting_confirmation')",(row['user'],row['token']))
+        for action in actions:
+            Store.event(c,action['workspace'] or 'personal:'+action['user'],actor,'credential_action.interrupted',action['id'])
         if not row['vault_id']:
             continue  # Legacy unscoped connections cannot be attributed honestly.
         key = (row['kind'], row['vault_id'], row['user'], row['workspace'])

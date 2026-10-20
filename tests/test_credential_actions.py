@@ -1,10 +1,13 @@
 import base64
 import time
+import sqlite3
+import pytest
 
 from fastapi.testclient import TestClient
 
 from backend.security import digest
 from backend.store import uid
+from backend.companion_status import identifier as connection_id
 from test_platform import PASSWORD,system,invited,post,data
 from test_companions import envelope
 from test_sharing import setup_identity,create,grant
@@ -136,3 +139,65 @@ def test_extension_cors_is_allowed_only_on_explicit_companion_action_routes(syst
         assert response.status_code==204 and response.headers['Access-Control-Allow-Origin']==origin
         assert client.options(route,headers={'Origin':'https://evil.example'}).status_code==403
     assert client.post('/api/account-actions',headers={'Origin':origin},json={}).status_code==403
+
+
+def test_disconnect_interrupts_only_its_leases_and_requires_explicit_resume(system):
+    app,client,_=system
+    vault=personal(client);first,_=approval(client,vault);second,_=approval(client,vault)
+    browser,headers=browser_token(app,client,vault);other,other_headers=browser_token(app,client,vault)
+    lease=claim(browser,headers,first).json()['lease'];other_lease=claim(other,other_headers,second).json()['lease']
+    assert result(browser,headers,first,lease,'prepared').status_code==200
+    assert result(other,other_headers,second,other_lease,'prepared').status_code==200
+    with app.state.store.connect() as c:
+        before=dict(c.execute('SELECT * FROM credential_actions WHERE id=?',(first,)).fetchone())
+    token_hash=digest(headers['Authorization'][7:])
+    assert post(client,'/companions/'+connection_id(token_hash)+'/revoke',{}).status_code==200
+    with app.state.store.connect() as c:
+        stopped=dict(c.execute('SELECT * FROM credential_actions WHERE id=?',(first,)).fetchone())
+        assert stopped['status']=='interrupted' and stopped['lease_hash'] is None and stopped['lease_connection'] is None
+        assert stopped['manifest']==before['manifest'] and stopped['items']==before['items']
+    assert result(browser,headers,first,lease,'confirmed_by_user').status_code==401
+    assert result(other,other_headers,second,other_lease,'confirmed_by_user').json()['status']=='complete'
+    assert claim(other,other_headers,first).status_code==409
+    resumed=claim(other,other_headers,first,True)
+    assert resumed.status_code==200 and resumed.json()['lease']!=lease
+    assert resumed.json()['action']['items'][0]['state']=='prepared'
+    assert result(other,other_headers,first,lease,'confirmed_by_user').status_code==409
+
+
+def test_disconnect_rolls_back_report_lease_and_audit_if_token_deletion_fails(system):
+    app,client,_=system
+    vault=personal(client);job,_=approval(client,vault);browser,headers=browser_token(app,client,vault)
+    lease=claim(browser,headers,job).json()['lease']
+    assert browser.get('/api/companion/vault',headers={**headers,'X-Sentinel-Companion-Version':'0.12.7'}).status_code==200
+    opaque=connection_id(digest(headers['Authorization'][7:]))
+    with app.state.store.connect(write=True) as c:
+        before_events=c.execute('SELECT count(*) FROM audit').fetchone()[0]
+        c.execute("CREATE TRIGGER block_test_revoke BEFORE DELETE ON companions BEGIN SELECT RAISE(ABORT,'fixture deletion failure'); END")
+    with pytest.raises(sqlite3.IntegrityError):post(client,'/companions/'+opaque+'/revoke',{})
+    with app.state.store.connect(write=True) as c:
+        row=c.execute('SELECT status,lease_hash FROM credential_actions WHERE id=?',(job,)).fetchone()
+        assert row['status']=='running' and row['lease_hash']==digest(lease)
+        assert c.execute('SELECT count(*) FROM audit').fetchone()[0]==before_events
+        assert c.execute("SELECT count(*) FROM entities WHERE kind='companion_status'").fetchone()[0]==1
+        c.execute('DROP TRIGGER block_test_revoke')
+    assert post(client,'/companions/'+opaque+'/revoke',{}).status_code==200
+
+
+def test_cached_bearer_authorization_cannot_claim_or_read_after_revocation(system):
+    # Reproduce the boundary between bearer lookup and its later write transaction.
+    from fastapi import FastAPI
+    from backend.credential_actions import register
+    app,client,_=system
+    vault=personal(client);job,_=approval(client,vault);browser,headers=browser_token(app,client,vault)
+    with app.state.store.connect() as c:
+        cached=dict(c.execute('SELECT * FROM companions WHERE token=?',(digest(headers['Authorization'][7:]),)).fetchone())
+    assert post(client,'/companions/'+connection_id(cached['token'])+'/revoke',{}).status_code==200
+    isolated=FastAPI()
+    register(isolated,app.state.store,lambda:None,lambda request:cached,lambda *args:None)
+    stale=TestClient(isolated)
+    assert stale.get('/api/companion/actions').status_code==401
+    assert claim(stale,{},job).status_code==401
+    assert result(stale,{},job,'unused-public-fixture-lease-'*3,'prepared').status_code==401
+    with app.state.store.connect() as c:
+        assert c.execute('SELECT status FROM credential_actions WHERE id=?',(job,)).fetchone()[0]=='queued'
