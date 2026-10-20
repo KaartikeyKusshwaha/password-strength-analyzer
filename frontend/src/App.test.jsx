@@ -9,7 +9,7 @@ import {version as productVersion} from '../package.json';
 
 // Prepare the real lazy module before timing integration interactions. Vite's
 // cold transform competes with native-KDF workers and is not a UI interaction.
-beforeAll(async()=>{await Promise.all([import('./ControlCenter'),import('./VaultCollection')]);},20000);
+beforeAll(async()=>{await Promise.all([import('./ControlCenter'),import('./VaultCollection'),import('./Watches')]);},20000);
 
 function mockWorkspace() {
   const user = {
@@ -54,6 +54,28 @@ function mockWorkspace() {
 }
 
 describe("workspace flows", () => {
+  it('refreshes findings after following a completed background watch alert',async()=>{
+    const {data,fetcher}=mockWorkspace();
+    const original=fetcher.getMockImplementation();
+    fetcher.mockImplementation((url,options)=>{
+      if(url==='/api/workspace'){
+        const snapshot=structuredClone(data);
+        return Promise.resolve({ok:true,json:async()=>snapshot});
+      }
+      if(url==='/api/watches')return Promise.resolve({ok:true,json:async()=>({watches:[],runs:[]})});
+      if(url==='/api/notifications')return Promise.resolve({ok:true,json:async()=>({unread:1,notifications:[{id:'alert',kind:'advisory',watch_name:'Public package fixture',at:'2026-10-21T01:00:00Z',count:1,read:false,finding_ids:['new-finding']}]})});
+      return original(url,options);
+    });
+    render(<App/>);
+    await screen.findByText('Your security, handled.');
+    fireEvent.click(screen.getByRole('button',{name:'Watches & alerts'}));
+    const review=await screen.findByRole('button',{name:'Review findings'},{timeout:5000});
+    // A background worker commits after the parent snapshot was loaded.
+    data.findings.push({id:'new-finding',title:'Fresh watch advisory',asset_id:'asset',rule:'DEP001',severity:'unknown',confidence:'high',status:'open',kind:'dependencies',evidence:'New public provider observation',first_seen:'2026-10-21T01:00:00Z',last_seen:'2026-10-21T01:00:00Z'});
+    fireEvent.click(review);
+    expect(await screen.findByRole('button',{name:'Fresh watch advisory',exact:true})).toBeInTheDocument();
+    expect(screen.getByRole('button',{name:'Findings 1'})).toBeInTheDocument();
+  },15000);
   it('opens shared-vault review from a dashboard ownership request without collecting credentials',async()=>{
     const {data,fetcher}=mockWorkspace();
     data.ownership_requests=[{id:'fixture-proposal',vault_name:'Client handoff',expires_at:Math.floor(Date.now()/1000)+900}];

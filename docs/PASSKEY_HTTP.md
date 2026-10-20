@@ -2,7 +2,7 @@
 
 Account passkey enrollment, sign-in, management and session/MFA integration are
 implemented. Live owner data runs schema 9 after an encrypted backup and a
-controlled restart. **Native Edge enrollment passed; sign-in and the remaining
+controlled restart. **Native Edge enrollment and sign-in passed; the remaining
 authenticator lifecycle checks are pending.**
 The main local origin remains http://127.0.0.1:8110 and explicitly reports
 passkeys unavailable. No origin, owner password, vault passphrase or companion
@@ -53,7 +53,13 @@ credential-response fields are sent. The reauthentication password is sent only
 to enrollment options/removal, not in the proof. Private authenticator keys
 remain outside the app and AI workers.
 
-Cancel/abort invalidates the pending server request. A missing finish response
+Sign-in explains the requesting/device/verifying phases. The account fields
+remain fixed while a request is active, and cancellation restores normal sign-in.
+
+Cancel/abort invalidates the pending server request. A client deadline also bounds
+the native wait to the returned lifetime (at most 120 seconds). Cancellation and
+expiry settle independently of a native promise that ignores abort; a late
+credential cannot reach the finish endpoint. A missing finish response
 is treated as unknown: the client asks for an account/list refresh and never
 retries a credential mutation automatically. User/device confirmation is required
 for real enrollment; no synthetic UI success substitutes for it. This is account
@@ -81,7 +87,7 @@ authentication only, not vault encryption, recovery or third-party enrollment.
 - Local ignored screenshots: data/browser-acceptance-0.13.0/
   passkey-origin-state.png and test-vault-after-upgrade.png.
 
-## Native enrollment passed; remaining lifecycle acceptance open
+## Native enrollment/sign-in passed; remaining lifecycle acceptance open
 
 A separate loopback-only app at http://localhost:8111 uses disposable data in
 data/passkey-browser-acceptance-20261021. No production user data was copied.
@@ -96,8 +102,19 @@ native confirmation were performed by the user, not simulated by test code.
 
 The ignored launcher and logs are in data/. The test app has no AI key, valuable
 vault data, or external email/registration integration. It does not change the
-main app's origin, sessions or companion pairing. A real sign-in was started
-with the existing test account email and awaits device confirmation. Keep the
-lifecycle gate open for sign-in, cancellation, MFA, removal and device cleanup. Stop the
+main app's origin, sessions or companion pairing. A real sign-in using the
+passkey completed after user/device confirmation. Edge displayed the signed-in
+account and "Last used 21/10/2026, 1:11:29 am" for the key. The ignored screenshot
+is passkey-signin-success-edge.png in the same evidence directory. A read-only
+store check confirmed the updated last_used and credential revision; this is a
+real zero-counter authenticator, so revision advances provide concurrency checks.
+The first native cancellation attempt did not visibly settle. The bounded client
+was then loaded and a fresh request expired in actual Edge with "Passkey request
+expired. Start again." Normal sign-in controls became available again. A read-only
+store check found zero pending ceremonies and unchanged key revision/last_used,
+so no late authentication was recorded. Screenshot: passkey-expiry-edge.png.
+The page-level Cancel click remains unverified while native UI is active; mocked
+late-native tests establish the client guard, not OS interaction. Keep the
+lifecycle gate open for explicit cancellation, MFA, removal and device cleanup. Stop the
 isolated service after the run. Actual extension 0.12.5 autofill acceptance is a
 separate pending gate; these passkey tests do not establish that it works.

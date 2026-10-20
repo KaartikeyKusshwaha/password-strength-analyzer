@@ -66,8 +66,8 @@ workflow. Developer checks are available as connected secondary workflows.
   Migration/backup integration and an isolated actual-data restore drill now
   pass; the backed-up local store now runs schema 9. Account/session/MFA routes
   and enrollment/removal UI are implemented. Real signed HTTP proofs and UI
-  tests pass. Native Edge enrollment passed in a separate disposable localhost
-  app; sign-in and remaining lifecycle acceptance are pending. The current
+  tests pass. Native Edge enrollment and sign-in passed in a separate disposable
+  localhost app; remaining lifecycle acceptance is pending. The current
   127.0.0.1 origin is explicitly unsupported. Vault unlocking is still a separate
   unimplemented passkey protocol. See PASSKEYS.md; keep this release gate open.
 - [x] Local strength/reuse and account-review summary with explicit assessment

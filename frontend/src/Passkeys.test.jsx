@@ -50,3 +50,19 @@ it('passkey sign-in uses the email without reading/sending the password and pres
   fireEvent.click(screen.getByRole('button',{name:'Verify and continue'}));
   await waitFor(()=>expect(done).toHaveBeenCalledTimes(1));expect(api).toHaveBeenCalledWith('/login/factor',{code:'public-fixture-code'});
 });
+it('explains a pending device prompt, freezes the account fields and restores sign-in after cancellation',async()=>{
+  vi.mocked(api).mockResolvedValue({available:true});
+  vi.mocked(performPasskey).mockImplementation((mode,{signal,onPhase})=>{
+    onPhase('authenticator');
+    return new Promise((_,reject)=>signal.addEventListener('abort',()=>reject(new Error('Passkey request cancelled or not approved.')),{once:true}));
+  });
+  const done=vi.fn();render(<Auth setup={false} onDone={done}/>);
+  fireEvent.change(screen.getByLabelText('Email address'),{target:{value:'fixture@example.test'}});
+  await waitFor(()=>expect(screen.getByRole('button',{name:'Sign in with a passkey'})).toBeEnabled());
+  fireEvent.click(screen.getByRole('button',{name:'Sign in with a passkey'}));
+  expect(await screen.findByRole('status')).toHaveTextContent('Complete the Windows or browser passkey prompt');
+  expect(screen.getByLabelText('Email address')).toBeDisabled();expect(screen.getByLabelText('Password')).toBeDisabled();
+  fireEvent.click(screen.getByRole('button',{name:'Cancel passkey request'}));
+  expect(await screen.findByRole('alert')).toHaveTextContent('cancelled');
+  expect(screen.getByRole('button',{name:'Sign in'})).toBeEnabled();expect(done).not.toHaveBeenCalled();
+});

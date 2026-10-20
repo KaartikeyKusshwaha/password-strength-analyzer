@@ -1,4 +1,4 @@
-import {beforeEach,expect,it,vi} from 'vitest';
+import {afterEach,beforeEach,expect,it,vi} from 'vitest';
 import {api} from './api';
 import {performPasskey,encodePasskey,decodePasskey} from './passkey-client';
 vi.mock('./api',()=>({api:vi.fn()}));
@@ -13,6 +13,7 @@ beforeEach(()=>{
   browser={create:vi.fn(async()=>credential),get:vi.fn(async()=>credential)};
   vi.stubGlobal('navigator',{credentials:browser});
 });
+afterEach(()=>{vi.useRealTimers();});
 it('converts native buffers, sends only explicit proof fields and carries the opaque request in a header option',async()=>{
   vi.mocked(api).mockResolvedValueOnce(options('register')).mockResolvedValueOnce({id:'new-fixture'});
   await expect(performPasskey('register',{password:'public-test-only',label:'Device'})).resolves.toEqual({id:'new-fixture'});
@@ -38,6 +39,37 @@ it('cancels if the component aborts while options are loading',async()=>{
   const controller=new AbortController();vi.mocked(api).mockImplementationOnce(async()=>{controller.abort();return options('login');}).mockResolvedValue({ok:true});
   await expect(performPasskey('login',{email:'fixture@example.test',signal:controller.signal})).rejects.toThrow('cancelled');
   expect(browser.get).not.toHaveBeenCalled();expect(api).toHaveBeenLastCalledWith('/passkeys/cancel',{}, {requestId:'r'.repeat(43)});
+});
+it('cancels even when the native promise ignores abort and discards its late proof',async()=>{
+  const controller=new AbortController();let release;
+  const credential=await browser.get();
+  browser.get.mockImplementation(()=>new Promise(resolve=>{release=resolve;}));
+  vi.mocked(api).mockResolvedValueOnce(options('login')).mockResolvedValue({ok:true});
+  const operation=performPasskey('login',{email:'fixture@example.test',signal:controller.signal});
+  const result=expect(operation).rejects.toThrow('cancelled');
+  await vi.waitFor(()=>expect(release).toBeTypeOf('function'));
+  controller.abort();await result;
+  expect(browser.get.mock.calls.at(-1)[0].signal.aborted).toBe(true);
+  expect(api).toHaveBeenLastCalledWith('/passkeys/cancel',{}, {requestId:'r'.repeat(43)});
+  release(credential);await Promise.resolve();
+  expect(vi.mocked(api).mock.calls.some(([path])=>path.endsWith('/finish'))).toBe(false);
+});
+it('bounds a native prompt by the server lifetime and never submits a late credential',async()=>{
+  vi.useFakeTimers();let release;
+  const credential=await browser.get();browser.get.mockImplementation(()=>new Promise(resolve=>{release=resolve;}));
+  vi.mocked(api).mockResolvedValueOnce({...options('login'),expires_in:2}).mockResolvedValue({ok:true});
+  const operation=performPasskey('login',{email:'fixture@example.test'});
+  const result=expect(operation).rejects.toThrow('expired');
+  await vi.advanceTimersByTimeAsync(2000);await result;
+  expect(browser.get.mock.calls.at(-1)[0].signal.aborted).toBe(true);
+  release(credential);await Promise.resolve();
+  expect(vi.mocked(api).mock.calls.some(([path])=>path.endsWith('/finish'))).toBe(false);
+  expect(vi.getTimerCount()).toBe(0);
+});
+it('rejects an unbounded lifetime before opening a native prompt',async()=>{
+  vi.mocked(api).mockResolvedValueOnce({...options('login'),expires_in:121}).mockResolvedValue({ok:true});
+  await expect(performPasskey('login',{email:'fixture@example.test'})).rejects.toThrow('Invalid passkey options');
+  expect(browser.get).not.toHaveBeenCalled();
 });
 it('does not invoke the authenticator for a wrong RP or weakened verification options',async()=>{
   const pending=options('login');pending.publicKey.rpId='other.example.test';vi.mocked(api).mockResolvedValueOnce(pending).mockResolvedValue({ok:true});

@@ -15,13 +15,26 @@
   passkey state, and unlocked/relocked the unchanged disposable one-entry vault.
 - A separate disposable localhost app was signed into through Edge. The user
   completed native enrollment; the actual page confirmed "Edge acceptance key"
-  enrolled and not used yet. Passkey sign-in was started and awaits device
-  confirmation. Remaining native lifecycle tests and actual companion autofill
+  enrolled and not used yet. Real sign-in then reached the authenticated account
+  and updated Last used after user/device confirmation. Remaining native lifecycle tests and actual companion autofill
   remain separate gates. See PASSKEY_HTTP.md.
 - The existing approved public lodash@4.17.20 dependency watch completed in
   actual Edge: 1/1 exact pins assessed, 5/5 advisory records checked, no overlapping
   reports grouped and zero new matches. The schedule stayed off; no new tasks or
   duplicate alert were created. Zero new matches is not a clean vulnerability result.
+- Browser testing exposed stale shared finding data after a watch completed.
+  Navigation now refreshes the workspace snapshot. The frozen-snapshot regression
+  and an actual Edge watch -> findings -> expanded-alias flow passed; the new
+  last-seen time was visible without a second page reload.
+- Native request waiting could remain busy during the cancellation check. The
+  client now races the prompt against explicit abort and a server-lifetime cap,
+  discarding late native proofs. The full frontend suite passed 180 tests across
+  41 files. A final prompt-status/field-locking follow-up passed 25 focused tests;
+  the production build passed. Tests include
+  a native promise that ignores abort and then returns a late credential; no
+  finish request is sent. In actual Edge the bounded new-build request expired,
+  re-enabled sign-in and left zero pending ceremonies with unchanged last-use
+  metadata. Explicit Cancel interaction during native UI remains unverified.
 
 ## Passkey schema migration and encrypted recovery — 20 October 2026
 

@@ -32,6 +32,23 @@ function serialize(mode,credential){
   return {id:credential.id,rawId:encodePasskey(credential.rawId),type:'public-key',response};
 }
 function aborted(signal){if(signal?.aborted)throw new DOMException('Cancelled','AbortError');}
+async function waitForAuthenticator(mode,publicKey,signal,expiresIn){
+  if(!Number.isInteger(expiresIn) || expiresIn<1 || expiresIn>120)throw new Error('Invalid passkey options.');
+  const native=new AbortController();let expired=false,rejectCancellation;
+  const cancellation=new Promise((_,reject)=>{rejectCancellation=reject;});
+  const cancel=()=>{native.abort();rejectCancellation(new DOMException('Cancelled','AbortError'));};
+  signal?.addEventListener('abort',cancel,{once:true});
+  const deadline=setTimeout(()=>{expired=true;cancel();},expiresIn*1000);
+  try {
+    aborted(signal);
+    // Do not depend on a native prompt settling promptly after AbortSignal.
+    // A late credential is discarded, and can never reach the finish endpoint.
+    return await Promise.race([navigator.credentials[mode==='register'?'create':'get']({publicKey,signal:native.signal}),cancellation]);
+  }catch(error){
+    if(expired && error.name==='AbortError')throw new Error('Passkey request expired. Start again.');
+    throw error;
+  }finally{clearTimeout(deadline);signal?.removeEventListener('abort',cancel);}
+}
 export async function performPasskey(mode,{email,password,code='',label,signal,onPhase=()=>{}}){
   if(!supportedPasskeys())throw new Error('Passkeys are unavailable in this browser or context.');
   if(!['login','register'].includes(mode))throw new Error('Unsupported passkey operation.');
@@ -43,7 +60,7 @@ export async function performPasskey(mode,{email,password,code='',label,signal,o
     requestId=pending.request_id;aborted(signal);
     const publicKey=nativeOptions(mode,pending.publicKey);
     onPhase('authenticator');
-    const credential=await navigator.credentials[mode==='register'?'create':'get']({publicKey,signal});
+    const credential=await waitForAuthenticator(mode,publicKey,signal,pending.expires_in??120);
     aborted(signal);
     const body={credential:serialize(mode,credential),...(mode==='register'?{label}:{})};
     onPhase('finishing');finishing=true;

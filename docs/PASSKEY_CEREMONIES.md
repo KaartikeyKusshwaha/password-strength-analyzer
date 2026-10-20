@@ -5,7 +5,7 @@ by the existing WebAuthn protocol helper. No sign-in, enrollment or credential
 removal route was present at the initial candidate stage. Startup schema-9,
 backup/recovery and account routes/UI now exist. A controlled, backed-up restart
 upgraded the owner store to schema 9 without changing protected records. Native
-Edge enrollment passed; remaining lifecycle acceptance is pending. See PASSKEY_HTTP.md. At the candidate's
+Edge enrollment/sign-in passed; remaining lifecycle acceptance is pending. See PASSKEY_HTTP.md. At the candidate's
 initial verification the browser companion was 0.12.4.
 It has since been built as 0.12.5; installed autofill acceptance remains pending.
 
@@ -55,8 +55,8 @@ counter updates, membership/revocation checks and pending MFA/session issuance
 are connected. Reauthenticated enrollment/removal UI includes cancellation and
 unsupported states. See PASSKEY_HTTP.md for the route contract and current tests.
 
-User-confirmed native Edge enrollment passed in the isolated localhost app.
-Passkey sign-in and native cancellation/removal acceptance remain open;
+User-confirmed native Edge enrollment and sign-in passed in the isolated localhost app.
+Native cancellation/removal acceptance remain open;
 synthetic proofs do not establish those remaining device results.
 
 Protocol reference already inspected:

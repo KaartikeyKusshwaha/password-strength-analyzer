@@ -2,8 +2,8 @@
 
 Status: implemented with schema-9 startup migration, backup/recovery and account
 routes/UI in app 0.13.0. A controlled, backed-up restart migrated the owner store
-while preserving protected records. Native Edge enrollment passed in the
-isolated localhost app; sign-in/lifecycle acceptance is pending, and the current
+while preserving protected records. Native Edge enrollment/sign-in passed in the
+isolated localhost app; remaining lifecycle acceptance is pending, and the current
 127.0.0.1 origin remains unsupported. This
 module does not decrypt vaults or enable passkeys on other services. See
 PASSKEY_HTTP.md and PASSKEY_MIGRATION.md.

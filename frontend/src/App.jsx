@@ -355,6 +355,7 @@ export function Auth({ setup, onDone }) {
                   name="email"
                   type="email"
                   autoComplete="username"
+                  disabled={busy}
                   required
                   maxLength={254}
                 />
@@ -362,6 +363,7 @@ export function Auth({ setup, onDone }) {
                   label="Password"
                   name="password"
                   type="password"
+                  disabled={busy}
                   autoComplete={
                     mode === "login" ? "current-password" : "new-password"
                   }
@@ -405,6 +407,7 @@ export function Auth({ setup, onDone }) {
                     : "Sign in"}
             </Button>
             {mode==='login' && <PasskeySignIn disabled={busy} onClick={passkeySignIn}/>}
+            {busy && passkeyPhase && <p className="fine" role="status">{passkeyPhase==='requesting'?'Requesting a secure passkey challenge…':passkeyPhase==='authenticator'?'Complete the Windows or browser passkey prompt. This request expires within two minutes.':'Verifying your passkey…'}</p>}
             {busy && passkeyPhase && passkeyPhase!=='finishing' && <button type="button" className="text-button" onClick={()=>passkeyController.current?.abort()}>Cancel passkey request</button>}
           </form>
           {mode === "setup" ? (
@@ -515,6 +518,9 @@ export default function App() {
     }
   }
   function go(value) {
+    // Background watches update their own view. Refresh the shared snapshot
+    // when navigating so findings and linked work reflect the completed check.
+    refresh().catch(e=>setError(e.message));
     setVaultMode(value==='shared-vaults'?'team':'personal');
     setPage(value==='shared-vaults'?'vault':value);
     setDetail(null);

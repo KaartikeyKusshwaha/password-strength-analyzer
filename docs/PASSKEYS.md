@@ -3,8 +3,8 @@
 Status: account routes, session/MFA integration and UI are implemented in app
 0.13.0. The backed-up local owner store has been upgraded to schema 9 without
 changing protected account/vault/sharing/connection records. User-confirmed
-native Edge enrollment passed in the isolated localhost acceptance app.
-Passkey sign-in and remaining device lifecycle checks are **not yet accepted**. The current
+native Edge enrollment and sign-in passed in the isolated localhost acceptance app.
+Remaining device lifecycle checks are **not yet accepted**. The current
 127.0.0.1 origin is explicitly unsupported; the UI does not offer fake success
 or silently change the app/companion origin. See PASSKEY_HTTP.md for the API,
 tests and live upgrade evidence.

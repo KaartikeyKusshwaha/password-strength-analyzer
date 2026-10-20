@@ -5,11 +5,25 @@ schema 9 with protected account/vault/sharing/connection records unchanged.
 Edge preserved owner sign-in, displayed the new account-passkey card's actual
 unsupported-IP-origin state and unlocked/relocked the existing one-entry test
 vault. The user completed native Edge enrollment in the separate disposable
-localhost app; the actual page confirms "Edge acceptance key". Passkey sign-in
-and remaining lifecycle acceptance are pending. See PASSKEY_HTTP.md. The approved
+localhost app; the actual page confirms "Edge acceptance key". Native passkey
+sign-in also reached the signed-in account and updated the key's Last used time.
+Remaining lifecycle acceptance is pending. See PASSKEY_HTTP.md. The approved
 public dependency watch also completed: 1/1 pins, 5/5 advisory details, no
 overlapping reports grouped, zero new matches, schedule off. Installed companion
 autofill remains unverified.
+
+Following the completed watch's Review findings link initially displayed the
+parent app's cached metadata from the previous day. Navigation now refreshes
+the shared workspace snapshot. A new actual watch run followed by that link
+showed the 21 October 01:13 last-seen time and expanded CVE/GHSA aliases without
+another page reload. The new regression test uses a frozen initial snapshot
+and a background finding added before navigation.
+
+Passkey sign-in cancellation initially remained busy. The client now bounds its
+native wait independently of the authenticator promise, and discards late proofs.
+A fresh actual Edge request reached the expiry message, restored sign-in controls,
+and left zero pending server ceremonies and unchanged credential last-use/revision.
+Explicit Cancel interaction while native UI is active still needs acceptance.
 
 Status: **partial live Edge verification**, 20 October 2026. Browser access now
 works. The backend initially was not running and returned connection refused;
