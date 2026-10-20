@@ -61,7 +61,8 @@ workflow. Developer checks are available as connected secondary workflows.
   browser end-to-end tests; mobile Android/iOS autofill apps and integrations.
 - [ ] Passkey account sign-in and a separately designed vault-unlock mechanism.
   Ordinary WebAuthn authentication does not automatically provide a vault key.
-  A pinned-library protocol and isolated single-use ceremony store have 54 tests.
+  A pinned-library protocol, isolated single-use ceremony store and transactional
+  credential persistence have 74 tests.
   Migration/backup integration, account/session/MFA routes, enrollment/removal UI
   and live authenticator acceptance are not implemented. See PASSKEYS.md. This
   is not a usable feature.

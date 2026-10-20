@@ -1,5 +1,18 @@
 # Development verification — 0.12.0
 
+## Passkey credential persistence candidate — 20 October 2026
+
+- Added an explicit transaction-bound credential schema/repository with unique
+  credential IDs, scoped lookup, bounded active registrations, revocation
+  tombstones, revision/counter checks and atomic session-write compatibility.
+  It is not imported by the app or installed in the owner store.
+- Focused real-signature protocol/ceremony/credential suite: **74 passed**.
+  Full backend regression: **280 passed**, one existing TestClient deprecation
+  warning. The JUnit result is retained as ignored runtime evidence.
+- Real owner-store read-only check: schema 8, no passkey credential table.
+  The existing server listener remained active. No new account authentication
+  routes or UI are exposed. See PASSKEY_CREDENTIALS.md for the remaining gates.
+
 ## Live backend recovery and truthful connection status — 20 October 2026
 
 - The app backend was confirmed stopped, backed up encrypted, and restarted.

@@ -2,6 +2,8 @@
 
 Status: **in development, no sign-in/enrollment routes or UI yet**. An isolated
 single-use ceremony-storage candidate is now tested alongside the protocol.
+Transaction-bound credential persistence is also tested in isolated databases;
+see [the credential storage contract](PASSKEY_CREDENTIALS.md).
 The running
 application, account sessions, vaults and origin have not been changed. Do not
 present this helper as available sign-in, recovery or vault unlocking.
@@ -40,6 +42,7 @@ See [the ceremony candidate evidence](PASSKEY_CEREMONIES.md).
 
 - Add explicit schema migration for credentials and short-lived ceremonies.
   Store no authenticator private keys. Scope each credential to its account.
+  Candidate modules now supply both schemas, but app/backup integration is pending.
 - Registration requires current app-password reauthentication and the enrolled
   app MFA factor. Bind the enrollment challenge to that authenticated session.
 - Bind sign-in challenges to a fresh HttpOnly/SameSite browser ceremony cookie,
