@@ -1,6 +1,8 @@
 # Passkey account sign-in — protocol foundation
 
-Status: **in development, no sign-in/enrollment routes or UI yet**. The running
+Status: **in development, no sign-in/enrollment routes or UI yet**. An isolated
+single-use ceremony-storage candidate is now tested alongside the protocol.
+The running
 application, account sessions, vaults and origin have not been changed. Do not
 present this helper as available sign-in, recovery or vault unlocking.
 
@@ -29,6 +31,12 @@ An authenticator's private key stays outside the service. Server public-key
 records will still be account metadata requiring access control and backup.
 
 ## Required before integration can be called usable
+
+`backend/passkey_ceremonies.py` supplies a candidate for challenge lifecycle,
+tested only in temporary databases. It is not imported by the running app and
+has no automatic schema-install behavior. Its explicit schema installer must
+join the future versioned migration and backup/recovery contract before use.
+See [the ceremony candidate evidence](PASSKEY_CEREMONIES.md).
 
 - Add explicit schema migration for credentials and short-lived ceremonies.
   Store no authenticator private keys. Scope each credential to its account.
@@ -66,8 +74,9 @@ and real ECDSA signatures. They exercise registration/authentication, origin/RP
 binding, challenges, UP/UV, crossOrigin/topOrigin, user handles, credential IDs,
 signature failure, counter rollback, zero counters and malformed responses.
 The zero-counter test explicitly demonstrates that the helper alone accepts the
-same valid response twice: replay rejection belongs to the still-unimplemented
-single-use ceremony integration. These tests are not a hardware/browser test or
+same valid response twice. The additional SQLite ceremony candidate tests now
+reject replay after a committed claim, including with real zero-counter signed
+responses. Route/session integration remains unimplemented. These tests are not a hardware/browser test or
 independent audit. `pip check` also passed after dependency installation.
 
 Sources inspected:
