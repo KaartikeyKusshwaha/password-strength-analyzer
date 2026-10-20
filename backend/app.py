@@ -317,7 +317,7 @@ def create_app(settings=None):
             app.state.watch_service.stop()
             executor.shutdown(wait=True, cancel_futures=True)
 
-    app = FastAPI(title="SentinelOps", version="0.12.0", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title="SentinelOps", version="0.13.0", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.store, app.state.settings = store, settings
     app.state.cipher, app.state.executor = cipher, executor
     app.state.agent_transport = None
@@ -439,7 +439,9 @@ def create_app(settings=None):
             user = c.execute("SELECT * FROM users WHERE email=?", (body.email,)).fetchone()
             valid = verify_password(body.password.get_secret_value(), user["password"] if user else dummy_password)
             must(user and valid, "Invalid credentials", 401)
-            workspace = c.execute("SELECT workspace FROM members WHERE user=? ORDER BY rowid LIMIT 1", (user["id"],)).fetchone()[0]
+            membership = c.execute("SELECT m.workspace FROM members m JOIN workspaces w ON w.id=m.workspace WHERE m.user=? AND w.demo=0 ORDER BY m.rowid LIMIT 1", (user["id"],)).fetchone()
+            must(membership, "Invalid credentials", 401)
+            workspace = membership[0]
             c.execute("DELETE FROM sessions WHERE token=?", (digest(request.cookies.get("sentinel_session", "")),))
             result = issue(c, response, user["id"], workspace, bool(user["mfa"]))
             if not user["mfa"]:
@@ -453,6 +455,7 @@ def create_app(settings=None):
             session = c.execute("SELECT * FROM sessions WHERE token=? AND pending=1 AND expires>?", (digest(request.cookies.get("sentinel_session", "")), time.time())).fetchone()
             must(session and hmac.compare_digest(request.headers.get("X-CSRF-Token", ""), session["csrf"]), "Challenge expired", 403)
             user = c.execute("SELECT * FROM users WHERE id=?", (session["user"],)).fetchone()
+            must(user and c.execute('SELECT 1 FROM members m JOIN workspaces w ON w.id=m.workspace WHERE m.user=? AND m.workspace=? AND w.demo=0',(session['user'],session['workspace'])).fetchone(), "Challenge expired or workspace access unavailable", 403)
             must(consume_factor(c, user, body.code, cipher), "Invalid or already used code", 401)
             c.execute("DELETE FROM sessions WHERE token=?", (session["token"],))
             result = issue(c, response, user["id"], session["workspace"])
@@ -463,8 +466,13 @@ def create_app(settings=None):
     def logout(response: Response, session=Depends(auth)):
         with store.connect(write=True) as c:
             c.execute("DELETE FROM sessions WHERE token=?", (session["token"],))
+            c.execute('DELETE FROM passkey_ceremonies WHERE account=?',(session['user'],))
         response.delete_cookie("sentinel_session", path="/")
+        response.delete_cookie('sentinel_passkey_binding',path='/api/passkeys')
         return {"ok": True}
+
+    from .passkey_routes import install_routes as install_passkey_routes
+    install_passkey_routes(app,store,settings,cipher,auth,issue,throttle)
 
     def vault_metadata(row):
         result = {key:row[key] for key in ("id","name","purpose","color","lock_seconds","browser_enabled","browser_save","browser_fill","archived","is_default","revision","created_at","updated_at")}

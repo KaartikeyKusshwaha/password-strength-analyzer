@@ -1,4 +1,15 @@
-# Browser acceptance — SentinelOps 0.12.0 / companion 0.12.5
+# Browser acceptance — SentinelOps 0.13.0 / companion 0.12.5
+
+Latest continuation, 21 October 2026: the backed-up owner store migrated to
+schema 9 with protected account/vault/sharing/connection records unchanged.
+Edge preserved owner sign-in, displayed the new account-passkey card's actual
+unsupported-IP-origin state and unlocked/relocked the existing one-entry test
+vault. The user completed native Edge enrollment in the separate disposable
+localhost app; the actual page confirms "Edge acceptance key". Passkey sign-in
+and remaining lifecycle acceptance are pending. See PASSKEY_HTTP.md. The approved
+public dependency watch also completed: 1/1 pins, 5/5 advisory details, no
+overlapping reports grouped, zero new matches, schedule off. Installed companion
+autofill remains unverified.
 
 Status: **partial live Edge verification**, 20 October 2026. Browser access now
 works. The backend initially was not running and returned connection refused;

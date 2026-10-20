@@ -1,4 +1,4 @@
-"""Transaction-bound passkey credential storage; not yet wired to app routes.
+"""Transaction-bound passkey credential storage for account routes.
 
 Only trusted code may pass verifier results here. Caller owns reauthentication,
 single-use ceremony consumption and current session/membership policy. Successful

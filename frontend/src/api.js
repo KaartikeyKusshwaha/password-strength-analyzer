@@ -3,7 +3,7 @@ let csrf = "";
 export function setCsrf(value) {
   csrf = value || "";
 }
-export async function api(path, body) {
+export async function api(path, body, {requestId} = {}) {
   let response;
   try { response = await fetch("/api" + path, {
     credentials: "same-origin",
@@ -11,7 +11,7 @@ export async function api(path, body) {
     headers:
       body === undefined
         ? {}
-        : { "Content-Type": "application/json", "X-CSRF-Token": csrf },
+        : { "Content-Type": "application/json", "X-CSRF-Token": csrf, ...(requestId?{'X-Passkey-Request':requestId}:{}) },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   }); } catch { reportConnection('unavailable');throw new Error('Cannot reach SentinelOps. Keep the local app running, then retry.'); }
   let value;

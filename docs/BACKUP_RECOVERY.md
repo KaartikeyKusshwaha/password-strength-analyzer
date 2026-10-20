@@ -10,8 +10,9 @@ There is a 128 MiB development limit and a 30-second snapshot budget.
 
 New Store initialization applies the transactional schema-9 passkey migration.
 Back up an existing schema-8 store before restarting the updated app. The
-currently running owner store has not yet been migrated. Passkey account routes
-and UI remain unfinished; the schema alone does not enable sign-in.
+local owner store was migrated on 21 October after an encrypted backup and
+isolated restore drill. Account routes/UI are implemented; the current IP origin
+is unsupported and actual authenticator acceptance remains pending.
 
 This is separate from the personal-vault export in the app. A full-app backup
 contains sensitive account hashes, workspace metadata and server MFA secrets as

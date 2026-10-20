@@ -64,9 +64,12 @@ workflow. Developer checks are available as connected secondary workflows.
   A pinned-library protocol, isolated single-use ceremony store and transactional
   credential persistence have 74 tests.
   Migration/backup integration and an isolated actual-data restore drill now
-  pass; the running store remains schema 8. Account/session/MFA routes,
-  enrollment/removal UI and live authenticator acceptance are not implemented. See PASSKEYS.md. This
-  is not a usable feature.
+  pass; the backed-up local store now runs schema 9. Account/session/MFA routes
+  and enrollment/removal UI are implemented. Real signed HTTP proofs and UI
+  tests pass. Native Edge enrollment passed in a separate disposable localhost
+  app; sign-in and remaining lifecycle acceptance are pending. The current
+  127.0.0.1 origin is explicitly unsupported. Vault unlocking is still a separate
+  unimplemented passkey protocol. See PASSKEYS.md; keep this release gate open.
 - [x] Local strength/reuse and account-review summary with explicit assessment
   limits, unknown history and no invented overall security score. Archived
   entries are excluded from active review and companion operations.
@@ -117,8 +120,9 @@ workflow. Developer checks are available as connected secondary workflows.
 - [x] Development implementation of bounded OSV alias lookup/grouping for
   dependency watches, separate detail-coverage reporting and stable finding/task
   identity within the exact package and scan scope. Tested with automated cases
-  and a read-only live API probe; staged independently while private browser
-  setup is pending. Live dashboard acceptance remains outstanding. Historical
+  and a read-only live API probe. Live Edge reran the approved public-package
+  watch and displayed 1/1 assessed pins, 5/5 advisory details, no overlapping
+  reports grouped and zero new matches. Historical
   overlapping work is retained; partial detail coverage can still overlap.
 - [ ] Installed-software discovery, severity enrichment, dependency graph
   discovery and externally delivered notifications.

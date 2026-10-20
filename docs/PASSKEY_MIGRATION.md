@@ -1,9 +1,12 @@
 # Schema-nine passkey migration and recovery
 
 Source integration is implemented. New Store instances install the ceremony
-and credential tables through migration 9. The running owner process has not
-been restarted and remains on schema 8. Account endpoints, session/MFA integration,
-management UI and live authenticator acceptance still need implementation.
+and credential tables through migration 9. On 21 October the owner process was
+restarted after an encrypted backup and upgraded to schema 9 with unchanged
+protected account/vault/sharing/connection records. Account endpoints,
+session/MFA integration and management UI now exist. Actual authenticator
+acceptance remains pending; see PASSKEY_HTTP.md. The earlier schema-8 restore
+drill below is retained as historical evidence.
 
 ## Migration behavior
 

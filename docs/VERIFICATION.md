@@ -1,4 +1,27 @@
-# Development verification — 0.12.0
+# Development verification — 0.13.0
+
+## Account passkey integration and live upgrade — 21 October 2026
+
+- Enrollment, one-time browser-bound sign-in, pending MFA, own-key management,
+  reauthenticated removal, cancellation and session/audit policy are integrated.
+  Proofs cannot substitute for a current account/workspace authorization check.
+- Backend: 313-test full run passed; final authentication suite passed 43 tests
+  after membership guards. Frontend: 176 tests across 41 files passed; a final
+  14-test focused follow-up and production build also passed.
+- A fresh encrypted backup preceded a process-chain-verified restart with no
+  active jobs or enabled watches. The owner store is now schema 9. Integrity
+  and protected account/vault/sharing/connection/key comparisons passed.
+- Live Edge kept its owner session, showed 0.13.0 and the unsupported-IP-origin
+  passkey state, and unlocked/relocked the unchanged disposable one-entry vault.
+- A separate disposable localhost app was signed into through Edge. The user
+  completed native enrollment; the actual page confirmed "Edge acceptance key"
+  enrolled and not used yet. Passkey sign-in was started and awaits device
+  confirmation. Remaining native lifecycle tests and actual companion autofill
+  remain separate gates. See PASSKEY_HTTP.md.
+- The existing approved public lodash@4.17.20 dependency watch completed in
+  actual Edge: 1/1 exact pins assessed, 5/5 advisory records checked, no overlapping
+  reports grouped and zero new matches. The schedule stayed off; no new tasks or
+  duplicate alert were created. Zero new matches is not a clean vulnerability result.
 
 ## Passkey schema migration and encrypted recovery — 20 October 2026
 

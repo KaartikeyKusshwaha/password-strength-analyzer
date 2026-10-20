@@ -49,6 +49,8 @@ import PortCoverage from "./PortCoverage";
 import {version as productVersion} from '../package.json';
 import WatchIndicator from "./WatchIndicator";
 import ConnectionStatus from './ConnectionStatus';
+import Passkeys,{PasskeySignIn} from './Passkeys';
+import {performPasskey} from './passkey-client';
 import "./style.css";
 
 const ControlCenter = lazy(() => import("./ControlCenter"));
@@ -236,6 +238,17 @@ export function Auth({ setup, onDone }) {
   const [mode, setMode] = useState(setup ? "setup" : "login");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [passkeyPhase,setPasskeyPhase]=useState('');
+  const passkeyController=useRef(null);
+  useEffect(()=>()=>passkeyController.current?.abort(),[]);
+  async function passkeySignIn(event){
+    const email=event.currentTarget.form.elements.email;
+    if(!email.reportValidity())return;
+    setBusy(true);setError('');const controller=new AbortController();passkeyController.current=controller;
+    try {const result=await performPasskey('login',{email:email.value,signal:controller.signal,onPhase:setPasskeyPhase});if(result.mfa_required)setMode('factor');else await onDone();}
+    catch(error){setError(error.message);}
+    finally {passkeyController.current=null;setBusy(false);setPasskeyPhase('');}
+  }
   async function submit(e) {
     e.preventDefault();
     setBusy(true);
@@ -391,6 +404,8 @@ export function Auth({ setup, onDone }) {
                     ? "Verify and continue"
                     : "Sign in"}
             </Button>
+            {mode==='login' && <PasskeySignIn disabled={busy} onClick={passkeySignIn}/>}
+            {busy && passkeyPhase && passkeyPhase!=='finishing' && <button type="button" className="text-button" onClick={()=>passkeyController.current?.abort()}>Cancel passkey request</button>}
           </form>
           {mode === "setup" ? (
             <p className="fine">
@@ -401,6 +416,7 @@ export function Auth({ setup, onDone }) {
             mode !== "factor" && (
               <button
                 className="text-button"
+                disabled={busy}
                 onClick={() => {
                   setMode(mode === "join" ? "login" : "join");
                   setError("");
@@ -1799,6 +1815,7 @@ export default function App() {
           )}
           {page === "settings" && (
             <div className="settings-grid">
+              <Passkeys mfaEnabled={me.mfa_enabled} onSessionChanged={refresh}/>
               <section className="panel">
                 <div className="panel-heading">
                   <h2>Team members</h2>

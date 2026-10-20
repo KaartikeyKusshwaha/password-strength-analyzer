@@ -431,6 +431,23 @@ explicit enrollment, revocation and tests. TOTP codes are not an encryption key.
 
 ## Release gates
 
+Account passkeys in 0.13.0 use exact configured RP/origin, required user
+verification, a separate HttpOnly browser binding and one-use server challenges.
+Enrollment requires a full session plus fresh password/enrolled MFA. Proofs
+are consumed before parsing/verification; keys/counters/revisions, membership
+and session issuance are checked transactionally. Existing enrolled MFA remains
+required after passkey sign-in. Account removal revokes sessions/challenges and
+keeps a tombstone; backup restore revokes every restored active key.
+
+Public keys, device labels and authentication times are server metadata.
+Authenticator private keys never enter the vault, backend or AI context. A
+passkey is not a vault encryption/recovery key. Current IP-origin UI is disabled;
+the separately prepared localhost acceptance account has disposable data only.
+Native enrollment/sign-in, Windows Hello/security-key behavior and site/store
+compatibility are not accepted from unit/component/synthetic-signature tests.
+Migration/origin changes and cached device credentials need deliberate review;
+rollback freshness and erasure of authenticator copies are not provided.
+
 Independent review of the Argon2id + wrapped-key implementation; sharing/revocation protocol; production
 Postgres migrations and restore drills; CSV/breach-check browser interoperability;
 passkeys; per-site account-change adapters; signed clients and extension

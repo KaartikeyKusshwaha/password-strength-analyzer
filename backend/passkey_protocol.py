@@ -84,7 +84,7 @@ class RelyingParty:
             exclude_credentials=[PublicKeyCredentialDescriptor(id=value) for value in credential_ids])))
 
     def authentication_options(self,credential_ids):
-        if not 1<=len(credential_ids)<=10:raise PasskeyError('Invalid account credential scope.')
+        if not 0<=len(credential_ids)<=10:raise PasskeyError('Invalid account credential scope.')
         return json.loads(options_to_json(generate_authentication_options(
             rp_id=self.rp_id,timeout=120000,user_verification=UserVerificationRequirement.REQUIRED,
             allow_credentials=[PublicKeyCredentialDescriptor(id=value) for value in credential_ids])))

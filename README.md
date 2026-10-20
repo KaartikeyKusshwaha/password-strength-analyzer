@@ -2,13 +2,14 @@
 
 A cybersecurity control center evolving from Kaartikey Kusshwaha’s password-strength-analyzer internship project. The first audience is small teams and agencies managing accounts across clients.
 
-**App development build 0.12.0 / browser companion 0.12.5.** This is not an audited password manager or a production security certification. Use disposable credentials until the release gates in [the product plan](docs/PRODUCT_PLAN.md) are met.
+**App development build 0.13.0 / browser companion 0.12.5.** This is not an audited password manager or a production security certification. Use disposable credentials until the release gates in [the product plan](docs/PRODUCT_PLAN.md) are met.
 
 ## Connected workflows
 
 - **Control center:** give a target to an operator. It registers the asset, runs the scoped check, records findings, and can dispatch AI-guided remediation tasks when explicitly authorized.
 - **Browser assistant:** recognized signup and password-change forms receive a local strength dialog, generation, and private encrypted saving. Exact-origin login filling requires a selected entry and never submits a form.
 - **Multiple vaults:** separate passphrases and encrypted contents, purpose/color, lock timers, default selection, archive, browser access/save/fill rules and exact-origin scopes. The same website can exist in several vaults. Copying unlocks and re-encrypts the destination locally.
+- **Account passkeys (development):** reauthenticated enrollment/removal, browser WebAuthn sign-in and preserved app MFA. Requires a supported configured HTTPS domain or localhost; the current 127.0.0.1 origin is explicitly unavailable. Actual authenticator acceptance is pending. This does not unlock vaults or enroll other websites. See [passkey scope and evidence](docs/PASSKEYS.md).
 - **Shared workspace vaults (preview):** separate encrypted sharing identities, individually wrapped vault keys, signed invitations, trusted-channel fingerprint checks and owner/admin/editor/viewer roles. Revocation requires a new encryption key for remaining members. Accepted shared vaults can connect to the companion for selected login fills, code reveals and encrypted saving according to current roles and browser policy.
 - **Vault ownership handoff:** an expiring signed proposal and explicit successor acceptance rotate the vault key, preserve approved member access, and revoke this vault’s existing browser connections. Addressed requests appear on the dashboard. See [the handoff protocol and limits](docs/OWNERSHIP_TRANSFER.md).
 - **Sharing passphrase maintenance:** re-encrypt your existing private sharing keys locally without replacing your fingerprint or vault grants. A signed, revision-bound change revokes your shared browser connections and cancels unfinished shared account actions across workspaces. Cached keys and older backups cannot be erased; this is not identity-key rotation or recovery.
@@ -47,7 +48,7 @@ Open http://127.0.0.1:8110/. On first launch, obtain the bootstrap token locally
 
 Create the vault yourself and choose its master passphrase locally. The app sign-in password and a vault’s master passphrase are separate. An app password reset cannot unlock an encrypted vault.
 
-SQLite remains the **local development** store. [Encrypted operator backups and isolated restore tooling](docs/BACKUP_RECOVERY.md) are available. Postgres migration, production deployment/backup operations, independent client/sharing audit, mobile clients, passkeys and extension-store publication are unfinished production gates. Shared vaults are a development preview with explicit limitations in the threat model.
+SQLite remains the **local development** store. [Encrypted operator backups and isolated restore tooling](docs/BACKUP_RECOVERY.md) are available. Postgres migration, production deployment/backup operations, independent client/sharing audit, mobile clients, native passkey acceptance and extension-store publication are unfinished production gates. Shared vaults are a development preview with explicit limitations in the threat model.
 
 ## Browser companion
 

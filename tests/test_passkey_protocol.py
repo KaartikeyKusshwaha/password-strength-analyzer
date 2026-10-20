@@ -60,7 +60,7 @@ def test_options_require_user_verification_and_do_not_expand_rp_scope():
     assert options['attestation']=='none' and len(decode(options['challenge']))>=32
     assert options['excludeCredentials'][0]['id']==b64(b'old-credential')
     assert party.authentication_options([b'old-credential'])['userVerification']=='required'
-    with pytest.raises(PasskeyError):party.authentication_options([])
+    assert party.authentication_options([])['allowCredentials']==[]
     with pytest.raises(PasskeyError):party.registration_options(b'','fixture@example.test')
 
 

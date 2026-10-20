@@ -1,14 +1,13 @@
-# Passkey account sign-in — protocol foundation
+# Account passkeys — development implementation
 
-Status: **in development, no sign-in/enrollment routes or UI yet**. An isolated
-single-use ceremony-storage candidate is now tested alongside the protocol.
-Transaction-bound credential persistence is also tested in isolated databases;
-see [the credential storage contract](PASSKEY_CREDENTIALS.md). Schema-9 migration
-and encrypted backup/recovery now pass an isolated actual-data restore drill;
-see [the migration evidence](PASSKEY_MIGRATION.md).
-The running
-application, account sessions, vaults and origin have not been changed. Do not
-present this helper as available sign-in, recovery or vault unlocking.
+Status: account routes, session/MFA integration and UI are implemented in app
+0.13.0. The backed-up local owner store has been upgraded to schema 9 without
+changing protected account/vault/sharing/connection records. User-confirmed
+native Edge enrollment passed in the isolated localhost acceptance app.
+Passkey sign-in and remaining device lifecycle checks are **not yet accepted**. The current
+127.0.0.1 origin is explicitly unsupported; the UI does not offer fake success
+or silently change the app/companion origin. See PASSKEY_HTTP.md for the API,
+tests and live upgrade evidence.
 
 ## Implemented
 
@@ -34,38 +33,39 @@ There is no custom public-key verification algorithm or secret in this module.
 An authenticator's private key stays outside the service. Server public-key
 records will still be account metadata requiring access control and backup.
 
-## Required before integration can be called usable
+## Integrated account workflow
 
 `backend/passkey_ceremonies.py` supplies the challenge lifecycle. Its explicit
 schema installer now participates in startup migration 9 and backup/recovery.
-The real owner process has not been restarted, so it still runs schema 8 and
-does not expose ceremony routes. See [the ceremony evidence](PASSKEY_CEREMONIES.md)
-and [the isolated migration/restore drill](PASSKEY_MIGRATION.md).
+The real owner process now runs schema 9. See the
+[ceremony evidence](PASSKEY_CEREMONIES.md) and
+[migration/restore evidence](PASSKEY_MIGRATION.md).
 
-- Apply the tested schema-9 migration to the owner store at a controlled restart
-  when routes are ready. Store no authenticator private keys. Credentials and
-  short-lived ceremonies now have versioned schemas and backup/recovery handling.
-- Registration requires current app-password reauthentication and the enrolled
-  app MFA factor. Bind the enrollment challenge to that authenticated session.
-- Bind sign-in challenges to a fresh HttpOnly/SameSite browser ceremony cookie,
-  account, purpose, exact RP configuration and expiration. Throttle both routes
-  and cap outstanding ceremonies. Do not trust expected values from a request.
-- Claim/consume a challenge once atomically, including invalid attempts; update
-  credential counters atomically. Zero-counter synced credentials cannot supply
-  replay protection; the single-use server ceremony must do that job.
-- Issue sessions only after successful verification, current membership checks
-  and existing MFA policy. Preserve the normal pending-factor state and CSRF
-  controls. A helper verification result by itself is not authorization.
-- Add credential listing/removal with reauthentication, enrollment/deletion
-  audit events, global credential-ID uniqueness, bounded names/records, session
-  revocation policy, and enrollment race/replay protections.
-- Update backup schema validation and restore invalidation of ceremonies.
-  Define handling of revoked credentials in old backups; do not imply rollback
-  protection. Exercise migration/recovery before updating a real user store.
-- Integrate explicit browser user gestures, cancellation and unsupported states;
-  offer no simulated passkey success. Require user interaction for registration.
-- Test actual Windows Hello/security-key enrollment and sign-in, plus wrong
-  origin, expired/replayed ceremonies, MFA, removal, membership and restore flows.
+- Enrollment requires current account password, an unused enrolled MFA factor,
+  CSRF and exact Origin. The challenge is bound to that full session. Current
+  session/membership is checked again after cryptographic verification.
+- Sign-in starts with the entered email and requests a discoverable credential
+  without exposing an account's credential IDs/count. The original server
+  challenge fixes the expected account; it cannot be changed in the proof.
+  A matching user handle is mandatory for this flow.
+- A separate HttpOnly/SameSite cookie binds the browser. Claims are consumed
+  before proof JSON parsing/verification, including malformed or invalid proofs.
+  Exact RP/origin, UV, bounded queues, throttles and revision/counter guards apply.
+- Session issuance shares a transaction with credential updates and current
+  membership policy. Enrolled MFA still produces a pending session; the normal
+  factor endpoint must complete before protected access is available.
+- Team & security lists only the current user's passkeys. Removal requires fresh
+  password/MFA, tombstones the key, cancels pending account ceremonies, signs
+  out other account sessions and rotates the current session/CSRF.
+- Backup restore clears challenges and revokes restored active passkeys. It
+  cannot erase device keys or provide independent rollback protection.
+- Explicit UI actions invoke the browser authenticator. Cancellation closes the
+  pending request; uncertain finish outcomes are not retried automatically.
+
+Before claiming browser acceptance, configure a deliberate supported origin and
+verify enrollment, cancellation, sign-in, MFA, removal, restart and restore using
+actual authenticators. Origin changes need session/cookie, CSRF and companion
+verification. Do not alter the current origin merely to make a green status.
 
 Passkeys here are for **SentinelOps account authentication**. They do not enable
 passkeys on Google or another site, replace provider enrollment, decrypt a vault,
@@ -81,11 +81,15 @@ signature failure, counter rollback, zero counters and malformed responses.
 The zero-counter test explicitly demonstrates that the helper alone accepts the
 same valid response twice. The additional SQLite ceremony candidate tests now
 reject replay after a committed claim, including with real zero-counter signed
-responses. Route/session integration remains unimplemented. These tests are not a hardware/browser test or
-independent audit. `pip check` also passed after dependency installation.
+responses. Real-signed HTTP tests now cover session/MFA integration, revocation,
+bad proofs/JSON, wrong account/browser/origin/RP, pending factors, throttles,
+cancellation and session races. Frontend tests cover native buffer conversion,
+proof allowlisting, explicit gestures, MFA transition, cancellation and ambiguous
+outcomes. These are not a hardware/browser test or independent audit.
 
 Sources inspected:
 - https://www.w3.org/TR/webauthn-3/#rp-id
+- https://www.w3.org/TR/webauthn-3/#discoverable-credential
 - https://duo-labs.github.io/py_webauthn/registration.html
 - https://duo-labs.github.io/py_webauthn/authentication.html
 - Pinned 3.0.1 installed library source and PyPI package metadata. The online

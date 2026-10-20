@@ -1,10 +1,12 @@
-# Passkey credential persistence — integration candidate
+# Passkey credential persistence
 
-Status: implemented with schema-9 startup migration and backup/recovery
-integration. The running owner store remains schema 8 until a controlled restart.
-No account endpoint, session issuance, credential-management UI or live
-authenticator enrollment is provided by this module. It does not decrypt vaults
-or enable passkeys on other services. See PASSKEY_MIGRATION.md.
+Status: implemented with schema-9 startup migration, backup/recovery and account
+routes/UI in app 0.13.0. A controlled, backed-up restart migrated the owner store
+while preserving protected records. Native Edge enrollment passed in the
+isolated localhost app; sign-in/lifecycle acceptance is pending, and the current
+127.0.0.1 origin remains unsupported. This
+module does not decrypt vaults or enable passkeys on other services. See
+PASSKEY_HTTP.md and PASSKEY_MIGRATION.md.
 
 `backend/passkey_credentials.py` complements the existing cryptographic protocol
 and single-use ceremony store. Its schema installer does not commit or migrate
@@ -37,26 +39,27 @@ the app implicitly. Each write requires the caller's explicit transaction.
   private keys cannot be erased by the server.
 
 The typed result is an internal API contract, not an independent authorization
-boundary: trusted code can construct dataclasses. Future routes must call the
+boundary: trusted code can construct dataclasses. The account routes call the
 actual verifier and must never deserialize a request into a trusted result.
 
-## Session and migration requirements still open
+## Current session and migration integration
 
 1. The versioned migration and isolated encrypted restore drill now pass.
-   Restore clears challenges and revokes every restored active passkey. Apply
-   the backed-up owner migration at a controlled restart when routes are ready.
-2. Issue the browser binding cookie, throttle endpoints and consume challenges
+   Restore clears challenges and revokes every restored active passkey. The
+   backed-up owner migration was applied at a controlled restart for app 0.13.0.
+2. HTTP routes issue the browser binding cookie, throttle endpoints and consume challenges
    before proof verification. Enrollment uses fresh app-password/MFA checks.
-3. In the same write transaction as commit_authentication, check the current
-   account/workspace policy, consume any required MFA and issue the appropriate
-   full/pending session. A successful credential update alone is not a session.
+3. In the same write transaction as commit_authentication, routes check current
+   account/workspace membership and issue the appropriate full/pending session.
+   Enrolled MFA is verified separately through the pending-session flow before
+   a full session is issued. A successful credential update alone is not a session.
    A later policy error must roll back that update and session together, while
    the already-committed ceremony remains spent.
 4. Listing/removal require the signed-in owner and fresh removal authorization;
    invalidate pending account ceremonies and apply session-revocation policy.
-   Add scoped enrollment/removal audit records and bounded endpoint rates.
-5. Add user-gesture WebAuthn UI, cancellation/unsupported states and actual
-   authenticator testing. Current 127.0.0.1 origin remains unsupported by the
+   Scoped enrollment/removal audit records and bounded endpoint rates are present.
+5. User-gesture WebAuthn UI and cancellation/unsupported states are implemented;
+   actual authenticator testing remains pending. Current 127.0.0.1 origin is unsupported by the
    protocol configuration; do not silently switch the existing app origin.
 
 ## Verification on 20 October 2026
@@ -71,7 +74,7 @@ requirements and DDL rollback. A combined ceremony/signature/credential case
 spends a real zero-counter assertion once. These are not hardware acceptance or
 an independent security review.
 
-A read-only check of the real owner store confirmed schema 8 and zero
+At that candidate stage, a read-only check of the real owner store confirmed schema 8 and zero
 passkey_credentials tables. The running app and installed companion were not
 restarted or changed by this candidate.
 

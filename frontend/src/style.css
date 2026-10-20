@@ -1429,6 +1429,11 @@ details p {
 .settings-grid > .panel {
   margin: 0;
 }
+.passkey-form {display:grid;gap:12px;margin-top:18px;}
+.passkey-list {padding-left:20px;}
+.passkey-list li {margin:14px 0;overflow-wrap:anywhere;}
+.passkey-signin {margin-top:12px;}
+.passkey-signin .button {width:100%;}
 .member-row {
   display: flex;
   align-items: center;
