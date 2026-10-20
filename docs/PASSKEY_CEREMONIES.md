@@ -2,9 +2,10 @@
 
 `backend/passkey_ceremonies.py` addresses single-use challenge lifecycle required
 by the existing WebAuthn protocol helper. No sign-in, enrollment or credential
-removal route has been added. Nothing was imported into the app, the server was
-not restarted, and the real owner database still has schema 8 with no ceremony
-table. At the candidate's initial verification the browser companion was 0.12.4.
+removal route has been added. Startup schema-9 and backup/recovery integration
+now exist; the server was not restarted, and the real owner database still has
+schema 8 with no ceremony table. See PASSKEY_MIGRATION.md. At the candidate's
+initial verification the browser companion was 0.12.4.
 It has since been built as 0.12.5; installed autofill acceptance remains pending.
 
 ## Implemented contract
@@ -45,8 +46,8 @@ security review is made.
 
 ## Integration still required
 
-1. Versioned schema migration for credentials and ceremonies with backup schema
-   validation/restore invalidation, and a migration test before owner-store use.
+1. Apply the now-tested versioned migration/backup contract to the owner store
+   at a backed-up controlled restart when the account routes are ready.
 2. Origin-checked, throttled HTTP routes with browser-cookie and session binding.
    Consume before parsing/verifying any submitted authenticator proof.
 3. Unique credential/account registration and atomic counter update, current

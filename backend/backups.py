@@ -13,11 +13,13 @@ from cryptography.fernet import Fernet, InvalidToken
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-from backend.store import Store, canonical, now
+from backend.store import Store, canonical, now, SCHEMA_VERSION
+from backend.passkey_migration import validate_layout
 
 MAGIC = b'SNTLBK01'
 MAX_BYTES = 128 * 1024 * 1024
-SCHEMA = 8
+SCHEMA = SCHEMA_VERSION
+SUPPORTED_SCHEMAS = (8, SCHEMA)
 
 
 class BackupError(ValueError):
@@ -63,8 +65,12 @@ def validate_database(connection, server_key):
     if connection.execute('PRAGMA integrity_check').fetchall() != [('ok',)]:
         raise BackupError('Database integrity check failed.')
     versions = [r[0] for r in connection.execute('SELECT version FROM schema_migrations ORDER BY version')]
-    if versions != list(range(1, SCHEMA + 1)):
+    if not versions or not all(type(v) is int for v in versions) or versions[-1] not in SUPPORTED_SCHEMAS or versions != list(range(1, versions[-1] + 1)):
         raise BackupError('Unsupported database schema; use the matching application release.')
+    schema = versions[-1]
+    if schema >= 9:
+        try: validate_layout(connection)
+        except ValueError: raise BackupError('Passkey schema validation failed.') from None
     cipher = Fernet(server_key)
     # Detect a missing/mismatched server key before declaring recovery possible.
     for row in connection.execute('SELECT mfa,mfa_draft FROM users'):
@@ -78,6 +84,7 @@ def validate_database(connection, server_key):
         if not Store.audit(connection, row['workspace'])['valid']:
             raise BackupError('Audit chain validation failed.')
     connection.row_factory = None
+    return schema
 
 
 def create_backup(data_dir, key_file, output):
@@ -103,12 +110,12 @@ def create_backup(data_dir, key_file, output):
         if source.execute('PRAGMA page_count').fetchone()[0] * page_size > MAX_BYTES:
             raise BackupError('Database exceeds the supported backup size.')
         source.backup(snapshot, pages=256, progress=progress, sleep=0.05)
-        validate_database(snapshot, server_key)
+        source_schema = validate_database(snapshot, server_key)
         database_bytes = snapshot.serialize()
     finally:
         snapshot.close()
         source.close()
-    manifest = canonical({'format': 1, 'schema': SCHEMA, 'created_at': now(),
+    manifest = canonical({'format': 1, 'schema': source_schema, 'created_at': now(),
                           'database_bytes': len(database_bytes)}).encode()
     payload = struct.pack('>I', len(manifest)) + manifest + server_key + database_bytes
     if len(payload) > MAX_BYTES:
@@ -116,13 +123,17 @@ def create_backup(data_dir, key_file, output):
     nonce = secrets.token_bytes(12)
     encrypted = AESGCM(backup_key).encrypt(nonce, payload, MAGIC)
     private_write(Path(output), MAGIC + nonce + encrypted)
-    return {'created_at': json.loads(manifest)['created_at'], 'schema': SCHEMA}
+    return {'created_at': json.loads(manifest)['created_at'], 'schema': source_schema}
 
 
 def suspend_authorizations(connection):
     """Do not replay pre-disaster bearer grants, approvals or scheduled work."""
     for table in ('sessions', 'invites', 'companions', 'devices'):
         connection.execute(f'DELETE FROM {table}')
+    connection.execute('DELETE FROM passkey_ceremonies')
+    for row in connection.execute('SELECT id,user FROM passkey_credentials WHERE revoked_at IS NULL').fetchall():
+        Store.event(connection,'personal:'+row['user'],'system:restore','auth.passkey_revoked',row['id'])
+    connection.execute('UPDATE passkey_credentials SET revoked_at=?,revision=revision+1 WHERE revoked_at IS NULL',(time.time(),))
     connection.execute('UPDATE users SET mfa_draft=NULL')
     cancelled=connection.execute("SELECT id,workspace,user,kind FROM credential_actions WHERE status NOT IN ('complete','cancelled','expired')").fetchall()
     connection.execute("UPDATE credential_actions SET status='cancelled',lease_hash=NULL,lease_connection=NULL,lease_expires=NULL WHERE status NOT IN ('complete','cancelled','expired')")
@@ -171,7 +182,7 @@ def restore_backup(archive, key_file, destination):
         server_key = payload[4 + length:48 + length]
         database_bytes = payload[48 + length:]
         if (set(manifest) != {'format', 'schema', 'created_at', 'database_bytes'} or
-                manifest['format'] != 1 or manifest['schema'] != SCHEMA or
+                manifest['format'] != 1 or type(manifest['schema']) is not int or manifest['schema'] not in SUPPORTED_SCHEMAS or
                 manifest['database_bytes'] != len(database_bytes) or
                 not database_bytes.startswith(b'SQLite format 3\x00')):
             raise ValueError()
@@ -183,6 +194,17 @@ def restore_backup(archive, key_file, destination):
         stage.mkdir(mode=0o700)
         private_write(stage / 'sentinelops.db', database_bytes)
         private_write(stage / '.encryption-key', server_key)
+        # Validate the archive's original schema before any migration. No
+        # supplied schema marker may hide missing tables or a future version.
+        initial = sqlite3.connect(stage / 'sentinelops.db')
+        try:
+            source_schema = validate_database(initial, server_key)
+            if source_schema != manifest['schema']:
+                raise BackupError('Backup manifest and database schema differ.')
+        finally:
+            initial.close()
+        if source_schema < SCHEMA:
+            Store(stage / 'sentinelops.db')
         connection = sqlite3.connect(stage / 'sentinelops.db')
         try:
             validate_database(connection, server_key)
@@ -197,7 +219,7 @@ def restore_backup(archive, key_file, destination):
         if destination.exists() or destination.is_symlink():
             raise BackupError('Restore destination appeared during validation.')
         stage.rename(destination)
-    return {'created_at': manifest['created_at'], 'schema': SCHEMA, 'authorization_reset': True}
+    return {'created_at': manifest['created_at'], 'schema': SCHEMA, 'source_schema': source_schema, 'authorization_reset': True}
 
 
 def main(argv=None):

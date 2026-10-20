@@ -181,6 +181,11 @@ def test_claim_remains_consumed_after_reopening_store(service):
 
 def test_schema_install_respects_migration_transaction_and_does_not_change_version(tmp_path):
     store = Store(tmp_path / 'migration-fixture.db')
+    # Explicitly construct the pre-passkey schema now that Store installs v9.
+    with store.connect(write=True) as c:
+        c.execute('DROP TABLE passkey_ceremonies')
+        c.execute('DROP TABLE passkey_credentials')
+        c.execute('DELETE FROM schema_migrations WHERE version=9')
     with pytest.raises(RuntimeError):
         with store.connect(write=True) as c:
             install_schema(c)

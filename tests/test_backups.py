@@ -5,7 +5,7 @@ from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 
 from backend.app import Settings, create_app
-from backend.backups import BackupError, create_backup, init_key, main, restore_backup
+from backend.backups import BackupError, create_backup, init_key, main, restore_backup, SCHEMA
 from backend.security import verify_password
 from backend.store import Store, now
 from test_platform import system, PASSWORD, post
@@ -157,7 +157,7 @@ def test_invalid_audit_or_future_schema_cannot_be_backed_up(system, tmp_path):
         create_backup(source, key, archive)
     assert not archive.exists()
     with store.connect(write=True) as c:
-        c.execute('INSERT INTO schema_migrations VALUES(9,?)', (now(),))
+        c.execute('INSERT INTO schema_migrations VALUES(?,?)', (SCHEMA+1,now()))
     with pytest.raises(BackupError, match='schema'):
         create_backup(source, key, archive)
 

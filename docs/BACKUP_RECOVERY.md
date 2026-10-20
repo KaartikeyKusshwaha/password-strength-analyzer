@@ -1,12 +1,17 @@
 # SQLite operator backup and recovery
 
-The offline tool `python -m backend.backups` backs up the current schema-8
-SQLite application. It uses SQLite's online backup API to include committed WAL
+The offline tool `python -m backend.backups` supports schema-8 and schema-9
+SQLite application databases. It uses SQLite's online backup API to include committed WAL
 pages while the app runs. It encrypts the database and server MFA-encryption
 key together with AES-256-GCM, a fresh 96-bit nonce and a version-bound header.
 It checks SQLite integrity, schema compatibility, MFA-key compatibility when
 encrypted MFA records exist, and all stored audit scopes before accepting data.
 There is a 128 MiB development limit and a 30-second snapshot budget.
+
+New Store initialization applies the transactional schema-9 passkey migration.
+Back up an existing schema-8 store before restarting the updated app. The
+currently running owner store has not yet been migrated. Passkey account routes
+and UI remain unfinished; the schema alone does not enable sign-in.
 
 This is separate from the personal-vault export in the app. A full-app backup
 contains sensitive account hashes, workspace metadata and server MFA secrets as
@@ -51,11 +56,21 @@ archive paths are extracted. Plaintext staging exists briefly on disk; normal
 cleanup is not secure erasure and a machine crash can leave staging behind.
 Use an encrypted disk, private parent directory and inspect it after failures.
 
+A schema-8 archive is validated in its original form, then upgraded to schema 9
+only in the new destination. The encrypted manifest must match the actual
+database version. Schema-9 backups additionally require both passkey tables,
+their expected layout and global credential-ID uniqueness constraint. Missing,
+gapped and future schema histories fail closed.
+
 Recovery preserves account password hashes, enrolled MFA, vault ciphertext and
 revisions, sharing identities/grants, assets, findings, tasks and audit history.
 It deliberately changes active authorization and execution state:
 
 - Deletes sessions, invites, browser connections and device bearer grants.
+- Deletes pending passkey ceremonies and revokes every active restored passkey.
+  Revoked IDs remain tombstoned. This prevents an older backup from silently
+  reactivating passkeys removed after its snapshot. Sign in with the restored
+  app password/MFA and enroll fresh passkeys when account passkey UI is available.
 - Clears unfinished MFA enrollment; preserves already enrolled MFA and its
   replay/recovery-code state as of the snapshot.
 - Cancels unfinished credential actions and clears their leases. Encrypted
@@ -78,6 +93,13 @@ prove freshness, supply independent rollback protection, rotate shared-vault
 keys, deploy the restored service, or switch the live DATA_DIR automatically.
 The independent crypto/security review and production database/deployment gates
 remain open. No recurring backup scheduler or offsite transfer is configured.
+
+On 20 October 2026 an actual schema-8 encrypted backup was restored into an
+isolated ignored data directory and migrated to schema 9. Account protection,
+personal/shared ciphertext, sharing identities and grants matched the source;
+restored bearer grants/challenges were cleared. The live store stayed on schema
+8 with unchanged protected records. No recovered service was launched or
+promoted. See PASSKEY_MIGRATION.md for exact evidence and limits.
 
 ## Implementation references
 

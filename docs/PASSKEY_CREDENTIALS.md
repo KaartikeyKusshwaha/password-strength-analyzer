@@ -1,9 +1,10 @@
 # Passkey credential persistence — integration candidate
 
-Status: implemented and tested in disposable SQLite databases; not imported by
-the running application. No owner-store migration, account endpoint, session
-issuance, credential-management UI or live authenticator enrollment is provided
-by this module. It does not decrypt vaults or enable passkeys on other services.
+Status: implemented with schema-9 startup migration and backup/recovery
+integration. The running owner store remains schema 8 until a controlled restart.
+No account endpoint, session issuance, credential-management UI or live
+authenticator enrollment is provided by this module. It does not decrypt vaults
+or enable passkeys on other services. See PASSKEY_MIGRATION.md.
 
 `backend/passkey_credentials.py` complements the existing cryptographic protocol
 and single-use ceremony store. Its schema installer does not commit or migrate
@@ -41,9 +42,9 @@ actual verifier and must never deserialize a request into a trusted result.
 
 ## Session and migration requirements still open
 
-1. Add credentials/ceremonies through a versioned migration with encrypted backup
-   and restore validation. A restored old backup can contain old credentials;
-   define explicit authorization-reset policy without claiming rollback defense.
+1. The versioned migration and isolated encrypted restore drill now pass.
+   Restore clears challenges and revokes every restored active passkey. Apply
+   the backed-up owner migration at a controlled restart when routes are ready.
 2. Issue the browser binding cookie, throttle endpoints and consume challenges
    before proof verification. Enrollment uses fresh app-password/MFA checks.
 3. In the same write transaction as commit_authentication, check the current

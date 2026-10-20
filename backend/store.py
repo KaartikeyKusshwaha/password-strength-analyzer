@@ -6,6 +6,8 @@ import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
 
+SCHEMA_VERSION = 9
+
 
 def now():
     return datetime.now(timezone.utc).isoformat()
@@ -23,6 +25,10 @@ class Store:
     def __init__(self, path):
         self.path = str(path)
         with self.connect() as c:
+            if c.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='schema_migrations'").fetchone():
+                versions = [r[0] for r in c.execute('SELECT version FROM schema_migrations ORDER BY version')]
+                if versions and (not all(type(v) is int for v in versions) or versions[-1] > SCHEMA_VERSION or versions != list(range(1,versions[-1]+1))):
+                    raise ValueError('Unsupported or incomplete schema. Use a matching release and validated backup.')
             c.executescript("""
                 PRAGMA journal_mode=WAL;
                 CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,email TEXT UNIQUE NOT NULL,password TEXT NOT NULL,mfa TEXT,mfa_draft TEXT,mfa_step INTEGER DEFAULT -1,recovery TEXT DEFAULT '[]');
@@ -79,6 +85,8 @@ class Store:
             c.execute('UPDATE companions SET vault_id=(SELECT id FROM vault_spaces WHERE vault_spaces.user=companions.user AND is_default=1) WHERE vault_id IS NULL')
             for version in (1,2,3,4,5,6,7,8):
                 c.execute('INSERT OR IGNORE INTO schema_migrations VALUES(?,?)', (version,now()))
+            from .passkey_migration import apply
+            apply(c, now())
 
     @contextmanager
     def connect(self, write=False):

@@ -3,7 +3,9 @@
 Status: **in development, no sign-in/enrollment routes or UI yet**. An isolated
 single-use ceremony-storage candidate is now tested alongside the protocol.
 Transaction-bound credential persistence is also tested in isolated databases;
-see [the credential storage contract](PASSKEY_CREDENTIALS.md).
+see [the credential storage contract](PASSKEY_CREDENTIALS.md). Schema-9 migration
+and encrypted backup/recovery now pass an isolated actual-data restore drill;
+see [the migration evidence](PASSKEY_MIGRATION.md).
 The running
 application, account sessions, vaults and origin have not been changed. Do not
 present this helper as available sign-in, recovery or vault unlocking.
@@ -34,15 +36,15 @@ records will still be account metadata requiring access control and backup.
 
 ## Required before integration can be called usable
 
-`backend/passkey_ceremonies.py` supplies a candidate for challenge lifecycle,
-tested only in temporary databases. It is not imported by the running app and
-has no automatic schema-install behavior. Its explicit schema installer must
-join the future versioned migration and backup/recovery contract before use.
-See [the ceremony candidate evidence](PASSKEY_CEREMONIES.md).
+`backend/passkey_ceremonies.py` supplies the challenge lifecycle. Its explicit
+schema installer now participates in startup migration 9 and backup/recovery.
+The real owner process has not been restarted, so it still runs schema 8 and
+does not expose ceremony routes. See [the ceremony evidence](PASSKEY_CEREMONIES.md)
+and [the isolated migration/restore drill](PASSKEY_MIGRATION.md).
 
-- Add explicit schema migration for credentials and short-lived ceremonies.
-  Store no authenticator private keys. Scope each credential to its account.
-  Candidate modules now supply both schemas, but app/backup integration is pending.
+- Apply the tested schema-9 migration to the owner store at a controlled restart
+  when routes are ready. Store no authenticator private keys. Credentials and
+  short-lived ceremonies now have versioned schemas and backup/recovery handling.
 - Registration requires current app-password reauthentication and the enrolled
   app MFA factor. Bind the enrollment challenge to that authenticated session.
 - Bind sign-in challenges to a fresh HttpOnly/SameSite browser ceremony cookie,

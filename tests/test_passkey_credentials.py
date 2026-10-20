@@ -221,6 +221,10 @@ def test_writes_require_explicit_transaction_and_schema_install_rolls_back(store
     with store.connect() as c:
         with pytest.raises(RuntimeError): credentials.register(c,USER,party,'Device',verified)
     clean = Store(tmp_path/'ddl-rollback.db')
+    with clean.connect(write=True) as c:
+        c.execute('DROP TABLE passkey_ceremonies')
+        c.execute('DROP TABLE passkey_credentials')
+        c.execute('DELETE FROM schema_migrations WHERE version=9')
     with pytest.raises(RuntimeError):
         with clean.connect(write=True) as c:
             credentials.install_schema(c)

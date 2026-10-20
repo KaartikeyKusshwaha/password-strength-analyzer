@@ -1,7 +1,7 @@
 """Single-use WebAuthn challenge storage; integration candidate, no HTTP routes.
 
-install_schema must be included in the future versioned store migration before
-this service is wired into the app. Consuming commits before signature checking:
+install_schema is included in store migration 9; account routes remain unwired.
+Consuming commits before signature checking:
 verification failure must never roll the claim back and make it reusable.
 """
 from dataclasses import dataclass, field

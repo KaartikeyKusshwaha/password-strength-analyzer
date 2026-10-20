@@ -63,8 +63,9 @@ workflow. Developer checks are available as connected secondary workflows.
   Ordinary WebAuthn authentication does not automatically provide a vault key.
   A pinned-library protocol, isolated single-use ceremony store and transactional
   credential persistence have 74 tests.
-  Migration/backup integration, account/session/MFA routes, enrollment/removal UI
-  and live authenticator acceptance are not implemented. See PASSKEYS.md. This
+  Migration/backup integration and an isolated actual-data restore drill now
+  pass; the running store remains schema 8. Account/session/MFA routes,
+  enrollment/removal UI and live authenticator acceptance are not implemented. See PASSKEYS.md. This
   is not a usable feature.
 - [x] Local strength/reuse and account-review summary with explicit assessment
   limits, unknown history and no invented overall security score. Archived

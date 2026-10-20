@@ -1,5 +1,24 @@
 # Development verification — 0.12.0
 
+## Passkey schema migration and encrypted recovery — 20 October 2026
+
+- New Store instances now apply schema 9 transactionally and reject future,
+  gapped or malformed histories. Existing applied markers with missing passkey
+  tables fail closed; migration does not silently recreate credential records.
+- Backup supports source schemas 8/9, validates layout and manifest agreement,
+  upgrades only isolated old restores, clears ceremonies and revokes restored
+  active passkeys. Already revoked IDs remain tombstoned.
+- Full backend regression: **290 passed**, one existing TestClient deprecation
+  warning. The final malformed-metadata guard and its two additional cases were
+  rechecked with the **12-test migration suite passing**.
+- An actual encrypted owner-data backup restored successfully into a new local
+  directory, upgraded to schema 9, preserved compared account/vault/sharing data
+  and cleared its bearer grants/challenges. The live owner database remains
+  schema 8 with no passkey tables and unchanged compared protected records.
+  No restored server or owner migration was launched. See PASSKEY_MIGRATION.md.
+- Account routes, sessions/MFA, enrollment/removal UI and real authenticator
+  acceptance remain unfinished; this migration is not usable passkey sign-in.
+
 ## Passkey credential persistence candidate — 20 October 2026
 
 - Added an explicit transaction-bound credential schema/repository with unique
