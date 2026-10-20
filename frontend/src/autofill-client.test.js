@@ -1,9 +1,9 @@
 import {expect,it,vi} from 'vitest';
 import {fillSavedLogin} from '../../companion/extension/autofill-client';
-const active={id:123,origin:'https://example.test'},version='0.12.5';
+const active={id:123,origin:'https://example.test'},version='0.12.6';
 function fixture(check={ok:true,version}) {
   const entry={origin:active.origin,username:'public-fixture',password:'test-only'};
-  return {entry,browser:{tabs:{sendMessage:vi.fn().mockResolvedValueOnce(check).mockResolvedValueOnce({ok:true})}},session:{generation:4,fill:vi.fn(async()=>entry),active:vi.fn()}};
+  return {entry,browser:{tabs:{sendMessage:vi.fn().mockResolvedValueOnce(check).mockResolvedValueOnce({ok:true,filled:'login'})}},session:{generation:4,fill:vi.fn(async()=>entry),active:vi.fn()}};
 }
 it('checks a matching content version and main-frame target before accessing or transmitting a saved login',async()=>{
   const {browser,session,entry}=fixture();
@@ -30,4 +30,15 @@ it('does not send credentials if the vault locks while fetching a fill entry',as
 it('reports the target refusal rather than claiming successful filling',async()=>{
   const {browser,session}=fixture();browser.tabs.sendMessage.mockReset().mockResolvedValueOnce({ok:true,version}).mockResolvedValueOnce({ok:false,reason:'form_action'});
   await expect(fillSavedLogin(browser,session,'entry',active,version)).rejects.toThrow('This form sends to another origin.');
+});
+it.each(['form_changed','value_rejected'])('reports a website failure after filling without resending credentials: %s',async reason=>{
+  const {browser,session}=fixture();browser.tabs.sendMessage.mockReset().mockResolvedValueOnce({ok:true,version}).mockResolvedValueOnce({ok:false,reason});
+  await expect(fillSavedLogin(browser,session,'entry',active,version)).rejects.toThrow(/website/i);
+  expect(browser.tabs.sendMessage.mock.calls.filter(([,message])=>message.type==='fill-login')).toHaveLength(1);
+});
+it('returns a password-only receipt and rejects an incomplete success acknowledgement',async()=>{
+  const {browser,session}=fixture();browser.tabs.sendMessage.mockReset().mockResolvedValueOnce({ok:true,version}).mockResolvedValueOnce({ok:true,filled:'password'});
+  await expect(fillSavedLogin(browser,session,'entry',active,version)).resolves.toBe('password');
+  const incomplete=fixture();incomplete.browser.tabs.sendMessage.mockReset().mockResolvedValueOnce({ok:true,version}).mockResolvedValueOnce({ok:true});
+  await expect(fillSavedLogin(incomplete.browser,incomplete.session,'entry',active,version)).rejects.toThrow('did not confirm');
 });

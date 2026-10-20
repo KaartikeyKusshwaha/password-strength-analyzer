@@ -74,5 +74,6 @@ chrome.runtime.onMessage.addListener((message,sender,reply)=>{
   }
   if(sender.id!==chrome.runtime.id || message?.type!=='fill-login')return;
   if(window.top!==window){reply({ok:false});return;}
-  reply(fillLoginForm(document,location.href,message.entry));
+  fillLoginForm(document,location.href,message.entry).then(reply,()=>reply({ok:false,reason:'value_rejected'}));
+  return true;
 });

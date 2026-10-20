@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SentinelOps Security Companion",
-  "version": "0.12.5",
+  "version": "0.12.6",
   "description": "Local new-password checks, opt-in encrypted vault saving, exact-origin autofill and TOTP codes.",
   "minimum_chrome_version": "120",
   "permissions": ["storage", "activeTab"],

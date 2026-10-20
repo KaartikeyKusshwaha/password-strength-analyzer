@@ -282,16 +282,17 @@ export function Popup() {
                 <h3>{entry.title}</h3>
                 <p>{entry.username}</p>
                 <button
+                  disabled={busy}
                   onClick={async () => {
-                    setError("");
+                    setError("");setNotice('');setBusy(true);
                     try {
-                      await fillSavedLogin(chrome,session.current,entry.id,active,manifest.version);
+                      const filled=await fillSavedLogin(chrome,session.current,entry.id,active,manifest.version);
                       setNotice(
-                        "Filled the selected login. Review the website before submitting.",
+                        filled==='login'?"Username and password filled. Review the website before submitting.":"Password filled. This form has no detected username field; review the account before submitting.",
                       );
                     } catch (e) {
                       reportError(e);
-                    }
+                    } finally {setBusy(false);}
                   }}
                 >
                   Fill this login

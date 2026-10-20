@@ -1,4 +1,11 @@
-# Browser acceptance — SentinelOps 0.13.0 / companion 0.12.5
+# Browser acceptance — SentinelOps 0.13.0 / companion 0.12.6
+
+Companion 0.12.6 is built with field-retention receipts, form revalidation between
+writes and clear password-only/rejected-value outcomes. All 189 frontend tests
+passed. Installed-browser acceptance is still open: the latest control inventory
+exposes no apps or browsers and reports local browser use disabled. No extension
+reload or successful actual fill is inferred. See
+companion-0.12.6-autofill-receipts.md.
 
 Latest continuation, 21 October 2026: the backed-up owner store migrated to
 schema 9 with protected account/vault/sharing/connection records unchanged.

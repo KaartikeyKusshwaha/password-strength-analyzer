@@ -1,5 +1,16 @@
 # Development verification — 0.13.0
 
+## Companion autofill receipts — 21 October 2026
+
+Companion 0.12.6 rechecks field identity/form eligibility between credential
+writes and observes field retention before reporting success. A website's
+replacement/reset is reported without retry or submission; password-only steps
+have a distinct message. All 189 frontend tests across 41 files and both
+companion builds passed. The 12-file package matches its build. Actual installed
+Edge acceptance remains pending because the latest browser inventory reports
+local browser use disabled and exposes no apps/browsers. See
+companion-0.12.6-autofill-receipts.md for exact evidence and scope.
+
 ## Account passkey integration and live upgrade — 21 October 2026
 
 - Enrollment, one-time browser-bound sign-in, pending MFA, own-key management,

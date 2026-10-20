@@ -6,6 +6,8 @@ export function autofillError(reason) {
     username_field:'Several username fields were found. SentinelOps did not choose one.',
     frame:'Autofill is available only in the main website page.',
     entry:'The selected login cannot be filled. Check its details in your vault.',
+    form_changed:'The website changed its sign-in form while filling. Review the fields and try again from the current page. Nothing was submitted.',
+    value_rejected:'The website did not keep the filled values. Review its fields; SentinelOps did not submit or retry the login.',
   })[reason] || 'The website did not confirm autofill. Nothing was submitted.';
 }
 
@@ -23,4 +25,6 @@ export async function fillSavedLogin(browser,session,entryId,active,version) {
   try {result=await browser.tabs.sendMessage(active.id,{type:'fill-login',entry:selected},{frameId:0});}
   catch {throw new Error('The website companion disconnected. Refresh the website and try again. Nothing was submitted.');}
   if(!result?.ok)throw new Error(autofillError(result?.reason));
+  if(!['login','password'].includes(result.filled))throw new Error('The website companion did not confirm the filled fields. Refresh the website and try again. Nothing was submitted.');
+  return result.filled;
 }
