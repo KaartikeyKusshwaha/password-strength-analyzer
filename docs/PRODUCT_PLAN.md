@@ -13,7 +13,7 @@ workflow. Developer checks are available as connected secondary workflows.
 | Central control center | `ControlCenter.jsx`, `/api/operations`; target -> asset -> check -> findings -> optional authorized AI task dispatch. |
 | Real device checks | Local operator and paired polling device client, private-IP allowlists, 64-port bound, job leases, cancel/revoke. Reported observations are not proven vulnerabilities. |
 | Windows host posture | Explicit local/connection consent, protocol-v2 capability heartbeat, fixed read-only firewall/Defender/BitLocker status tools, bounded typed reports, per-check permission/unsupported states, findings and dashboard coverage table. No recovery keys, arbitrary commands, OS changes or patch assessment. |
-| In-page password assistant | Extension `content.js`, dedicated private window `vault-frame.jsx`; recognized signup/change forms get local suggestions, generation and explicit encrypted saving. One disposable login saved/synchronized/reopened in actual Edge. The 0.12.4 autofill correction and remaining browser cases still need acceptance. |
+| In-page password assistant | Extension `content.js`, dedicated private window `vault-frame.jsx`; recognized signup/change forms get local suggestions, generation and explicit encrypted saving. One disposable login saved/synchronized/reopened in actual Edge. The 0.12.5 dynamic-form correction and autofill diagnostics still need installed-browser acceptance. |
 | Multiple personal vaults | Per-vault ciphertext, revisions, names/purposes/colors, lock settings, archive, browser access/save/fill switches and optional exact-origin scope. |
 | Scoped browser connections | Bound to a vault; extension can remember multiple connections and switch, locking the old one. |
 | Duplicate sites and cross-vault copies | Independent entries allowed; destination unlocked and re-encrypted locally, original preserved. |
@@ -61,9 +61,10 @@ workflow. Developer checks are available as connected secondary workflows.
   browser end-to-end tests; mobile Android/iOS autofill apps and integrations.
 - [ ] Passkey account sign-in and a separately designed vault-unlock mechanism.
   Ordinary WebAuthn authentication does not automatically provide a vault key.
-  A pinned-library protocol foundation has 33 signed-response tests; challenge
-  storage, account/session/MFA routes, enrollment/removal UI and live authenticator
-  acceptance are not yet implemented. See PASSKEYS.md. This is not a usable feature.
+  A pinned-library protocol and isolated single-use ceremony store have 54 tests.
+  Migration/backup integration, account/session/MFA routes, enrollment/removal UI
+  and live authenticator acceptance are not implemented. See PASSKEYS.md. This
+  is not a usable feature.
 - [x] Local strength/reuse and account-review summary with explicit assessment
   limits, unknown history and no invented overall security score. Archived
   entries are excluded from active review and companion operations.

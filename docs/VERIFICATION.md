@@ -1,5 +1,24 @@
 # Development verification — 0.12.0
 
+## Live backend recovery and truthful connection status — 20 October 2026
+
+- The app backend was confirmed stopped, backed up encrypted, and restarted.
+  Actual test-vault decryption succeeded afterward; SQLite integrity was ok,
+  schema stayed 8, and the disposable public login remained intact. A live
+  hash-prefix breach lookup reported 1,763 occurrences; the vault was relocked.
+- The unconditional connected header was replaced with latest-request state
+  and a read-only Retry. Actual Edge request blocking, failure, retry and
+  activity recovery passed, including the visible 390-pixel mobile warning.
+  Network and viewport overrides were restored.
+- Full frontend suite: **165 passed / 39 files**. Production dashboard build
+  passed. The responsive-only follow-up was rebuilt and visually verified.
+- Strict installed-Python audit: 57 packages, zero known advisories after the
+  project virtual environment's pip update to 26.2.1. pip check passed. This is
+  advisory coverage, not an independent review or production-readiness claim.
+- Installed companion still shows an older unversioned assistant. The 0.12.5
+  build and 162-test baseline are recorded separately; actual installed autofill
+  is not accepted. See browser-backend-recovery-2026-10-20.md.
+
 ## Live vault check and companion 0.12.1 diagnostic — 20 October 2026
 
 - Edge reconnected. Saved app sign-in succeeded without extracting password

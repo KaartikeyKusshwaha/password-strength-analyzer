@@ -1925,6 +1925,23 @@ details p {
   .local-tag {
     display: none !important;
   }
+  .topbar:has(.local-tag:is([data-state="unavailable"],[data-state="error"])) {
+    height: auto;
+    min-height: 58px;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+  .topbar .inline:has(.local-tag:is([data-state="unavailable"],[data-state="error"])) {
+    width: 100%;
+  }
+  .topbar .local-tag:is([data-state="unavailable"],[data-state="error"]) {
+    display: flex !important;
+    flex-wrap: wrap;
+    margin-right: auto;
+    color: #923b25;
+  }
   .topbar .inline {
     gap: 7px;
   }

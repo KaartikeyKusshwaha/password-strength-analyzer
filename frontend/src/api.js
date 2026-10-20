@@ -1,3 +1,4 @@
+import {reportConnection} from './connection-state';
 let csrf = "";
 export function setCsrf(value) {
   csrf = value || "";
@@ -12,8 +13,11 @@ export async function api(path, body) {
         ? {}
         : { "Content-Type": "application/json", "X-CSRF-Token": csrf },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-  }); } catch { throw new Error('Cannot reach SentinelOps. Keep the local app running, then retry.'); }
-  const value = await response.json();
+  }); } catch { reportConnection('unavailable');throw new Error('Cannot reach SentinelOps. Keep the local app running, then retry.'); }
+  let value;
+  try {value=await response.json();}
+  catch {reportConnection('error');throw new Error('SentinelOps returned an unexpected response. Retry when the service is available.');}
+  reportConnection(response.status>=500?'error':'available');
   if (!response.ok) {
     const error = new Error(
       typeof value.detail === "string" ? value.detail : "Request failed",

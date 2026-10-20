@@ -48,6 +48,7 @@ import DevicePosture from "./DevicePosture";
 import PortCoverage from "./PortCoverage";
 import {version as productVersion} from '../package.json';
 import WatchIndicator from "./WatchIndicator";
+import ConnectionStatus from './ConnectionStatus';
 import "./style.css";
 
 const ControlCenter = lazy(() => import("./ControlCenter"));
@@ -744,10 +745,7 @@ export default function App() {
             <strong>{navigation.find((n) => n[0] === page)?.[1]}</strong>
           </div>
           <div className="inline">
-            <span className="local-tag">
-              <span className="status-light on" />
-              Workspace connected
-            </span>
+            <ConnectionStatus/>
             <WatchIndicator open={()=>go('watches')}/>
             <button
               className="icon-button"

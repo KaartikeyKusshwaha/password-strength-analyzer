@@ -4,8 +4,8 @@
 by the existing WebAuthn protocol helper. No sign-in, enrollment or credential
 removal route has been added. Nothing was imported into the app, the server was
 not restarted, and the real owner database still has schema 8 with no ceremony
-table. Browser companion remains built as 0.12.4; its autofill acceptance is
-still pending the user's popup action.
+table. At the candidate's initial verification the browser companion was 0.12.4.
+It has since been built as 0.12.5; installed autofill acceptance remains pending.
 
 ## Implemented contract
 
