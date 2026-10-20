@@ -118,3 +118,10 @@ late-native tests establish the client guard, not OS interaction. Keep the
 lifecycle gate open for explicit cancellation, MFA, removal and device cleanup. Stop the
 isolated service after the run. Actual extension 0.12.5 autofill acceptance is a
 separate pending gate; these passkey tests do not establish that it works.
+
+After expiry, ordinary password sign-in to the disposable account also passed.
+The test-key removal form is prepared with the existing disposable account
+password for the required human credential-change handoff. The final Remove
+this passkey button has not been clicked by the agent. Screenshot:
+data/browser-acceptance-0.13.0/passkey-removal-ready-edge.png. The test service
+remains running for this handoff; no owner account or main vault was changed.
