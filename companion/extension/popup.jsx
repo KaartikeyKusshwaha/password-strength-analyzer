@@ -7,6 +7,8 @@ import {ActionQueue} from './action-queue';
 import { generatePassword } from "../../frontend/src/lab";
 import "./popup.css";
 import { restoreConnection, prepareConnection, allowConnection } from "./connection";
+import {fillSavedLogin} from './autofill-client';
+import manifest from './public/manifest.json';
 
 export function Popup() {
   const [config, setConfig] = useState(null),
@@ -115,7 +117,7 @@ export function Popup() {
         <span className="logo">S</span>
         <div>
           <h1>SentinelOps</h1>
-          <small>YOUR SECURITY COMPANION</small>
+          <small>YOUR SECURITY COMPANION · {manifest.version}</small>
         </div>
       </header>
       {connections.length > 0 && <label>Connected vault<select value={config ? connections.findIndex(item=>item.token===config.token) : ''} disabled={busy} onChange={async event=>{const next=connections[Number(event.target.value)];if(!next)return;lockVault();setVaultPolicy(null);await chrome.storage.local.set({connection:next});await chrome.storage.local.remove('pendingConnection');setPendingConnection(null);setConfig(next);setReconnectRequired(false);setError('');}}><option value="" disabled>Choose a connected vault</option>{connections.map((item,index)=><option key={index} value={index}>{item.vaultName || 'Vault name not verified'}{item.vaultKind==='shared'?' · shared':''} · {new URL(item.origin).host}</option>)}</select></label>}
@@ -283,15 +285,7 @@ export function Popup() {
                   onClick={async () => {
                     setError("");
                     try {
-                      const generation=session.current.generation,selected=await session.current.fill(entry.id,active.origin);session.current.active(generation);
-                      const result = await chrome.tabs.sendMessage(active.id, {
-                        type: "fill-login",
-                        entry: selected,
-                      });
-                      if (!result?.ok)
-                        throw new Error(
-                          "Use a single visible login password field on this exact origin. Cross-origin form actions are not filled.",
-                        );
+                      await fillSavedLogin(chrome,session.current,entry.id,active,manifest.version);
                       setNotice(
                         "Filled the selected login. Review the website before submitting.",
                       );

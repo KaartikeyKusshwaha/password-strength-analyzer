@@ -2,7 +2,7 @@
 
 A cybersecurity control center evolving from Kaartikey Kusshwaha’s password-strength-analyzer internship project. The first audience is small teams and agencies managing accounts across clients.
 
-**App development build 0.12.0 / browser companion 0.12.4.** This is not an audited password manager or a production security certification. Use disposable credentials until the release gates in [the product plan](docs/PRODUCT_PLAN.md) are met.
+**App development build 0.12.0 / browser companion 0.12.5.** This is not an audited password manager or a production security certification. Use disposable credentials until the release gates in [the product plan](docs/PRODUCT_PLAN.md) are met.
 
 ## Connected workflows
 

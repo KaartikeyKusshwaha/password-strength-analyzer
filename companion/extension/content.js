@@ -5,7 +5,8 @@ import { generatePassword } from '../../frontend/src/lab';
 import { isNewPassword, formOriginAllowed, setPasswordFields } from './form-policy';
 import {preparePasswordChange} from './change-form';
 import {watchPrivateFrame} from './frame-status';
-import {fillLoginForm} from './login-form';
+import {fillLoginForm,inspectLoginForm} from './login-form';
+import manifest from './public/manifest.json';
 
 const estimator = new ZxcvbnFactory({ translations: en.translations, graphs: common.adjacencyGraphs, dictionary: {...common.dictionary, ...en.dictionary} });
 const labels = ['Very guessable','Guessable','Somewhat guessable','Less guessable','Harder to guess'];
@@ -23,7 +24,7 @@ function assistant(field) {
   const header=document.createElement('header'),brand=document.createElement('strong');brand.textContent='SentinelOps · password assistant';
   const dismiss=document.createElement('button');dismiss.textContent='×';dismiss.setAttribute('aria-label','Close password assistant');dismiss.onclick=event=>{if(event.isTrusted)close();};header.append(brand,dismiss);
   const title=document.createElement('h2');title.textContent='A stronger password, right here.';
-  const origin=document.createElement('small');origin.textContent=location.origin;
+  const origin=document.createElement('small');origin.textContent=location.origin+' · Companion '+manifest.version;
   const estimate=document.createElement('p'),meter=document.createElement('meter');meter.min=0;meter.max=4;
   const help=document.createElement('small');
   const generate=document.createElement('button');generate.className='primary';generate.textContent='Use a strong password';
@@ -31,7 +32,7 @@ function assistant(field) {
   const status=document.createElement('p');status.setAttribute('role','status');
   const fine=document.createElement('small');fine.textContent='Strength checks and generation run locally. Saving encrypts your login to your connected vault. Nothing is sent to AI. Website forms are never submitted automatically.';
   renderEstimate=()=>{const value=field.value;save.disabled=!value;const result=value && value.length<=128?estimator.check(value):null;estimate.textContent=result?labels[result.score]+' · local estimate':value?'Too long to assess (128 characters max)':'Create a unique password for this account.';meter.value=result?.score||0;help.textContent=result?.feedback?.warning||'';};
-  generate.onclick=event=>{if(!event.isTrusted || !field.isConnected)return;setPasswordFields(field,generatePassword());renderEstimate();status.textContent='Filled the password and matching confirmation field. Review the website before continuing.';};
+  generate.onclick=event=>{if(!event.isTrusted || !field.isConnected || !isNewPassword(field) || !formOriginAllowed(location.href,field.form?.action))return;setPasswordFields(field,generatePassword());renderEstimate();status.textContent='Filled the password and matching confirmation field. Review the website before continuing.';};
   save.onclick=async event=>{
     if(!event.isTrusted || !field.isConnected || !field.value)return;
     if(!formOriginAllowed(location.href,field.form?.action)){status.textContent='Cross-origin form destinations are not supported.';return;}
@@ -53,17 +54,20 @@ function assistant(field) {
   section.append(header,origin,title,estimate,meter,help,generate,save,status,fine);shadow.append(css,section);document.documentElement.append(host);panel=host;renderEstimate();
 }
 function attach(field) {
-  if(attached.has(field) || !isNewPassword(field))return;
+  if(attached.has(field))return;
   attached.add(field);
-  field.addEventListener('focus',event=>{if(event.isTrusted && field.getClientRects().length && formOriginAllowed(location.href,field.form?.action))assistant(field);});
+  field.addEventListener('focus',event=>{if(event.isTrusted && isNewPassword(field) && field.getClientRects().length && formOriginAllowed(location.href,field.form?.action))assistant(field);});
   let timer;
   field.addEventListener('input',()=>{if(current!==field || !renderEstimate)return;clearTimeout(timer);timer=setTimeout(()=>renderEstimate?.(),150);});
 }
-function inspect(){document.querySelectorAll('input[type="password"]').forEach(attach);if(current && !current.isConnected)close();}
+function inspect(){document.querySelectorAll('input[type="password"]').forEach(attach);if(current && (!current.isConnected || (renderEstimate && !isNewPassword(current))))close();}
 inspect();let scanTimer;
-new MutationObserver(()=>{clearTimeout(scanTimer);scanTimer=setTimeout(inspect,250);}).observe(document.documentElement,{subtree:true,childList:true});
+new MutationObserver(()=>{clearTimeout(scanTimer);scanTimer=setTimeout(inspect,250);}).observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['type','name','id','autocomplete','disabled','readonly','hidden','action']});
 document.addEventListener('keydown',event=>{if(event.isTrusted && event.key==='Escape')close();});
 chrome.runtime.onMessage.addListener((message,sender,reply)=>{
+  if(sender.id===chrome.runtime.id && message?.type==='inspect-login'){
+    reply({...((window.top===window)?inspectLoginForm(document,location.href,message.origin):{ok:false,reason:'frame'}),version:manifest.version});return;
+  }
   if(sender.id===chrome.runtime.id && message?.type==='prepare-password-change'){
     if(window.top!==window){reply({ok:false,reason:'cross_origin'});return;}
     reply(preparePasswordChange(document,location.href,message));return;

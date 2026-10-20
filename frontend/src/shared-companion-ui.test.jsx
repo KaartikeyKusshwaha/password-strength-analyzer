@@ -4,12 +4,13 @@ import {webcrypto} from 'node:crypto';
 import {Popup} from '../../companion/extension/popup';
 import {Frame} from '../../companion/extension/vault-frame';
 import native from './fixtures/native-sharing.json';
+import manifest from '../../companion/extension/public/manifest.json';
 
 let browser,fetcher,value;
 beforeEach(()=>{
   vi.stubGlobal('crypto',webcrypto);
   const config={origin:'http://127.0.0.1:8110',token:'fixture-only-never-real',vaultId:native.team.id,vaultName:'Shared client',vaultKind:'shared',ownerIsSelf:true};
-  browser={storage:{local:{get:vi.fn(async()=>({connection:config,connections:[config]})),set:vi.fn(),remove:vi.fn()}},runtime:{sendMessage:vi.fn(async()=>null)},tabs:{query:vi.fn(async()=>[{id:41,url:'https://example.test/login'}]),sendMessage:vi.fn(async()=>({ok:true}))}};
+  browser={storage:{local:{get:vi.fn(async()=>({connection:config,connections:[config]})),set:vi.fn(),remove:vi.fn()}},runtime:{sendMessage:vi.fn(async()=>null)},tabs:{query:vi.fn(async()=>[{id:41,url:'https://example.test/login'}]),sendMessage:vi.fn(async()=>({ok:true,version:manifest.version}))}};
   value={kind:'shared',revision:1,envelope:native.team.payload,vault:{id:native.team.id,name:'Shared client',kind:'shared',browser_save:false,browser_fill:true,origins:[],lock_seconds:30},sharing:{user_id:native.user,identity:native.identity,team:structuredClone(native.team)}};
   fetcher=vi.fn(async(url,options)=>({ok:true,status:200,json:async()=>options.method==='POST'?{revision:2}:value}));
   vi.stubGlobal('chrome',browser);vi.stubGlobal('fetch',fetcher);
@@ -20,10 +21,13 @@ it('the popup opens a shared vault locally and checks fresh policy before fillin
   // Real Argon2 + native key import may exceed RTL's default one-second wait under load.
   await screen.findByText('Unlocked · this popup only',{}, {timeout:10000});expect(screen.queryByText('Save a login manually')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button',{name:'Fill this login'}));
-  await waitFor(()=>expect(browser.tabs.sendMessage).toHaveBeenCalledWith(41,{type:'fill-login',entry:{origin:native.entry.origin,username:native.entry.username,password:native.entry.password}}));
+  await waitFor(()=>expect(browser.tabs.sendMessage).toHaveBeenCalledWith(41,{type:'fill-login',entry:{origin:native.entry.origin,username:native.entry.username,password:native.entry.password}},{frameId:0}));
   browser.tabs.sendMessage.mockClear();value={...value,vault:{...value.vault,browser_fill:false}};
   fireEvent.click(screen.getByRole('button',{name:'Fill this login'}));await screen.findByRole('alert');
-  expect(browser.tabs.sendMessage).not.toHaveBeenCalled();expect(JSON.stringify(fetcher.mock.calls)).not.toContain(native.password);
+  expect(browser.tabs.sendMessage).toHaveBeenCalledTimes(1);
+  expect(browser.tabs.sendMessage).toHaveBeenCalledWith(41,{type:'inspect-login',origin:native.entry.origin},{frameId:0});
+  expect(JSON.stringify(browser.tabs.sendMessage.mock.calls)).not.toContain(native.entry.password);
+  expect(JSON.stringify(fetcher.mock.calls)).not.toContain(native.password);
 },15000);
 it('the in-page panel confirms replacement and sends only encrypted shared data',async()=>{
   value={...value,vault:{...value.vault,browser_save:true}};

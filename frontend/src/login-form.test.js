@@ -1,5 +1,5 @@
 import {beforeEach,expect,it,vi} from 'vitest';
-import {fillLoginForm} from '../../companion/extension/login-form';
+import {fillLoginForm,inspectLoginForm} from '../../companion/extension/login-form';
 import {isNewPassword} from '../../companion/extension/form-policy';
 const origin='https://practice.expandtesting.com';
 const entry={origin,username:'public-fixture',password:'public-test-only'};
@@ -15,6 +15,14 @@ it('fills the observed single-field sign-in despite its misleading new-password 
   expect(fillLoginForm(document,origin+'/login',entry)).toEqual({ok:true});
   expect(password.value).toBe(entry.password);expect(form.elements.username.value).toBe(entry.username);
   expect(changed).toHaveBeenCalledTimes(2);expect(submit).not.toHaveBeenCalled();
+});
+it('preflights without reading or modifying values and refuses again if the form changes before filling',()=>{
+  const field=document.getElementById('password');
+  expect(inspectLoginForm(document,origin+'/login',origin)).toEqual({ok:true});
+  expect(field.value).toBe('');expect(document.querySelector('input[name=username]').value).toBe('');
+  document.querySelector('form').action='https://other.test/collect';
+  expect(fillLoginForm(document,origin+'/login',entry)).toEqual({ok:false,reason:'form_action'});
+  expect(field.value).toBe('');
 });
 it('retains signup/change/name/confirmation protections even with a Login button',()=>{
   const password=document.getElementById('password');

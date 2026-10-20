@@ -1,4 +1,4 @@
-# Browser acceptance — SentinelOps 0.12.0 / companion 0.12.4
+# Browser acceptance — SentinelOps 0.12.0 / companion 0.12.5
 
 Status: **partial live Edge verification**, 20 October 2026. Browser access now
 works. The backend initially was not running and returned connection refused;
@@ -25,6 +25,15 @@ Autofill then failed: actual practice-page DOM labeled its login field
 only for explicit unambiguous sign-in forms and includes the expiry countdown.
 All 150 frontend tests and production builds passed. Reload and actual fill
 verification are pending; see `companion-0.12.4-autofill.md`.
+
+Follow-up: the user still reported autofill failure and showed the SentinelOps
+new-password assistant on the login form. A live Edge refresh and password-field
+focus reproduced that suggestion, while read-only form metadata still showed
+the explicit Login button and single password field. The installed extension's
+version was not established. Version 0.12.5 rechecks field classification at
+focus time, closes obsolete suggestions and adds a versioned, main-frame-only
+autofill preflight with specific failure messages. See
+`companion-0.12.5-autofill-diagnostics.md`. Installed fill success remains pending.
 
 Historical continuation before that acceptance: Edge reconnected and saved sign-in succeeded. The user
 created the disposable Browser acceptance vault. Dashboard incorrect/correct
