@@ -19,3 +19,18 @@ Thumbs.db
 
 # Misc
 .clario/
+.venv/
+.env
+!.env.example
+data/
+dist/
+.pytest_cache/
+.coverage
+coverage/
+*.log
+*.db-wal
+*.db-shm
+*.sentinelbackup
+*.backup-key
+companion/extension/dist/
+companion/extension/*.zip

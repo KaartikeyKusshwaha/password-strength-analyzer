@@ -1,0 +1,220 @@
+{
+  "product": "SentinelOps",
+  "version": "0.10.0",
+  "recorded_at": "2026-10-19T19:01:36.667321+00:00",
+  "hashes": {
+    "frontend/dist/index.html": "03dbb52a41eab585dc47386606f3381a56b26fbf09c0f648757eb13c93ba83bb",
+    "companion/extension/sentinelops-companion.zip": "58ae4eede89ac7aa8b80b7cef673bc0c0b4179b3afec2368af8ac0641fcdb82d",
+    "companion/extension/dist/manifest.json": "5092a1aef6a2d8abaca5509bc019c1aa32f65ca08a6cb307c6bea75057cfbb08",
+    "backend/app.py": "a4c19787e9232e33bff10117cd58785727b5e4932ec59a276c96678622bfe656",
+    "backend/sharing.py": "47dbff5757b763732adceefbec47255f3039f14babb2bc6311c48a606e3cb546",
+    "backend/backups.py": "66d9bbbe85580b411b4c0a1f4ae75bea7d7f184a05bf13d48018335cf6d3c9df",
+    "frontend/src/TeamVaults.jsx": "5fde25e61e89c35eb5270df72643d8584ac6c4ecc216382ee14997d2ee8905f8",
+    "frontend/src/SharingPassphraseChange.jsx": "ed7b86da3902194603dee4d9ec801c2d6da1d6bc7d4423136aa6e97a6d58753b",
+    "frontend/src/sharing-crypto.js": "42702c56b918b22531901cea7a19dcd81a61e83eb915285b4578635a6fb106e1",
+    "frontend/dist/assets/AccountActions-DrH1CArC.js": "a61fbed745bc0bd46da2b199dd682e8f55cfabeb63dbaf051d0e63c5ca9bafad",
+    "frontend/dist/assets/Companions-D9ltU3bO.js": "eb17eeac56eaa65f8b64cbf6a1221361a7a19da0a78c07d88fcd279e5d6d44ab",
+    "frontend/dist/assets/ControlCenter-ev_DrqId.js": "60a28ec07341cfd6d484eff73b392acddc5c8c6de14aa4ccda966976b928713f",
+    "frontend/dist/assets/download-DsvUrPuY.js": "0be0e9f5ff7bbeb210746da9f09cae71703047ca1f1fd5494bbd4a10f410a25b",
+    "frontend/dist/assets/index-BpfQGGLW.js": "30f236393be0a1aa106e616d842da826ac227116788f0fb11f400f16ae4aa81e",
+    "frontend/dist/assets/index-BseIy-bB.css": "33d909cb3b19295f364ea8b277b9e186fd91d46faf061ac082e7192f5f1ab1fe",
+    "frontend/dist/assets/index.esm-CgNExnv6.js": "a0129a0cfd01edad4bc94bc0654b5c6e5596117d71cefe02b45cb26217d1dccf",
+    "frontend/dist/assets/monitor-Cqkq35QV.js": "ac0a5d19c47e13d269d1e249373a8420b510f0cbc228ecc57fdd600d334a2869",
+    "frontend/dist/assets/strength-Cnf38iKx.js": "dbc5cbfa39a38dae2e1247acf549de76e807c87f7d9ce0c5b08ed246032901a2",
+    "frontend/dist/assets/vault-v2-BZxaJb0s.js": "2652e619b5d54c816f4ca0103fb406d2b7b3a938185745cdd1629eaa43f3c95f",
+    "frontend/dist/assets/VaultCollection-DWefaH_p.js": "47dc5d7093746cd4877eeb7b23455ed7aa9f2f4b9c1f0ee7380836360ff9cbf5",
+    "frontend/dist/assets/Watches-DVzt1dNa.js": "b7c1af2ec7d969ef0f28f8deb4dadcca416f2f1b3477236a6f9c4dfd188fd974"
+  },
+  "browser_access": {
+    "state": "disabled",
+    "family": "edge",
+    "error": "Local browser use is disabled in Work settings",
+    "localhost": "http://127.0.0.1:8110/"
+  },
+  "private_setup": "Deferred at user request until independent implementation work is complete.",
+  "prior_candidate": "browser-candidate-0.9.2.json",
+  "cases": {
+    "B01": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.10.0 browser acceptance pending. Prior-build evidence, where present, remains in browser-candidate-0.9.2.json."
+      ]
+    },
+    "B02": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.10.0 browser acceptance pending. Prior-build evidence, where present, remains in browser-candidate-0.9.2.json."
+      ]
+    },
+    "B03": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.10.0 browser acceptance pending. Prior-build evidence, where present, remains in browser-candidate-0.9.2.json."
+      ]
+    },
+    "B04": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.10.0 browser acceptance pending. Prior-build evidence, where present, remains in browser-candidate-0.9.2.json."
+      ]
+    },
+    "B05": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.10.0 browser acceptance pending. Prior-build evidence, where present, remains in browser-candidate-0.9.2.json."
+      ]
+    },
+    "B06": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.10.0 browser acceptance pending. Prior-build evidence, where present, remains in browser-candidate-0.9.2.json."
+      ]
+    },
+    "B07": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.10.0 browser acceptance pending. Prior-build evidence, where present, remains in browser-candidate-0.9.2.json."
+      ]
+    },
+    "B08": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.10.0 browser acceptance pending. Prior-build evidence, where present, remains in browser-candidate-0.9.2.json."
+      ]
+    },
+    "B09": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.10.0 browser acceptance pending. Prior-build evidence, where present, remains in browser-candidate-0.9.2.json."
+      ]
+    },
+    "B10": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.10.0 browser acceptance pending. Prior-build evidence, where present, remains in browser-candidate-0.9.2.json."
+      ]
+    },
+    "B11": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.10.0 browser acceptance pending. Prior-build evidence, where present, remains in browser-candidate-0.9.2.json."
+      ]
+    },
+    "B12": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.10.0 browser acceptance pending. Prior-build evidence, where present, remains in browser-candidate-0.9.2.json."
+      ]
+    },
+    "B13": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.10.0 browser acceptance pending. Prior-build evidence, where present, remains in browser-candidate-0.9.2.json."
+      ]
+    },
+    "B14": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.10.0 browser acceptance pending. Prior-build evidence, where present, remains in browser-candidate-0.9.2.json."
+      ]
+    },
+    "B15": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.10.0 browser acceptance pending. Prior-build evidence, where present, remains in browser-candidate-0.9.2.json."
+      ]
+    },
+    "B16": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.10.0 browser acceptance pending. Prior-build evidence, where present, remains in browser-candidate-0.9.2.json."
+      ]
+    },
+    "B17": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.10.0 browser acceptance pending. Prior-build evidence, where present, remains in browser-candidate-0.9.2.json."
+      ]
+    },
+    "B18": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.10.0 browser acceptance pending. Prior-build evidence, where present, remains in browser-candidate-0.9.2.json."
+      ]
+    },
+    "B19": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.10.0 browser acceptance pending. Prior-build evidence, where present, remains in browser-candidate-0.9.2.json."
+      ]
+    },
+    "B20": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.10.0 browser acceptance pending. Prior-build evidence, where present, remains in browser-candidate-0.9.2.json."
+      ]
+    },
+    "S01": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.10.0 browser acceptance pending. Prior-build evidence, where present, remains in browser-candidate-0.9.2.json."
+      ]
+    },
+    "S02": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.10.0 browser acceptance pending. Prior-build evidence, where present, remains in browser-candidate-0.9.2.json."
+      ]
+    },
+    "S03": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.10.0 browser acceptance pending. Prior-build evidence, where present, remains in browser-candidate-0.9.2.json."
+      ]
+    },
+    "S04": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.10.0 browser acceptance pending. Prior-build evidence, where present, remains in browser-candidate-0.9.2.json."
+      ]
+    },
+    "S05": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.10.0 browser acceptance pending. Prior-build evidence, where present, remains in browser-candidate-0.9.2.json."
+      ]
+    },
+    "S06": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "New sharing-identity passphrase flow has automated coverage; live browser testing pending."
+      ]
+    }
+  }
+}

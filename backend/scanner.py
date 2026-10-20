@@ -1,0 +1,267 @@
+"""Bounded, evidence-first checks; submitted source and email are never executed."""
+import ast
+import hashlib
+import http.client
+import ipaddress
+import json
+import re
+import socket
+import ssl
+import time
+from urllib.parse import urlsplit
+
+import httpx
+
+RULES = {
+    'HOST001':('low','Windows firewall profile disabled','CWE-693','Review whether this profile is used and restore the intended firewall configuration with the device administrator. No rule or public-exposure assessment was performed.','https://learn.microsoft.com/en-us/powershell/module/netsecurity/get-netfirewallprofile'),
+    'HOST002':('unknown','Microsoft Defender protection requires review','CWE-693','Check the active antivirus product and Defender operating mode locally. A disabled Defender service does not prove the device has no antivirus.','https://learn.microsoft.com/en-us/powershell/module/defender/get-mpcomputerstatus'),
+    'HOST003':('medium','System-drive BitLocker protection is off','CWE-311','Review encryption and suspension state with the device owner. Verify recovery arrangements before changing encryption settings. No recovery keys were collected.','https://learn.microsoft.com/en-us/windows/security/operating-system-security/data-protection/bitlocker/operations-guide'),
+    "PY001": ("high", "Fast password hashing", "CWE-916", "Use Argon2id or scrypt with a unique salt and a calibrated work factor.", "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html"),
+    "PY002": ("high", "Predictable security token", "CWE-338", "Use secrets.token_urlsafe; expire and consume reset tokens once.", "https://docs.python.org/3/library/secrets.html"),
+    "PY003": ("high", "TLS verification disabled", "CWE-295", "Enable certificate verification and configure a trusted CA bundle.", "https://requests.readthedocs.io/en/latest/user/advanced/#ssl-cert-verification"),
+    "PY004": ("high", "Shell execution enabled", "CWE-78", "Use a fixed executable and an argument array with shell=False; review input origin.", "https://docs.python.org/3/library/subprocess.html#security-considerations"),
+    "PY005": ("medium", "Debug mode explicitly enabled", "CWE-489", "Disable debug mode for deployed environments and verify release configuration.", "https://flask.palletsprojects.com/en/stable/debugging/"),
+    "PY006": ("high", "Dynamic code evaluation", "CWE-95", "Replace eval/exec with a bounded parser and allowed operations; review input origin.", "https://docs.python.org/3/library/functions.html#eval"),
+    "PY007": ("medium", "Cookie protection disabled", "CWE-614", "Enable secure and HttpOnly cookies on HTTPS and choose an appropriate SameSite policy.", "https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html"),
+    "PY008": ("high", "Credential-like source literal", "CWE-798", "Remove the literal and rotate the credential if real. Review repository history.", "https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html"),
+    "DEP001": ("unknown", "Dependency advisory match", "CWE-1395", "Review the OSV advisory, upgrade to a fixed compatible version and test. Reachability is not established.", "https://osv.dev/"),
+    "WEB001": ("medium", "Content Security Policy absent", "CWE-693", "Define and test a restrictive Content-Security-Policy for HTML responses.", "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy"),
+    "WEB002": ("medium", "HSTS absent", "CWE-319", "After validating HTTPS across the domain, configure Strict-Transport-Security.", "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security"),
+    "WEB003": ("low", "MIME sniffing protection absent", "CWE-693", "Set X-Content-Type-Options: nosniff on responses.", "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options"),
+    "WEB004": ("low", "Framing policy absent", "CWE-1021", "Set CSP frame-ancestors or X-Frame-Options for pages that should not be embedded.", "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options"),
+    "WEB005": ("low", "Technology header disclosed", "CWE-200", "Consider removing version-bearing Server/X-Powered-By headers. Disclosure alone does not prove a vulnerability.", "https://owasp.org/www-project-web-security-testing-guide/"),
+    "MAIL001": ("medium", "Urgency and credential request", "CWE-451", "Verify the request with the sender through a previously trusted channel. Do not use the message link.", "https://www.cisa.gov/secure-our-world/recognize-and-report-phishing"),
+    "MAIL002": ("medium", "Link obscures destination", "CWE-451", "Inspect the destination independently. Shortened links and IP URLs are indicators, not proof of phishing.", "https://www.cisa.gov/secure-our-world/recognize-and-report-phishing"),
+    "MAIL003": ("high", "Sensitive data request", "CWE-359", "Do not reply with credentials or financial information; verify through an established channel.", "https://www.cisa.gov/secure-our-world/recognize-and-report-phishing"),
+    "PORT001": ("unknown", "Local TCP listener requires review", "CWE-16", "Identify the owning application locally. Verify necessity, authentication, binding interface and firewall rules before changing anything. Open does not mean vulnerable or publicly reachable.", "https://www.cisa.gov/resources-tools/resources/securing-network-infrastructure-devices"),
+}
+PY_LIMITS = "Eight Python AST rules, one submitted file; no data flow, runtime, reachability, JavaScript or infrastructure coverage. No findings does not establish security."
+
+
+def finding(rule, line=0, evidence="", confidence="medium", **extra):
+    severity, title, cwe, guidance, reference = RULES[rule]
+    return dict(rule=rule, title=title, severity=severity, cwe=cwe, guidance=guidance, reference=reference, line=line, evidence=evidence, confidence=confidence, **extra)
+
+
+def scan_python(source):
+    if len(source.encode()) > 120_000:
+        raise ValueError("Source must be at most 120 KB.")
+    try:
+        tree = ast.parse(source)
+    except (SyntaxError, ValueError, RecursionError) as e:
+        raise ValueError("Python parsing failed; no assessment completed.") from e
+    aliases = {}
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Import):
+            for a in n.names:
+                aliases[a.asname or a.name] = a.name
+        if isinstance(n, ast.ImportFrom) and n.module:
+            for a in n.names:
+                aliases[a.asname or a.name] = f"{n.module}.{a.name}"
+
+    def name(n):
+        if isinstance(n, ast.Name):
+            return aliases.get(n.id, n.id)
+        if isinstance(n, ast.Attribute):
+            return name(n.value) + "." + n.attr
+        return ""
+
+    items = []
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Call):
+            call = name(n.func)
+            keywords = {k.arg: k.value.value for k in n.keywords if isinstance(k.value, ast.Constant)}
+            if call in {"hashlib.md5", "hashlib.sha1", "hashlib.sha256", "hashlib.sha512"} and any(isinstance(v, ast.Name) and re.search("password|passwd|passphrase", v.id, re.I) for arg in n.args for v in ast.walk(arg)):
+                items.append(finding("PY001", n.lineno, "Fast hashlib digest receives a password-named input."))
+            if call.startswith("random.") and call.split(".")[-1] in {"choice", "choices", "randint", "randrange", "getrandbits", "random"}:
+                contexts = [x for x in ast.walk(tree) if isinstance(x, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Assign)) and x.lineno <= n.lineno <= x.end_lineno]
+                ids = [x.name for x in contexts if isinstance(x, (ast.FunctionDef, ast.AsyncFunctionDef))]
+                ids += [v.id for x in contexts if isinstance(x, ast.Assign) for t in x.targets for v in ast.walk(t) if isinstance(v, ast.Name)]
+                if any(re.search("token|password|secret|nonce|otp", v, re.I) for v in ids):
+                    items.append(finding("PY002", n.lineno, "random used in a security-named context; heuristic, not data-flow proof."))
+            if call.startswith(("requests.", "httpx.")) and keywords.get("verify") is False:
+                items.append(finding("PY003", n.lineno, "HTTP call explicitly disables certificate verification.", "high"))
+            if call.startswith("subprocess.") and keywords.get("shell") is True:
+                items.append(finding("PY004", n.lineno, "subprocess enables shell=True; input origin requires review."))
+            if call.endswith(".run") and keywords.get("debug") is True:
+                items.append(finding("PY005", n.lineno, "Run call explicitly enables debug=True."))
+            if call in {"eval", "exec", "builtins.eval", "builtins.exec"}:
+                items.append(finding("PY006", n.lineno, "Dynamic evaluation found; input origin requires review."))
+            if call.endswith(".set_cookie") and any(keywords.get(k) is False for k in ("secure", "httponly")):
+                items.append(finding("PY007", n.lineno, "Cookie call explicitly disables a protection."))
+        if isinstance(n, (ast.Assign, ast.AnnAssign)):
+            for target in n.targets if isinstance(n, ast.Assign) else [n.target]:
+                identifier, value = name(target), n.value
+                if identifier.upper() in {"SESSION_COOKIE_SECURE", "SESSION_COOKIE_HTTPONLY"} and isinstance(value, ast.Constant) and value.value is False:
+                    items.append(finding("PY007", n.lineno, "Session cookie configuration disables a protection.", "high"))
+                if re.search(r"(^|_)(api_key|secret_key|password|passwd|access_token)$", identifier, re.I) and isinstance(value, ast.Constant) and isinstance(value.value, str) and len(value.value) >= 8:
+                    items.append(finding("PY008", n.lineno, "Credential-named assignment has a string literal. Value redacted."))
+    return dict(findings=list({(x["rule"], x["line"]): x for x in items}.values()), source_digest=hashlib.sha256(source.encode()).hexdigest(), rules_checked=list(RULES)[:8], limits=PY_LIMITS)
+
+
+def scan_email(text):
+    lowered = text.lower()
+    urgent = bool(re.search(r"\b(urgent|immediately|suspended|final notice|action required)\b", lowered))
+    credential = bool(re.search(r"\b(verify|password|credentials|login|sign in|reset)\b", lowered))
+    sensitive = bool(re.search(r"\b(send|reply|provide|share)\b.{0,90}\b(password|otp|bank details|card number|passport|ssn)\b", lowered))
+    urls = re.findall(r"https?://[^\s<>\"']+", text)[:30]
+    obscured = False
+    for url in urls:
+        try:
+            host = urlsplit(url).hostname or ""
+            obscured |= host.lower() in {"bit.ly", "tinyurl.com", "t.co", "is.gd"} or bool(re.fullmatch(r"\d+\.\d+\.\d+\.\d+", host)) or "@" in urlsplit(url).netloc
+        except ValueError:
+            obscured = True
+    items = []
+    if urgent and credential:
+        items.append(finding("MAIL001", evidence="Urgency language and an account/credential request occur together."))
+    if obscured:
+        items.append(finding("MAIL002", evidence="A shortened, numeric-host or userinfo-bearing URL was found. URL redacted."))
+    if sensitive:
+        items.append(finding("MAIL003", evidence="A request to share credentials or sensitive identifiers was found."))
+    return dict(findings=items, signals={"urgency": urgent, "credential_context": credential, "obscured_link": obscured, "sensitive_request": sensitive, "links_count": len(urls)}, outcome="Review recommended" if items else "No listed indicators found", limits="Three transparent text rules, not an inbox filter or validated phishing classifier. Sender identity, SPF/DKIM/DMARC, attachments and link destinations were not checked. No links are opened. No listed indicators does not mean safe.")
+
+
+def parse_dependencies(text, format):
+    packages, skipped = [], []
+    if format == "requirements":
+        for line, raw in enumerate(text.splitlines(), 1):
+            raw = raw.strip()
+            if not raw or raw.startswith("#"):
+                continue
+            m = re.fullmatch(r"([A-Za-z0-9][A-Za-z0-9._-]*)==([A-Za-z0-9][A-Za-z0-9.+_-]*)\s*(?:#.*)?", raw)
+            if m:
+                packages.append(dict(ecosystem="PyPI", name=m[1], version=m[2], line=line))
+            else:
+                skipped.append(f"Line {line}: not an unconditional exact pin.")
+    else:
+        try:
+            manifest = json.loads(text)
+            if not isinstance(manifest, dict):
+                raise ValueError()
+            for group in ("dependencies", "devDependencies"):
+                values = manifest.get(group, {})
+                if not isinstance(values, dict):
+                    raise ValueError()
+                for package, version in values.items():
+                    if re.fullmatch(r"(?:@[a-z0-9._-]+/)?[a-z0-9._-]+", package) and isinstance(version, str) and re.fullmatch(r"\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?", version):
+                        packages.append(dict(ecosystem="npm", name=package, version=version, line=0))
+                    else:
+                        skipped.append("Package uses a range, URL, alias or unsupported version.")
+        except (ValueError, TypeError, AttributeError) as e:
+            raise ValueError("package.json must contain dependency maps.") from e
+    if len(packages) > 20:
+        raise ValueError("Submit at most 20 exact pins per scan.")
+    return packages, skipped
+
+
+def scan_dependencies(text, format, transport=None):
+    packages, skipped = parse_dependencies(text, format)
+    items, checked, error = [], [], None
+    with httpx.Client(timeout=8, transport=transport, follow_redirects=False) as client:
+        for package in packages:
+            try:
+                response = client.post("https://api.osv.dev/v1/query", json={"package": {"name": package["name"], "ecosystem": package["ecosystem"]}, "version": package["version"]})
+                response.raise_for_status()
+                payload = response.json()
+                if not isinstance(payload, dict) or not isinstance(payload.get("vulns", []), list) or payload.get("next_page_token"):
+                    raise ValueError()
+                current = []
+                for vuln in payload.get("vulns", []):
+                    advisory = vuln.get("id", "")
+                    if not re.fullmatch(r"[A-Za-z0-9._-]{1,100}", advisory):
+                        raise ValueError()
+                    severity = str(vuln.get("database_specific", {}).get("severity", "unknown")).lower()
+                    item = finding("DEP001", package["line"], f"OSV matches {package['ecosystem']} {package['name']}@{package['version']} to {advisory}.", "high", advisory=advisory, package=package)
+                    item.update(severity=severity if severity in {"critical", "high", "medium", "low"} else "unknown", reference="https://osv.dev/vulnerability/" + advisory)
+                    current.append(item)
+                items.extend(current)
+                checked.append(package)
+            except (httpx.HTTPError, ValueError, TypeError, AttributeError):
+                error = "OSV lookup failed or response unsupported. Remaining packages not assessed; retry explicitly."
+                break
+    return dict(findings=items, packages=packages, checked=checked, skipped=skipped, error=error, limits="Exact submitted pins only. No range resolution, transitive traversal, advisory severity inference or exploit reachability. Unmatched packages are not certified safe.")
+
+
+def scan_watch(packages,transport=None):
+    """Bounded OSV batch matching, followed by bounded alias-only detail lookup."""
+    items,checked,error=[],[],None
+    try:
+        queries=[{'package':{'ecosystem':p['ecosystem'],'name':p['name']},'version':p['version']} for p in packages]
+        started=time.monotonic()
+        with httpx.Client(timeout=8,transport=transport,follow_redirects=False) as client:
+            with client.stream('POST','https://api.osv.dev/v1/querybatch',json={'queries':queries}) as response:
+                response.raise_for_status();raw=bytearray()
+                for chunk in response.iter_bytes():
+                    raw.extend(chunk)
+                    if len(raw)>1000000 or time.monotonic()-started>20:
+                        raise ValueError()
+        value=json.loads(raw)
+        if not isinstance(value,dict) or not isinstance(value.get('results'),list) or len(value['results'])!=len(packages):
+            raise ValueError()
+        for package,result in zip(packages,value['results']):
+            if not isinstance(result,dict) or not isinstance(result.get('vulns',[]),list) or len(result.get('vulns',[]))>100:
+                error='OSV returned unsupported or over-limit results. Coverage is incomplete.';continue
+            current=[];seen=set()
+            for vuln in result.get('vulns',[]):
+                advisory=vuln.get('id') if isinstance(vuln,dict) else None
+                if not isinstance(advisory,str) or not re.fullmatch(r'[A-Za-z0-9._-]{1,100}',advisory) or advisory in seen:
+                    raise ValueError()
+                seen.add(advisory)
+                current.append(finding('DEP001',package['line'],f"OSV batch matches {package['ecosystem']} {package['name']}@{package['version']} to {advisory}.",'high',advisory=advisory,package=package))
+                current[-1]['reference']='https://osv.dev/vulnerability/'+advisory
+            if len(items)+len(current)>200:
+                error='OSV advisory coverage exceeded this watch limit; review a narrower inventory.';continue
+            items.extend(current)
+            if result.get('next_page_token'):
+                error='OSV results were paginated. Returned matches are recorded, but coverage is incomplete.'
+            else:
+                checked.append(package)
+    except (httpx.HTTPError,ValueError,TypeError,AttributeError):
+        error='OSV watch request failed or returned unsupported data. Coverage is incomplete; no safe result was inferred.'
+    from .advisories import enrich
+    items,detail_coverage=enrich(items,transport)
+    return dict(findings=items,packages=packages,checked=checked,skipped=[],error=error,advisory_details=detail_coverage,limits='OSV matches for registered exact PyPI/npm versions only. Up to 20 advisory detail requests group returned alias relationships within the same exact package. Detail coverage is separate from package matching; unavailable details retain raw matches. No transitive discovery, range resolution, inferred severity or exploit reachability. Missing matches do not certify safety.')
+
+
+def inspect_headers(headers, status=200):
+    headers = {k.lower(): v for k, v in headers.items()}
+    checks = [("content-security-policy", "WEB001"), ("strict-transport-security", "WEB002"), ("x-content-type-options", "WEB003")]
+    items = [finding(rule, evidence=f"{header} absent from the assessed HTTPS response.") for header, rule in checks if not headers.get(header)]
+    if "x-frame-options" not in headers and "frame-ancestors" not in headers.get("content-security-policy", "").lower():
+        items.append(finding("WEB004", evidence="Neither X-Frame-Options nor CSP frame-ancestors is present."))
+    if headers.get("server") or headers.get("x-powered-by"):
+        items.append(finding("WEB005", evidence="Server or X-Powered-By header is present; value omitted."))
+    return dict(findings=items, http_status=status, present_headers=[k for k in headers if k in {x[0] for x in checks} | {"x-frame-options"}], limits="One HTTPS HEAD response on port 443, no redirects. Header presence is not policy correctness. No crawling, port sweep, exploitation, banner-to-CVE claims or authenticated-page coverage.")
+
+
+def validate_host(host):
+    host = host.lower().strip().rstrip(".")
+    if not re.fullmatch(r"(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}", host):
+        raise ValueError("Enter an exact public DNS hostname without a scheme, path or port.")
+    return host
+
+
+def scan_web(host, allowed):
+    host = validate_host(host)
+    if host not in allowed:
+        raise ValueError("Host is not in the server operator's SCAN_HOSTS allowlist.")
+    addresses = list({info[4][0] for info in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM)})
+    if not addresses or any(not ipaddress.ip_address(address).is_global for address in addresses):
+        raise ValueError("Target must resolve exclusively to public addresses.")
+    # Pin the vetted IP while retaining certificate verification and SNI. No second DNS lookup.
+    class PinnedConnection(http.client.HTTPSConnection):
+        def connect(self):
+            raw = socket.create_connection((addresses[0], 443), timeout=6)
+            try:
+                self.sock = self._context.wrap_socket(raw, server_hostname=host)
+            except BaseException:
+                raw.close()
+                raise
+    connection = PinnedConnection(host, timeout=6, context=ssl.create_default_context())
+    try:
+        connection.request("HEAD", "/", headers={"User-Agent": "SentinelOps/0.1 authorized-assessment", "Connection": "close"})
+        response = connection.getresponse()
+        return inspect_headers(dict(response.getheaders()), response.status)
+    finally:
+        connection.close()

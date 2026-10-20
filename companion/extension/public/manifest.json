@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "SentinelOps Security Companion",
+  "version": "0.12.4",
+  "description": "Local new-password checks, opt-in encrypted vault saving, exact-origin autofill and TOTP codes.",
+  "minimum_chrome_version": "120",
+  "permissions": ["storage", "activeTab"],
+  "optional_host_permissions": ["https://*/*", "http://127.0.0.1/*", "http://localhost/*"],
+  "background": {"service_worker": "background.js"},
+  "action": {"default_popup": "popup.html", "default_title": "SentinelOps Companion"},
+  "content_scripts": [{"matches": ["https://*/*"], "js": ["content.js"], "run_at": "document_idle", "all_frames": false}],
+  "content_security_policy": {"extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; base-uri 'none'"}
+}

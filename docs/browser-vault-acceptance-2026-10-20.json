@@ -1,0 +1,40 @@
+{
+  "recorded_at": "2026-10-20T13:48:32.831758+00:00",
+  "browser": "Edge Profile 1",
+  "state": "connected; awaiting action-time approval for new companion grant",
+  "runtime": "restarted backend with tested advisory grouping; existing browser-checked frontend",
+  "hashes": {
+    "backend/app.py": "bb7d3f3667a48b34db015e6e8f350d53b8e2149f330f3ce4abe36510f0ecfb49",
+    "backend/scanner.py": "c185b05911dc8ef3cb7865bd427d538bd131e1ed24f191413e35b62dfe4c9aae",
+    "backend/watches.py": "1525b9a1270c1bd872dda99ae6bb4c66ac458fbf747556f39a74def6d11f2fb5",
+    "backend/advisories.py": "21d5bd54225499d66d0eed35e51cdd4fc8d650d995bf27fc5ff82819820f51c3",
+    "frontend/dist/index.html": "6a822c0687f62fa4e7891677f89d49a136ff7fbf1b84dd299962ecc2feb8c843",
+    "companion/extension/sentinelops-companion.zip": "70756e4e8ba89f51b54731e2946f6bb7c17d59180b38d6c73f67ae2996308253"
+  },
+  "evidence": {
+    "data/browser-acceptance-0.12.0/test-vault-unlocked-empty.png": "0bac66225cd08881f58195b4e7b1b1e3263d97311460f12fa56687004a9f3031",
+    "data/browser-acceptance-0.12.0/scoped-connection-review.png": "b1ec84837c6f23060841089d474e7fad6f9fb406d466346445ad9d02f34f2a45"
+  },
+  "observations": [
+    "Edge sign-in session expired. Focusing password field supplied saved credentials; submitted without inspecting or extracting their values. Owner dashboard verified.",
+    "Selected Browser acceptance explicitly; Personal default vault was not unlocked.",
+    "Wrong disposable passphrase produced Could not unlock error and no entries. Established correct disposable passphrase opened Personal vault unlocked with 0/200 entries.",
+    "Prepared personal companion grant for Browser acceptance only, label Edge browser acceptance test. Did not submit token creation. Current app password supplied by Edge autofill, not inspected or extracted.",
+    "Requested explicit approval to grant companion access for default 30-day lifetime, save public practice-site demo login, and revoke test connection afterward. Awaiting answer."
+  ],
+  "cases": {
+    "B03": {
+      "status": "partial",
+      "observations": [
+        "Dashboard incorrect/correct unlock verified; companion-side equivalent remains unexecuted."
+      ]
+    },
+    "B02": {
+      "status": "not_run",
+      "observations": [
+        "Connection form prepared only. No new token or grant created."
+      ]
+    }
+  },
+  "secret_handling": "No real credential values, encrypted vault contents, bearer tokens or user codes included in this record."
+}
