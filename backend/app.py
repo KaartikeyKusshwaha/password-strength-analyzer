@@ -30,6 +30,7 @@ from .store import Store, canonical, now, uid
 from .sharing import TeamPayload
 from .vault_activity import record_connection_revocations, record_action_cancellations, invalidate_ownership
 from .posture import Report as PostureReport
+from . import companion_status
 
 ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(ROOT / ".env")
@@ -317,7 +318,7 @@ def create_app(settings=None):
             app.state.watch_service.stop()
             executor.shutdown(wait=True, cancel_futures=True)
 
-    app = FastAPI(title="SentinelOps", version="0.13.0", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title="SentinelOps", version="0.13.1", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.store, app.state.settings = store, settings
     app.state.cipher, app.state.executor = cipher, executor
     app.state.agent_transport = None
@@ -336,7 +337,7 @@ def create_app(settings=None):
         if companion and request.method == "OPTIONS":
             if not extension_origin_valid:
                 return JSONResponse({"detail": "Extension origin required"}, status_code=403)
-            return Response(status_code=204, headers={"Access-Control-Allow-Origin": extension_origin, "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "Authorization, Content-Type", "Vary": "Origin"})
+            return Response(status_code=204, headers={"Access-Control-Allow-Origin": extension_origin, "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "Authorization, Content-Type, X-Sentinel-Companion-Version", "Vary": "Origin"})
         if request.method in {"POST", "PATCH", "PUT", "DELETE"}:
             origin = request.headers.get("origin")
             if origin and origin != settings.origin and not (companion and extension_origin_valid):
@@ -578,8 +579,11 @@ def create_app(settings=None):
     def companion_read(request: Request):
         connection = companion_auth(request)
         if connection['kind']=='shared':
-            return shared_companions['read'](connection)
-        return read_vault(connection['user'],connection['vault_id'],True)
+            value = shared_companions['read'](connection)
+        else:
+            value = read_vault(connection['user'],connection['vault_id'],True)
+        companion_status.record_read(store,connection,request.headers.get(companion_status.HEADER))
+        return value
 
     @app.post("/api/companion/vault")
     def companion_save(body: CompanionWrite, request: Request):
@@ -594,8 +598,8 @@ def create_app(settings=None):
     @app.get("/api/companions")
     def companions(session=Depends(auth)):
         with store.connect() as c:
-            rows = [dict(r) for r in c.execute("SELECT label,expires FROM companions WHERE user=? AND expires>?", (session["user"], time.time()))]
-        return {"connections": rows}
+            rows = [companion_status.public_status(c,dict(r)) for r in c.execute("SELECT * FROM companions WHERE user=? AND expires>? ORDER BY expires DESC", (session["user"], time.time()))]
+        return {"connections": rows, "download_version":companion_status.packaged_version(ROOT/'companion'/'extension'/'sentinelops-companion.zip')}
 
     @app.post("/api/device-connections")
     def connect_device(body: DeviceConnection, session=Depends(auth)):

@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { Chrome, Download, Link2, Monitor, ShieldCheck } from "lucide-react";
 import { api } from "./api";
 import companionManifest from '../../companion/extension/public/manifest.json';
+import BrowserConnections from './BrowserConnections';
 export default function Companions({ assets, refresh, canWrite, go, devices = [] }) {
   const [error, setError] = useState(""),
     [pair, setPair] = useState(null),
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState("");
   const [deviceConfig, setDeviceConfig] = useState(null);
+  const [connectionRefresh,setConnectionRefresh]=useState(0);
   const [vaults, setVaults] = useState([]);
   const [sharedVaults,setSharedVaults]=useState([]),[vaultKind,setVaultKind]=useState('personal');
   useEffect(()=>{Promise.all([api('/vaults'),api('/team-vaults')]).then(([personal,shared])=>{setVaults(personal.vaults);setSharedVaults(shared.vaults);}).catch(error=>setError(error.message));},[]);
@@ -70,6 +72,7 @@ export default function Companions({ assets, refresh, canWrite, go, devices = []
             roots and unusual custom forms may not be detected. Your existing
             password manager remains usable.
           </p>
+          <BrowserConnections refreshKey={connectionRefresh}/>
           {pair ? (
             <div className="notice">
               <h3>One-time display: pairing token</h3>
@@ -109,6 +112,7 @@ export default function Companions({ assets, refresh, canWrite, go, devices = []
                       ),
                     );
                     form.reset();
+                    setConnectionRefresh(value=>value+1);
                   } catch (e) {
                     setError(e.message);
                   } finally {
@@ -167,6 +171,7 @@ export default function Companions({ assets, refresh, canWrite, go, devices = []
                 try {
                   await api("/companions/revoke", {});
                   setPair(null);
+                  setConnectionRefresh(value=>value+1);
                   setNotice("All companion tokens revoked.");
                 } catch (e) {
                   setError(e.message);

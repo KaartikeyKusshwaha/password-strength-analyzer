@@ -2,6 +2,7 @@ import { encryptVault, unlockVault, validateEntries, validOrigin, generateTotp }
 import { serviceOrigin } from './policy';
 import {openAction} from '../../frontend/src/action-crypto';
 import {isArchived,trackChanges} from '../../frontend/src/entry-history';
+import manifest from './public/manifest.json';
 
 // This class runs exclusively inside an extension-origin frame or popup.
 // The embedding website never receives the master passphrase or vault entries.
@@ -18,7 +19,7 @@ export class SaveSession {
       const fetcher = this.fetcher;
       const response = await fetcher(this.config.origin + '/api/companion'+path, {
         method: body ? 'POST' : 'GET', credentials: 'omit', redirect: 'error', signal: AbortSignal.any([controller.signal,AbortSignal.timeout(10000)]),
-        headers: { Authorization: 'Bearer ' + this.config.token, ...(body ? {'Content-Type':'application/json'} : {}) },
+        headers: { Authorization: 'Bearer ' + this.config.token, 'X-Sentinel-Companion-Version':manifest.version, ...(body ? {'Content-Type':'application/json'} : {}) },
         ...(body ? {body: JSON.stringify(body)} : {}),
       });
       this.active(generation);

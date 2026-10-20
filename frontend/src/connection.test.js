@@ -1,5 +1,6 @@
 import { expect, it, vi } from 'vitest';
 import { allowConnection, prepareConnection, restoreConnection, verifyConnection } from '../../companion/extension/connection';
+import manifest from '../../companion/extension/public/manifest.json';
 
 const origin = 'http://127.0.0.1:8110';
 const token = 'fixture_'.repeat(7);
@@ -33,7 +34,7 @@ it('recovers when popup closes during permission approval', async () => {
   const result = await restoreConnection(b, fetcher);
   expect(result.connection).toEqual({ origin, token });
   expect(b.values.pendingConnection).toBeUndefined();
-  expect(fetcher.mock.calls[0][1]).toMatchObject({ credentials: 'omit', redirect: 'error', headers: { Authorization: 'Bearer ' + token } });
+  expect(fetcher.mock.calls[0][1]).toMatchObject({ credentials: 'omit', redirect: 'error', headers: { Authorization: 'Bearer ' + token, 'X-Sentinel-Companion-Version':manifest.version } });
   expect((await restoreConnection(b, fetcher)).connection).toEqual({ origin, token });
   expect(fetcher).toHaveBeenCalledTimes(1);
 });

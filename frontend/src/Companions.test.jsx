@@ -5,6 +5,8 @@ import Companions from './Companions';
 it('pairs an accepted shared vault with explicit scope and never offers pending or disabled vaults',async()=>{
   const identifier='a'.repeat(24);
   const fetcher=vi.fn(async(url,options)=>({ok:true,json:async()=>url==='/api/vaults'?{vaults:[]}:url==='/api/team-vaults'?{vaults:[{id:identifier,name:'Client accounts',accepted:1,browser_enabled:true,role:'viewer'},{id:'pending',name:'Pending vault',accepted:0,browser_enabled:true},{id:'disabled',name:'Disabled vault',accepted:1,browser_enabled:false}]}:{kind:'shared',vault_name:'Client accounts',token:'public-fixture-token-not-real',origin:'http://127.0.0.1:8110',expires_days:30}}));
+  const original=fetcher.getMockImplementation();
+  fetcher.mockImplementation((url,options)=>url==='/api/companions' && !options?.body?Promise.resolve({ok:true,json:async()=>({connections:[],download_version:'0.12.7'})}):original(url,options));
   vi.stubGlobal('fetch',fetcher);
   render(<Companions assets={[]} devices={[]} refresh={vi.fn()} canWrite={false} go={vi.fn()}/>);
   await screen.findByLabelText('Connection type');fireEvent.click(screen.getByText('Create a private connection'));

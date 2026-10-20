@@ -126,4 +126,6 @@ confirmed the retained key tombstone (revision 2, revoked_at set) and zero pendi
 ceremonies. Enrollment, real sign-in, expiry and service-side removal now have
 native Edge evidence. Explicit cancellation during native UI, enrolled-MFA device
 acceptance and device-side key cleanup remain open. The main owner account and
-vaults were not changed. The test service remains available for remaining checks.
+vaults were not changed. The disposable service was subsequently stopped after
+the 0.13.1 owner-app restart; its test data and native evidence are retained.
+Remaining device/MFA checks require an explicit new acceptance run.

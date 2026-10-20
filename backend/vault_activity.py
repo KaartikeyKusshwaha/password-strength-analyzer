@@ -5,6 +5,7 @@ from typing import Literal
 from fastapi import Depends, HTTPException, Path, Query
 
 from .store import Store, now
+from .companion_status import forget as forget_connection_status
 
 PERSONAL_EVENTS = (
     'vault.created', 'vault.properties_updated', 'vault.default_changed',
@@ -32,6 +33,7 @@ def record_connection_revocations(c, connections, actor):
     """Call in the same transaction as revoking these scoped connections."""
     seen = set()
     for row in connections:
+        forget_connection_status(c,row)
         if not row['vault_id']:
             continue  # Legacy unscoped connections cannot be attributed honestly.
         key = (row['kind'], row['vault_id'], row['user'], row['workspace'])

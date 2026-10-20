@@ -12,7 +12,9 @@ New Store initialization applies the transactional schema-9 passkey migration.
 Back up an existing schema-8 store before restarting the updated app. The
 local owner store was migrated on 21 October after an encrypted backup and
 isolated restore drill. Account routes/UI are implemented; the current IP origin
-is unsupported and actual authenticator acceptance remains pending.
+is unsupported. Native enrollment/sign-in/expiry/removal passed in a separate
+disposable localhost app; remaining lifecycle acceptance is pending. The later
+0.13.1 restart also had a fresh encrypted backup and unchanged protected records.
 
 This is separate from the personal-vault export in the app. A full-app backup
 contains sensitive account hashes, workspace metadata and server MFA secrets as

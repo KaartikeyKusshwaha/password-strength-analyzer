@@ -1,5 +1,6 @@
 import {afterEach,expect,it,vi} from 'vitest';
 import {SaveSession} from '../../companion/extension/vault-session';
+import manifest from '../../companion/extension/public/manifest.json';
 
 afterEach(()=>vi.unstubAllGlobals());
 
@@ -9,6 +10,7 @@ it('calls browser fetch with its global receiver rather than the vault session',
     expect(url).toBe('http://127.0.0.1:8110/api/companion/vault');
     expect(options.credentials).toBe('omit');
     expect(options.redirect).toBe('error');
+    expect(options.headers['X-Sentinel-Companion-Version']).toBe(manifest.version);
     return Promise.resolve({ok:true,status:200,json:async()=>({revision:2})});
   });
   vi.stubGlobal('fetch',fetch);

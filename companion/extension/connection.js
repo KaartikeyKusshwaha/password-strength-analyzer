@@ -1,4 +1,5 @@
 import { serviceOrigin } from './policy';
+import manifest from './public/manifest.json';
 
 export function normalizeConnection(origin, token) {
   const connection = { origin: serviceOrigin(origin.trim()), token: token.trim() };
@@ -19,7 +20,7 @@ export async function verifyConnection(connection, fetcher = fetch) {
   try {
     const response = await fetcher(connection.origin + '/api/companion/vault', {
       method: 'GET', credentials: 'omit', redirect: 'error',
-      headers: { Authorization: 'Bearer ' + connection.token },
+      headers: { Authorization: 'Bearer ' + connection.token, 'X-Sentinel-Companion-Version':manifest.version },
       signal: controller.signal,
     });
     if (response.status === 401) throw new Error('This companion token is expired, revoked or incorrect. Create a fresh token in Browser & devices.');

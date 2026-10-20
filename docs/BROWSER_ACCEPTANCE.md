@@ -1,4 +1,11 @@
-# Browser acceptance — SentinelOps 0.13.0 / companion 0.12.6
+# Browser acceptance — SentinelOps 0.13.1 / companion 0.12.7
+
+The local app now includes account-private connection contact/version reports.
+The encrypted-backup/restart and HTTP header checks passed; data preservation
+comparisons passed. No installed client report or visual panel result is claimed
+while browser control is disabled. Companion 0.12.7 includes the prior 0.12.6
+field-retention checks. See COMPANION_CONNECTION_REPORTS.md. The completed
+disposable passkey service on 8111 is stopped; its data/evidence are retained.
 
 Companion 0.12.6 is built with field-retention receipts, form revalidation between
 writes and clear password-only/rejected-value outcomes. All 189 frontend tests

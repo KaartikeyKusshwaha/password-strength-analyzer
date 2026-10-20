@@ -1,4 +1,15 @@
-# Development verification — 0.13.0
+# Development verification — 0.13.1
+
+## Browser connection reports — 21 October 2026
+
+Account-private contact/version diagnostics are integrated in Browser & devices
+and companion 0.12.7. Reports do not expose token hashes or vault/website content
+and cannot authorize an action. Full backend: 319 passed (one existing warning).
+Full frontend: 192 passed / 42 files. App/companion builds and ZIP comparisons
+passed. The backed-up owner app was restarted with all nine compared record
+groups and its key unchanged; live schema remains 9 and the new header preflight
+works. Native passkey test port 8111 was stopped with data retained. Installed
+client/visual acceptance remains pending. See COMPANION_CONNECTION_REPORTS.md.
 
 ## Companion autofill receipts — 21 October 2026
 
