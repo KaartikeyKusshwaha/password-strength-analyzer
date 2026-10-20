@@ -60,19 +60,32 @@ def test_dependencies_do_not_silently_resolve_ranges():
 
 def test_osv_matches_and_partial_failures_are_distinct():
     def provider(request):
-        query = json.loads(request.content)
-        assert str(request.url) == 'https://api.osv.dev/v1/query'
-        if query['package']['name'] == 'fails':
-            return httpx.Response(503)
-        return httpx.Response(200, json={'vulns':[{'id':'GHSA-fixture-0001','database_specific':{'severity':'HIGH'}}]})
+        if request.method=='POST':
+            query = json.loads(request.content)
+            assert str(request.url) == 'https://api.osv.dev/v1/querybatch'
+            assert [p['package']['name'] for p in query['queries']]==['example','fails']
+            return httpx.Response(200,json={'results':[{'vulns':[{'id':'GHSA-fixture-0001'}]},{'next_page_token':'more'}]})
+        return httpx.Response(200,json={'id':'GHSA-fixture-0001','severity':[{'type':'CVSS_V3','score':'CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H'}]})
     result = scanner.scan_dependencies('example==1.0.0\nfails==2.0.0', 'requirements', httpx.MockTransport(provider))
     assert len(result['findings']) == 1
     assert len(result['checked']) == 1
     assert result['error'] and result['findings'][0]['severity'] == 'high'
-    no_match = scanner.scan_dependencies('example==1.0.0','requirements',httpx.MockTransport(lambda request:httpx.Response(200,json={})))
+    no_match = scanner.scan_dependencies('example==1.0.0','requirements',httpx.MockTransport(lambda request:httpx.Response(200,json={'results':[{}]})))
     assert not no_match['error'] and len(no_match['checked']) == 1 and not no_match['findings']
     malformed = scanner.scan_dependencies('example==1.0.0','requirements',httpx.MockTransport(lambda request:httpx.Response(200,json={'next_page_token':'more'})))
     assert malformed['error'] and not malformed['checked']
+
+
+def test_manual_dependency_checks_do_not_infer_severity_from_provider_text_or_assess_skipped_pins():
+    def provider(request):
+        if request.method=='POST':return httpx.Response(200,json={'results':[{'vulns':[{'id':'GHSA-fixture-0001'}]}]})
+        return httpx.Response(200,json={'id':'GHSA-fixture-0001','database_specific':{'severity':'CRITICAL'}})
+    result=scanner.scan_dependencies('example==1.0.0\nother>=2','requirements',httpx.MockTransport(provider))
+    assert result['findings'][0]['severity']=='unknown' and result['skipped']
+    assert result['advisory_details']['severity']=={'total':1,'scored':0,'partial':0}
+    def forbidden(request):raise AssertionError('An empty inventory must not request OSV')
+    empty=scanner.scan_dependencies('other>=2','requirements',httpx.MockTransport(forbidden))
+    assert not empty['checked'] and not empty['findings'] and empty['skipped']
 
 
 def test_website_allowlist_private_ip_and_no_dns_rebind():

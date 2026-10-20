@@ -1,4 +1,34 @@
-# Development verification — 0.13.2
+# Development verification — 0.13.3
+
+## Sourced dependency severity — 21 October 2026
+
+Manual checks and registered watches now share bounded batch matching, alias
+details and CVSS base calculations from OSV records. Each finding retains
+version/vector/source provenance, partial/unavailable states and distinct
+ratings. Missing ratings remain unknown. Severity-only changes preserve finding
+and task identity. See ADVISORY_SEVERITY.md for exact scope.
+
+Full regression: 352 backend tests passed (one existing TestClient warning),
+198 frontend tests across 43 files passed, production build and pip check
+passed. The initial focused run encountered the system pytest temp directory's
+access-denied error; rerunning with a fresh repository-local basetemp passed
+81 cases. The full run used a separate fresh basetemp and JUnit evidence in
+data/backend-regression-cvss-20261021-01.xml.
+
+A read-only live API check of the previously approved public lodash 4.17.20
+fixture assessed one exact pin, fetched 5/5 advisory records and calculated
+usable ratings for all five groups, including CVSS 3.1 and 4.0. The separate
+public cvss 3.6 package query returned no OSV matches at check time; this is not
+a safety certification. No owner inventory or findings were altered by either
+probe. Ignored evidence: data/osv-cvss-live-20261021.json.
+
+After a fresh encrypted backup, the local app restarted as 0.13.3. Integrity,
+schema 9, ten compared record groups and encryption key matched. Served index
+and script bytes match the build, which carries the new version. Owner setup
+and unauthenticated scan rejection passed. Evidence is in
+data/upgrade-0.13.3-baseline.json and data/upgrade-0.13.3-result.json. Actual Edge
+autofill and the new severity UI remain visually unverified because local
+browser control is disabled; HTTP and component checks do not replace them.
 
 ## Individual connection revocation — 21 October 2026
 

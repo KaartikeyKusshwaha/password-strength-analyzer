@@ -157,39 +157,24 @@ def parse_dependencies(text, format):
 
 def scan_dependencies(text, format, transport=None):
     packages, skipped = parse_dependencies(text, format)
-    items, checked, error = [], [], None
-    with httpx.Client(timeout=8, transport=transport, follow_redirects=False) as client:
-        for package in packages:
-            try:
-                response = client.post("https://api.osv.dev/v1/query", json={"package": {"name": package["name"], "ecosystem": package["ecosystem"]}, "version": package["version"]})
-                response.raise_for_status()
-                payload = response.json()
-                if not isinstance(payload, dict) or not isinstance(payload.get("vulns", []), list) or payload.get("next_page_token"):
-                    raise ValueError()
-                current = []
-                for vuln in payload.get("vulns", []):
-                    advisory = vuln.get("id", "")
-                    if not re.fullmatch(r"[A-Za-z0-9._-]{1,100}", advisory):
-                        raise ValueError()
-                    severity = str(vuln.get("database_specific", {}).get("severity", "unknown")).lower()
-                    item = finding("DEP001", package["line"], f"OSV matches {package['ecosystem']} {package['name']}@{package['version']} to {advisory}.", "high", advisory=advisory, package=package)
-                    item.update(severity=severity if severity in {"critical", "high", "medium", "low"} else "unknown", reference="https://osv.dev/vulnerability/" + advisory)
-                    current.append(item)
-                items.extend(current)
-                checked.append(package)
-            except (httpx.HTTPError, ValueError, TypeError, AttributeError):
-                error = "OSV lookup failed or response unsupported. Remaining packages not assessed; retry explicitly."
-                break
-    return dict(findings=items, packages=packages, checked=checked, skipped=skipped, error=error, limits="Exact submitted pins only. No range resolution, transitive traversal, advisory severity inference or exploit reachability. Unmatched packages are not certified safe.")
+    result = scan_watch(packages, transport)
+    result['skipped'] = skipped
+    return result
 
 
 def scan_watch(packages,transport=None):
-    """Bounded OSV batch matching, followed by bounded alias-only detail lookup."""
+    """Bounded OSV matching, alias lookup and sourced CVSS base ratings."""
     items,checked,error=[],[],None
     try:
         queries=[{'package':{'ecosystem':p['ecosystem'],'name':p['name']},'version':p['version']} for p in packages]
         started=time.monotonic()
         with httpx.Client(timeout=8,transport=transport,follow_redirects=False) as client:
+            if not packages:
+                # An empty parsed inventory is not an assessment or an API call.
+                return dict(findings=[],packages=[],checked=[],skipped=[],error=None,
+                            advisory_details={'total':0,'attempted':0,'completed':0,'grouped_matches':0,'status':'complete',
+                                              'severity':{'total':0,'scored':0,'partial':0}},
+                            limits='No exact pins were supplied; no packages were assessed.')
             with client.stream('POST','https://api.osv.dev/v1/querybatch',json={'queries':queries}) as response:
                 response.raise_for_status();raw=bytearray()
                 for chunk in response.iter_bytes():
@@ -205,23 +190,23 @@ def scan_watch(packages,transport=None):
             current=[];seen=set()
             for vuln in result.get('vulns',[]):
                 advisory=vuln.get('id') if isinstance(vuln,dict) else None
-                if not isinstance(advisory,str) or not re.fullmatch(r'[A-Za-z0-9._-]{1,100}',advisory) or advisory in seen:
+                if not isinstance(advisory,str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,99}',advisory) or advisory in seen:
                     raise ValueError()
                 seen.add(advisory)
                 current.append(finding('DEP001',package['line'],f"OSV batch matches {package['ecosystem']} {package['name']}@{package['version']} to {advisory}.",'high',advisory=advisory,package=package))
                 current[-1]['reference']='https://osv.dev/vulnerability/'+advisory
             if len(items)+len(current)>200:
-                error='OSV advisory coverage exceeded this watch limit; review a narrower inventory.';continue
+                error='OSV advisory coverage exceeded this check limit; review a narrower inventory.';continue
             items.extend(current)
             if result.get('next_page_token'):
                 error='OSV results were paginated. Returned matches are recorded, but coverage is incomplete.'
             else:
                 checked.append(package)
     except (httpx.HTTPError,ValueError,TypeError,AttributeError):
-        error='OSV watch request failed or returned unsupported data. Coverage is incomplete; no safe result was inferred.'
+        error='OSV request failed or returned unsupported data. Coverage is incomplete; no safe result was inferred.'
     from .advisories import enrich
     items,detail_coverage=enrich(items,transport)
-    return dict(findings=items,packages=packages,checked=checked,skipped=[],error=error,advisory_details=detail_coverage,limits='OSV matches for registered exact PyPI/npm versions only. Up to 20 advisory detail requests group returned alias relationships within the same exact package. Detail coverage is separate from package matching; unavailable details retain raw matches. No transitive discovery, range resolution, inferred severity or exploit reachability. Missing matches do not certify safety.')
+    return dict(findings=items,packages=packages,checked=checked,skipped=[],error=error,advisory_details=detail_coverage,limits='OSV matches for submitted exact PyPI/npm versions only. Up to 20 detail requests group returned aliases and calculate base ratings from valid CVSS vectors. Package, detail and severity coverage are separate; unavailable ratings remain unknown. No transitive discovery, range resolution or exploit reachability. Missing matches do not certify safety.')
 
 
 def inspect_headers(headers, status=200):

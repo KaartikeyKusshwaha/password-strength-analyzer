@@ -1,4 +1,13 @@
-# Browser acceptance — SentinelOps 0.13.2 / companion 0.12.7
+# Browser acceptance — SentinelOps 0.13.3 / companion 0.12.7
+
+App 0.13.3 adds sourced CVSS severity for dependency findings and separate
+severity coverage in manual-check history and watch runs. Automated provider,
+UI and persistence tests pass; a live public-package API probe passed. The
+backed-up local app runs 0.13.3 with protected records preserved. These checks
+do not establish actual browser rendering or companion autofill acceptance.
+Browser control most recently reported local browser use disabled, exposing
+neither Edge nor a native desktop surface. The installed companion remains
+unverified; its pairing was retained for the pending acceptance workflow.
 
 Individual browser disconnection now has an exact named confirmation and Keep
 option. Automated account isolation, other-connection preservation, lease

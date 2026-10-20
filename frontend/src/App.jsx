@@ -46,6 +46,8 @@ import {
 import { api } from "./api";
 import DevicePosture from "./DevicePosture";
 import PortCoverage from "./PortCoverage";
+import AdvisorySeverity from './AdvisorySeverity';
+import AdvisoryCoverage from './AdvisoryCoverage';
 import {version as productVersion} from '../package.json';
 import WatchIndicator from "./WatchIndicator";
 import ConnectionStatus from './ConnectionStatus';
@@ -1193,6 +1195,7 @@ export default function App() {
                     <p>{s.limits}</p>
                     <DevicePosture report={s.posture}/>
                     <PortCoverage observations={s.observations}/>
+                    <AdvisoryCoverage coverage={s.advisory_details}/>
                     {s.error && <p className="notice error">{s.error}</p>}
                     {s.skipped?.length > 0 && (
                       <p>Not assessed: {s.skipped.join(" ")}</p>
@@ -1250,6 +1253,7 @@ export default function App() {
                       {time(activeFinding.last_seen)}
                     </small>
                   </div>
+                  <AdvisorySeverity finding={activeFinding}/>
                   {!activeFinding.observed_in_latest && (
                     <div className="notice">
                       Not observed in the latest check of this scope. Resolution

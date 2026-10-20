@@ -124,8 +124,12 @@ workflow. Developer checks are available as connected secondary workflows.
   watch and displayed 1/1 assessed pins, 5/5 advisory details, no overlapping
   reports grouped and zero new matches. Historical
   overlapping work is retained; partial detail coverage can still overlap.
-- [ ] Installed-software discovery, severity enrichment, dependency graph
-  discovery and externally delivered notifications.
+- [x] Sourced CVSS base severity for manual dependency checks and watches, with
+  record/version/vector provenance, package scope and explicit partial/unknown
+  coverage. Ratings prioritize advisory matches; they do not prove local
+  exploitability. See ADVISORY_SEVERITY.md for bounds and remaining acceptance.
+- [ ] Installed-software discovery, dependency graph discovery and externally
+  delivered notifications.
 - [x] Encrypted per-account history for local saves, proposals, user-confirmed
   changes, reviews and archive/restore actions. Latest eight events, no previous
   password values and no claim of independent or tamper-evident verification.

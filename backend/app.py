@@ -319,7 +319,7 @@ def create_app(settings=None):
             app.state.watch_service.stop()
             executor.shutdown(wait=True, cancel_futures=True)
 
-    app = FastAPI(title="SentinelOps", version="0.13.2", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title="SentinelOps", version="0.13.3", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.store, app.state.settings = store, settings
     app.state.cipher, app.state.executor = cipher, executor
     app.state.agent_transport = None

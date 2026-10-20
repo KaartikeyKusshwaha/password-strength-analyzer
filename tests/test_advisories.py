@@ -28,7 +28,7 @@ def provider(records, seen=None):
 def test_transitive_alias_groups_preserve_raw_matches_and_do_not_cross_packages():
     records={'A':{'id':'A','aliases':['CVE-2026-1000']},'B':{'id':'B','aliases':['CVE-2026-2000']},'C':{'id':'C','aliases':['CVE-2026-1000','CVE-2026-2000']}}
     result,coverage=enrich([item('A'),item('B'),item('C'),item('A','other'),item('A',version='2.0.0')],provider(records))
-    assert len(result)==3 and coverage==dict(total=3,attempted=3,completed=3,grouped_matches=2,status='complete')
+    assert len(result)==3 and coverage==dict(total=3,attempted=3,completed=3,grouped_matches=2,status='complete',severity={'total':3,'scored':0,'partial':0})
     assert result[0]['matched_advisories']==['A','B','C']
     assert result[0]['advisory_ids']==['A','B','C','CVE-2026-1000','CVE-2026-2000']
     assert all(v['severity']=='unknown' for v in result)
@@ -68,11 +68,13 @@ def test_watch_groups_tasks_and_retains_finding_when_reported_id_changes(system)
     app,client,_=system
     watch=create(client,create_tasks=True)
     matched=['GHSA-fixture-a','PYSEC-fixture-b']
+    score='CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H'
     def respond(request):
         if request.method=='POST':
             return httpx.Response(200,json={'results':[{'vulns':[{'id':v} for v in matched]}]})
         identifier=request.url.path.rsplit('/',1)[-1]
-        return httpx.Response(200,json={'id':identifier,'aliases':['CVE-2026-1000',*matched]})
+        return httpx.Response(200,json={'id':identifier,'aliases':['CVE-2026-1000',*matched],
+                                      'severity':[{'type':'CVSS_V3','score':score}]})
     service=app.state.watch_service
     service.transport=httpx.MockTransport(respond)
     def run():
@@ -85,11 +87,15 @@ def test_watch_groups_tasks_and_retains_finding_when_reported_id_changes(system)
     assert len(first)==1 and len(data(client)['tasks'])==1
     identifier=first[0]['id']
     assert first[0]['matched_advisories']==matched
+    assert first[0]['severity']=='critical' and first[0]['severity_assessment']['selected']['base_score']==9.8
     assert client.get('/api/watches').json()['runs'][0]['advisory_details']['grouped_matches']==1
     matched[:]=['PYSEC-fixture-b']
+    score='CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H'
     run()
     current=data(client)['findings']
     assert len(current)==1 and current[0]['id']==identifier
+    assert current[0]['severity']=='high' and current[0]['severity_assessment']['selected']['base_score']==8.8
+    assert current[0]['scan_id']!=first[0]['scan_id']
     assert len(data(client)['tasks'])==1 and len(client.get('/api/notifications').json()['notifications'])==1
     assert client.get('/api/watches').json()['runs'][0]['new_matches']==0
     # A different watch has its own asset/scope, even with identical aliases.

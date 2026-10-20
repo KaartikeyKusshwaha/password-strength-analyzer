@@ -2,7 +2,7 @@
 
 A cybersecurity control center evolving from Kaartikey Kusshwaha’s password-strength-analyzer internship project. The first audience is small teams and agencies managing accounts across clients.
 
-**App development build 0.13.2 / browser companion 0.12.7.** This is not an audited password manager or a production security certification. Use disposable credentials until the release gates in [the product plan](docs/PRODUCT_PLAN.md) are met.
+**App development build 0.13.3 / browser companion 0.12.7.** This is not an audited password manager or a production security certification. Use disposable credentials until the release gates in [the product plan](docs/PRODUCT_PLAN.md) are met.
 
 ## Connected workflows
 
@@ -23,6 +23,7 @@ A cybersecurity control center evolving from Kaartikey Kusshwaha’s password-st
 - **Device operator:** assess one authorized private IP and up to 64 TCP ports. Run locally or pair a remote device that polls scoped jobs and returns results. TCP checks use network connects only. Open ports are observations, not proven vulnerabilities.
 - **Host protection checks:** on Windows, query the selected operator computer's firewall profile configuration, Defender antivirus/realtime state and system-drive BitLocker protection status using fixed read-only status commands. No arbitrary commands, elevation, recovery-key access or settings changes. Other platforms, missing providers and denied permissions remain unsupported/unassessed.
 - **Other checks:** Python AST patterns, exact pinned dependencies via OSV, email indicators, and HTTPS headers on allowlisted domains. Submitted code and email are processed in memory and excluded from provider input.
+- **Advisory severity:** manual checks and watches calculate CVSS base scores from OSV vectors, retaining the advisory, version and reported source. Missing/ambiguous ratings stay unknown; coverage and rating evidence appear with findings. This does not prove local exploitability. See [severity scope](docs/ADVISORY_SEVERITY.md).
 - **Dependency watch operator:** register exact PyPI/npm versions in Watches & alerts. Explicitly approve scheduled OSV checks (6 hours to 7 days), new-match alerts and optional assigned remediation tasks. Update versions, pause or archive a watch; stale and interrupted results cannot publish. Alerts have per-member read states. The server must remain running; partial/provider failures stay visible. This deterministic operator requires no LLM key.
 - **Agent workflow:** one Groq planner plus deterministic evidence, reference, dispatch and progress workers. Model output cannot execute commands or approve remediation. An independent reviewer resolves findings.
 

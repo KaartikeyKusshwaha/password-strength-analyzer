@@ -4,15 +4,17 @@ import re
 import time
 
 import httpx
+from .advisory_severity import assess
 
 
 ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]{0,99}')
 
 
 def enrich(items, transport=None):
-    """Preserve matches if detail coverage is unavailable; never infer severity."""
+    """Preserve matches when details fail; calculate only sourced CVSS ratings."""
     identifiers = sorted({item['advisory'] for item in items})
     details = {}
+    records = {}
     attempted = 0
     deadline = time.monotonic() + 20
     with httpx.Client(timeout=3, transport=transport, follow_redirects=False) as client:
@@ -35,6 +37,7 @@ def enrich(items, transport=None):
                 if not isinstance(aliases, list) or len(aliases) > 100 or any(not isinstance(a, str) or not ID.fullmatch(a) for a in aliases):
                     raise ValueError()
                 details[identifier] = sorted(set([identifier, *aliases]))
+                records[identifier] = value
             except (httpx.HTTPError, ValueError, TypeError):
                 # Matching and detail coverage are separate. No fabricated aliases.
                 continue
@@ -59,6 +62,12 @@ def enrich(items, transport=None):
         group['reference'] = 'https://osv.dev/vulnerability/' + group['advisory']
         package = group['package']
         group['evidence'] = f"OSV matches {package['ecosystem']} {package['name']}@{package['version']} to " + ', '.join(group['matched_advisories']) + '. Grouped only through returned alias relationships; reachability is not established.'
+        assessment=assess(group['matched_advisories'],records,package)
+        group['severity_assessment']=assessment
+        selected=assessment['selected']
+        group['severity']=selected['rating'] if selected and selected['rating']!='none' else 'unknown'
     coverage = dict(total=len(identifiers), attempted=attempted, completed=len(details), grouped_matches=len(items)-len(groups))
     coverage['status'] = 'complete' if len(details) == len(identifiers) else 'partial'
+    coverage['severity']={'total':len(groups),'scored':sum(bool(group['severity_assessment']['selected']) for group in groups),
+                          'partial':sum(group['severity_assessment']['status']=='partial' for group in groups)}
     return groups, coverage
