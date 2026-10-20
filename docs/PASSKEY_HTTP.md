@@ -120,8 +120,10 @@ isolated service after the run. Actual extension 0.12.5 autofill acceptance is a
 separate pending gate; these passkey tests do not establish that it works.
 
 After expiry, ordinary password sign-in to the disposable account also passed.
-The test-key removal form is prepared with the existing disposable account
-password for the required human credential-change handoff. The final Remove
-this passkey button has not been clicked by the agent. Screenshot:
-data/browser-acceptance-0.13.0/passkey-removal-ready-edge.png. The test service
-remains running for this handoff; no owner account or main vault was changed.
+The user completed the prepared test-key removal form. Their screenshot confirms
+"Passkey removed" and "No passkeys enrolled". A subsequent read-only store check
+confirmed the retained key tombstone (revision 2, revoked_at set) and zero pending
+ceremonies. Enrollment, real sign-in, expiry and service-side removal now have
+native Edge evidence. Explicit cancellation during native UI, enrolled-MFA device
+acceptance and device-side key cleanup remain open. The main owner account and
+vaults were not changed. The test service remains available for remaining checks.

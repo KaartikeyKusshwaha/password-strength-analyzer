@@ -12,6 +12,11 @@ public dependency watch also completed: 1/1 pins, 5/5 advisory details, no
 overlapping reports grouped, zero new matches, schedule off. Installed companion
 autofill remains unverified.
 
+The user subsequently submitted the disposable key removal. Their screenshot
+shows the removal notice and no enrolled keys. A read-only store check confirmed
+the retained revoked credential at revision 2 and zero pending ceremonies.
+Device-side key cleanup, explicit native cancellation and MFA acceptance remain open.
+
 Following the completed watch's Review findings link initially displayed the
 parent app's cached metadata from the previous day. Navigation now refreshes
 the shared workspace snapshot. A new actual watch run followed by that link
