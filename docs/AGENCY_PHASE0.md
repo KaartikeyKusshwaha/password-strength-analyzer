@@ -40,6 +40,11 @@ An initial attempt hit an inaccessible OS temporary directory before app setup;
 rerun used a fresh ignored workspace-local pytest directory. No production
 database, identity or permission was modified by this test.
 
+The complete current backend suite passed **448 tests, one skipped**, with one
+Starlette TestClient deprecation warning, in 159.89 seconds. The report is kept
+under ignored data/phase0-full-backend-results.xml. Counts are current collected
+suite results, not an assertion that the native browser gate passed.
+
 **The required two-account browser removal/rotation gate is still pending.**
 Automated tests do not substitute for it. The cloud secure-save, TOTP, multiple
 shared-vault browser workflows and recovery acceptance also remain pending.
@@ -55,3 +60,13 @@ pain reports and connector shortlist are unmet. Google OAuth requirements were
 checked against official sources in the master plan; no OAuth app or partner
 authorization has been created. No connector phase or real-data pilot is approved
 by merely shipping this extension release.
+
+## Release transport status
+
+The local 0.23.0 unpacked build and deterministic ZIP are ready. The Oracle SCP
+connection timed out before uploading the release; no server replacement was
+performed. Public HTTPS /api/status still returned 200 with setup complete.
+The prior deployed companion 0.22.1 remains the last verified cloud download
+until an authenticated download/manifest check proves a newer deployment.
+Local reloads and a downloadable GitHub release artifact must not be described
+as a successful Oracle deployment. SSH reachability needs resolution.
