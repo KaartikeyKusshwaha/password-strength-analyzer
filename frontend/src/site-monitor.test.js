@@ -1,5 +1,6 @@
 import {expect,it,vi} from 'vitest';
 import {createSiteMonitor} from '../../companion/extension/site-monitor';
+import {checkWebsite} from '../../companion/extension/site-check';
 function fixture(){
   const saved={},tabs=[{id:1,windowId:7,url:'https://example.test/private?secret=redacted',active:true}];let allowed=true,now=1000;
   const browser={runtime:{id:'fixture',getURL:path=>'chrome-extension://fixture/'+path,onMessage:{addListener:vi.fn()},onStartup:{addListener:vi.fn()},onInstalled:{addListener:vi.fn()}},permissions:{contains:vi.fn(async()=>allowed),onRemoved:{addListener:vi.fn()}},storage:{local:{get:vi.fn(async()=>structuredClone(saved)),set:vi.fn(async value=>Object.assign(saved,structuredClone(value)))}},tabs:{query:vi.fn(async()=>tabs),get:vi.fn(async()=>tabs[0]),onUpdated:{addListener:vi.fn()}},action:{setBadgeText:vi.fn(async()=>{}),setBadgeBackgroundColor:vi.fn(async()=>{})},alarms:{create:vi.fn(async()=>{}),clear:vi.fn(async()=>{}),onAlarm:{addListener:vi.fn()}}};
@@ -33,6 +34,13 @@ it('fails unknown, checks permission on recheck and does not label a different t
   expect(f.saved.siteMonitor[0].state).toBe('unassessed');expect(f.browser.action.setBadgeText).toHaveBeenLastCalledWith({tabId:1,text:'?'});
   f.allow(false);f.advance(16*60*1000);await f.monitor.check('https://example.test');expect(f.saved.siteMonitor).toEqual([]);expect(f.checker).toHaveBeenCalledTimes(1);
   f.allow(true);f.tabs[0].url='https://elsewhere.test/';await expect(f.enable()).rejects.toThrow('active site');
+});
+it('keeps a blocked or unavailable website unknown instead of clearing its badge',async()=>{
+  const f=fixture();
+  f.checker.mockImplementation(scope=>checkWebsite(scope,async()=>new Response(null,{status:503,headers:{'strict-transport-security':'max-age=31536000','content-security-policy':"default-src 'self'",'x-content-type-options':'nosniff'}})));
+  await f.enable();
+  expect(f.saved.siteMonitor[0]).toMatchObject({state:'unassessed',result:null});
+  expect(f.browser.action.setBadgeText).toHaveBeenLastCalledWith({tabId:1,text:'?'});
 });
 it('keeps pending secure-save badges ahead of monitoring warnings',async()=>{
   const f=fixture();await f.enable();f.monitor.setCapture(1,true);

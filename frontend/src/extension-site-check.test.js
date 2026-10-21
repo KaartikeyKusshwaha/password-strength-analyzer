@@ -20,7 +20,10 @@ it.each(['http://127.0.0.1','https://192.168.1.1','https://[::1]','https://local
   expect(()=>websiteScope(value)).toThrow();
 });
 it('reports limited header observations without claiming a fix',async()=>{
-  const result=await checkWebsite(websiteScope('https://example.com'),async()=>({status:403,headers:new Headers()}));
-  expect(result.actions).toHaveLength(3);expect(result.status).toBe(403);
+  const result=await checkWebsite(websiteScope('https://example.com'),async()=>({status:200,headers:new Headers()}));
+  expect(result.actions).toHaveLength(3);expect(result.status).toBe(200);
   expect(result.coverage).toContain('No redirects');
+});
+it.each([0,301,403,405,429,500,503,undefined])('leaves HTTP %s unassessed even when security headers are present',async status=>{
+  await expect(checkWebsite(websiteScope('https://example.com'),async()=>({status,headers:new Headers({'strict-transport-security':'max-age=31536000','content-security-policy':"default-src 'self'",'x-content-type-options':'nosniff'})}))).rejects.toThrow('No safety verdict');
 });

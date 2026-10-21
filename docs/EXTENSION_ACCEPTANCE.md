@@ -29,3 +29,19 @@ submission, automatic OS repair, passkey-to-vault unlock, or email breach
 monitor is claimed. A browser cannot inspect device ports without the helper.
 The helper remains an unsigned pilot. These limits must remain visible rather
 than being hidden behind a success status or a completion percentage.
+
+### Queued HTTP-response correction
+
+Source review found that error responses carrying the expected security headers
+could produce an empty action list. The queued checker now requires a 2xx
+response before interpreting headers. Access-denied, unsupported HEAD,
+rate-limited and unavailable responses remain unassessed. A real-checker monitor
+regression verifies that a 503 with all expected headers retains the unknown
+badge. All 29 site-check/operator/UI/monitor tests passed. This correction is
+source-only; the installed 0.22 directory and archive remain frozen.
+
+Edge reconnected as browser 4. The practice login invitation appeared after
+trusted focus; evidence is saved under ignored data/oracle-deployment as
+edge-reconnected-login-invitation.png. The Personal cloud vault remains at its
+initialization form, with no passphrase entered. Native popup site-check
+acceptance still awaits the user's click.

@@ -15,6 +15,9 @@ export async function checkWebsite(scope,fetcher=fetch) {
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
   try {
     const response=await fetcher(scope.origin+'/',{method:'HEAD',credentials:'omit',redirect:'error',cache:'no-store',referrerPolicy:'no-referrer',signal:controller.signal});
+    // Error pages and access-denial responses do not establish the site's
+    // normal header policy, even when the error response has every header.
+    if(!Number.isInteger(response.status)||response.status<200||response.status>=300)throw new Error('Unassessed HTTP response');
     const actions=[];
     for(const [header,id,title,detail] of [
       ['strict-transport-security','hsts','Ask the site owner to enforce HTTPS.','The response has no HSTS header. This alone does not prove the website is unsafe.'],
