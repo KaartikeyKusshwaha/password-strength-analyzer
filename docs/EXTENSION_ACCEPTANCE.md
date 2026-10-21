@@ -108,3 +108,12 @@ handoff. Evidence: data/oracle-deployment/cloud-vault-connection-approved.png.
 No security-agent grant is listed and no scan permission is inferred from this
 vault authorization. No operator-side token copying or direct grant insertion
 was used.
+
+### First installed cloud companion contact
+
+A fresh Connections UI refresh showed Last vault contact: 22 October 2026,
+04:17:51 Asia/Calcutta, and Client reports version 0.22.1, matching the
+downloadable build. This verifies the installed extension finished the cloud
+handoff and performed an authorized encrypted-vault read. It does not prove
+local decryption, a saved item, autofill, shared-vault access or security-agent
+permissions. Evidence: data/oracle-deployment/cloud-companion-first-contact-0.22.1.png.
