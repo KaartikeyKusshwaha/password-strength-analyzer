@@ -25,6 +25,7 @@ import { accountHealth, changePasswordUrl } from './account-health';
 import VaultActivity from './VaultActivity';
 import VaultRecovery from './VaultRecovery';
 import VaultImport from './VaultImport';
+import VaultExport from './VaultExport';
 import BreachReview from './BreachReview';
 import AccountActions from './AccountActions';
 import {sealAction} from './action-crypto';
@@ -572,6 +573,7 @@ export default function Vault({ space, otherVaults = [], me, initialType='login'
             </section>
           )}
           <VaultImport disabled={busy || !!space?.archived} existingCount={entries.length} onImport={items=>save([...entries,...items])}/>
+          <VaultExport entries={entries} disabled={busy}/>
           <BreachReview entries={entries}/>
           <div className="two-col">
             {entries.filter(entry=>!isArchived(entry)).map((entry) => (

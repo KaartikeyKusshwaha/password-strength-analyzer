@@ -11,12 +11,21 @@
   "retired_feature": "email/phishing detection",
   "automated_checks": {
     "backend": 423,
-    "react": 235,
+    "react": 245,
     "direct_operator_navigation_focused_react": 13,
     "scope_approval_and_navigation_focused_react": 15,
     "final_focused_react": 21,
     "app_build": "passed",
     "extension_build_and_package": "passed"
+  },
+  "personal_login_csv_export": {
+    "implemented": true,
+    "plaintext_requires_explicit_approval": true,
+    "locked_vault_controls_absent_tested": true,
+    "exact_values_round_trip_tested": true,
+    "totp_and_pending_passwords_excluded_tested": true,
+    "actual_browser_download": "pending",
+    "third_party_manager_import": "pending"
   },
   "actual_browser": {
     "three_tools_home": true,

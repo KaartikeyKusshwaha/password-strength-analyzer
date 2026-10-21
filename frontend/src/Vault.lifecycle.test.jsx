@@ -14,6 +14,19 @@ function masterForm(){
   fireEvent.change(screen.getByLabelText('New vault master passphrase'),{target:{value:'fixture-only-new-master-passphrase'}});
   fireEvent.change(screen.getByLabelText('Confirm new vault master passphrase'),{target:{value:'fixture-only-new-master-passphrase'}});
 }
+it('removes plaintext export on lock and requires new approval after unlocking again',async()=>{
+  mocks.unlock.mockResolvedValue({key:{},salt:[],entries:[entry]});
+  vi.stubGlobal('fetch',vi.fn(async url=>response(url==='/api/account-actions'?{actions:[]}:{envelope:payload,revision:1})));
+  await begin();fireEvent.click(await screen.findByText('Move logins to another password manager'));
+  fireEvent.click(screen.getByLabelText(/I understand this downloads plaintext/));
+  expect(screen.getByRole('button',{name:'Download plaintext login CSV'})).toBeEnabled();
+  fireEvent.click(screen.getByRole('button',{name:'Lock'}));
+  expect(screen.queryByText('Move logins to another password manager')).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Master passphrase'),{target:{value:'fixture-only-master-passphrase'}});
+  fireEvent.click(screen.getByRole('button',{name:'Unlock vault'}));
+  fireEvent.click(await screen.findByText('Move logins to another password manager'));
+  expect(screen.getByRole('button',{name:'Download plaintext login CSV'})).toBeDisabled();
+});
 it('does not restore a late unlock after the tab was hidden',async()=>{
   let complete;mocks.unlock.mockImplementation(()=>new Promise(resolve=>{complete=resolve;}));
   vi.stubGlobal('fetch',vi.fn(async()=>response({envelope:payload,revision:1})));

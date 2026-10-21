@@ -58,3 +58,10 @@ QR dependencies. The replacement inventory contains 233 exact versions, all
 matches returned. Scheduling and automatic task creation remain off. This is a
 snapshot check; future source changes require reimport, and no matches does not
 establish application safety.
+
+Unlocked personal vaults now support an explicitly approved plaintext login CSV
+for migration to another manager. It preserves independent login rows and exact
+credential values, excludes TOTP and unconfirmed proposed passwords, and clears
+approval on lock or selection/content changes. No export API or AI input is
+introduced. See LOGIN_EXPORT.md for sensitive-file handling and the still-open
+native download/import acceptance.

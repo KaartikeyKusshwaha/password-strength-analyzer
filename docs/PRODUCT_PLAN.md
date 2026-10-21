@@ -65,8 +65,10 @@ provider MFA settings or device settings without the corresponding user workflow
 - [x] Local CSV login import for Chrome, Bitwarden, 1Password and LastPass,
   preview, skipped-record reasons and ciphertext-only storage. Other item types,
   notes/custom fields and vendor-specific exports need additional coverage.
-- [ ] Encrypted export exists; add explicit approved plaintext export only if
-  needed for interoperability and explain the resulting file's sensitivity.
+- [x] Personal-vault plaintext login CSV export with explicit approval, archive
+  selection, exact-value escaping, excluded TOTP/proposed secrets and lock/reunlock
+  regression coverage. Encrypted export remains available for complete backups.
+  Native download/third-party import acceptance remains open; see LOGIN_EXPORT.md.
 - [x] Optional HIBP hash-prefix password checks integrated in the account view.
   The existing local library implements padded k-anonymity lookups; there is
   not yet recurring breach monitoring or verified-email account monitoring.
