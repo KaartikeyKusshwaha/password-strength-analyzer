@@ -16,6 +16,10 @@ export function inspectLoginForm(document,pageUrl,origin) {
   const {ok,reason}=loginTarget(document,pageUrl,origin);
   return ok?{ok:true}:{ok:false,reason};
 }
+export function isLoginFocusField(document,pageUrl,field) {
+  const target=loginTarget(document,pageUrl,new URL(pageUrl).origin);
+  return target.ok && (target.field===field || target.username===field);
+}
 export async function fillLoginForm(document,pageUrl,entry) {
   if(typeof entry?.username!=='string' || entry.username.length>254 || typeof entry?.password!=='string' || !entry.password || entry.password.length>256)return {ok:false,reason:'entry'};
   const target=loginTarget(document,pageUrl,entry.origin);

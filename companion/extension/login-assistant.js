@@ -1,10 +1,10 @@
-import {inspectLoginForm} from './login-form';
+import {isLoginFocusField} from './login-form';
 import {inspectOtp} from './otp-form';
 
 // This invitation contains no credential metadata. Unlock remains extension-owned.
 export function offerLogin(document,pageUrl,field,browser,{isTop=true,kind='login'}={}) {
   const origin=new URL(pageUrl).origin;
-  const supported=()=>kind==='otp'?inspectOtp(document,pageUrl,origin).ok:field.type==='password'&&inspectLoginForm(document,pageUrl,origin).ok;
+  const supported=()=>kind==='otp'?inspectOtp(document,pageUrl,origin).ok:isLoginFocusField(document,pageUrl,field);
   if(!isTop || !supported())return null;
   const host=document.createElement('div');
   host.style.cssText='position:fixed;right:18px;bottom:18px;z-index:2147483647';

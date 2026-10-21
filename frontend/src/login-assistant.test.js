@@ -22,6 +22,22 @@ it('does not offer login assistance for frames, cross-origin forms or signup fie
   document.querySelector('form').action='https://accounts.example.test/session';field.autocomplete='new-password';field.name='new_password';
   expect(offerLogin(document,'https://accounts.example.test/signup',field,{})).toBeNull();
 });
+it('offers on the recognized username without reading either credential',()=>{
+  const username=document.querySelector('[name=username]'),password=document.querySelector('[type=password]');
+  for(const field of [username,password])Object.defineProperty(field,'value',{get(){throw new Error('Credential read');}});
+  const browser={runtime:{sendMessage:vi.fn()}};
+  expect(offerLogin(document,'https://accounts.example.test/login',username,browser)).not.toBeNull();
+  expect(browser.runtime.sendMessage).not.toHaveBeenCalled();
+});
+it('does not invite on unrelated email fields or signup usernames',()=>{
+  const unrelated=document.createElement('input');unrelated.type='email';document.body.append(unrelated);
+  expect(offerLogin(document,'https://accounts.example.test/login',unrelated,{})).toBeNull();
+  const username=document.querySelector('[name=username]');
+  document.querySelector('[type=password]').autocomplete='new-password';
+  expect(offerLogin(document,'https://accounts.example.test/register',username,{})).toBeNull();
+  document.querySelector('form').action='https://other.example/session';
+  expect(offerLogin(document,'https://accounts.example.test/login',username,{})).toBeNull();
+});
 it('offers an authenticator invitation for an explicit code field without generating a code',()=>{
   const field=document.querySelector('[type=password]');field.type='text';field.autocomplete='one-time-code';
   const browser={runtime:{sendMessage:vi.fn()}};

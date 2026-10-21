@@ -96,7 +96,7 @@ function attach(field) {
   let timer;
   field.addEventListener('input',()=>{if(current!==field || !renderEstimate)return;clearTimeout(timer);timer=setTimeout(()=>renderEstimate?.(),150);});
 }
-function inspect(){document.querySelectorAll('input[type="password"],input[autocomplete="one-time-code"]').forEach(attach);if(current && (!current.isConnected || !formOriginAllowed(location.href,current.form?.action) || (renderEstimate && !isNewPassword(current))))close();if(loginOfferCandidate)inspectSaveOffer();}
+function inspect(){document.querySelectorAll('input[type="password"],input[autocomplete="one-time-code"],input[autocomplete="username"],input[type="email"],input[name="username"],input[name="email"]').forEach(attach);if(current && (!current.isConnected || !formOriginAllowed(location.href,current.form?.action) || (renderEstimate && !isNewPassword(current))))close();if(loginOfferCandidate)inspectSaveOffer();}
 inspect();let scanTimer;
 new MutationObserver(()=>{clearTimeout(scanTimer);scanTimer=setTimeout(inspect,250);}).observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['type','name','id','autocomplete','disabled','readonly','hidden','action']});
 document.addEventListener('keydown',event=>{if(event.isTrusted && event.key==='Escape')close();});

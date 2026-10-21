@@ -130,3 +130,13 @@ The practice username and password fields were then cleared through UI controls;
 no login form was submitted. Native companion retrieval/fill awaits the user's
 popup click, after which both field values can be verified without exposing
 real credentials. The public test vault must not store valuable credentials.
+
+### Queued proactive username invitation
+
+Source now offers the login invitation when the user focuses the recognized
+username/email field of an unambiguous supported login form, in addition to its
+password field. It reuses the exact login-target resolution, excludes unrelated
+email forms, explicit signup fields, cross-origin forms and frames, and reads no
+credential values to construct the invitation. Twenty login invitation/form
+regressions passed. This is source-only; installed companion 0.22.1 remains
+unchanged while cloud native autofill acceptance proceeds.
