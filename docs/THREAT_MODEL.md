@@ -423,11 +423,12 @@ or compromised browsers can retain copied data and cannot be remotely erased.
 All stored audit scopes are checked during SQLite backup validation; this is
 still not an independent audit or rollback authority. See VAULT_ACTIVITY.md.
 
-Current decision: **no master-passphrase recovery**. Encrypted backups require
-the original passphrase. The sign-in password and its reset cannot decrypt a
-vault. Resetting a vault discards access to its contents and must revoke its
-connections. A future recovery-key wrapper must have its own reviewed protocol,
-explicit enrollment, revocation and tests. TOTP codes are not an encryption key.
+Personal version-2 vaults now offer advance offline-kit recovery (0.16.0).
+The service never holds a recovery secret or decryptable key escrow. Without
+usable material prepared before the loss, neither account sign-in/reset nor TOTP
+can decrypt a vault. Shared identities still have no recovery. Full recovery-kit
+scope, lifecycle and historical-access limits appear below and in
+VAULT_RECOVERY_KITS.md; native acceptance and independent review remain open.
 
 ## Release gates
 
@@ -483,3 +484,25 @@ results remain untrusted self-reports rather than independent attestation. The
 app performs no online refresh, download, installation, reboot or settings
 change. Updates form a separate scan scope and cannot resolve port/protection
 findings. See WINDOWS_UPDATES.md for permissions, protocol and limitations.
+
+
+## Offline personal recovery kits (0.16.0)
+
+Recovery material is prepared locally before a master is lost. A separate random
+256-bit code wraps a fresh data key with AES-GCM and context/kit/date associated
+data. The kit is an encrypted snapshot plus wrapper; neither it, the code nor
+plaintext is uploaded. Only an owner/context/revision-bound replacement envelope
+and fixed intent reach the service. Successful activation, use or invalidation
+rotates actual key bytes in the client and atomically revokes the selected
+vault's browser tokens and unfinished account plans. Server code cannot prove
+hidden-key rotation or correct plaintext preservation; it validates metadata and
+transaction scope. A malicious client/session can already overwrite ciphertext.
+
+Kit snapshots and older app backups remain accessible with their historical
+keys; changing a master wrap alone does not revoke them. Current recovery never
+silently selects old data. Snapshot restoration explicitly overwrites current
+entries and can lose later changes. Losing both master and previously saved
+usable material remains unrecoverable. Closing UI cannot retract an already
+sent HTTP commit; no automatic retry is made. Shared recovery, trusted contacts,
+hardened memory, native credential/download acceptance and independent protocol
+review remain unfinished. See VAULT_RECOVERY_KITS.md for exact limits.

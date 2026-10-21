@@ -3,6 +3,7 @@ import {api} from './api';
 import {validateHistory} from './entry-history';
 
 const descriptions={
+  'vault.recovery_kit_activated':'Offline recovery kit reported activated with a new vault key','vault.recovered_current':'Current encrypted vault recovered with a new key','vault.recovered_snapshot':'Recovery-kit snapshot restored with a new vault key','vault.recovery_kits_invalidated':'Vault key rotated to invalidate older recovery kits for future data',
   'vault.created':'Vault space created','vault.properties_updated':'Vault properties updated',
   'vault.default_changed':'Default-vault selection changed','vault.archived':'Vault archived',
   'vault.restored':'Vault restored from archive','vault.initialized':'Encrypted vault initialized',

@@ -121,3 +121,15 @@ inactive-work and protected-record checks; all 16 upgrade checks passed. No
 existing connection acquired the new permission. Evidence is retained under
 `data/upgrade-0.15.0-*` and the operator backup directory. This does not configure
 offsite backups or recover a lost vault master passphrase.
+
+
+## Personal recovery kits are separate (0.16.0)
+
+An optional client-only kit plus its separate key can recover data encrypted
+under its enrolled data key. It must be prepared before master loss and is not
+stored in an operator backup unless the operator separately puts that file in
+the source directory (not recommended). The backup tool never learns this key.
+Restoring older encrypted vault contents can reintroduce older keys and recovery
+access; rotate personal data keys before adding new secrets after a restore.
+Shared identity recovery and trusted-contact emergency access remain absent.
+See VAULT_RECOVERY_KITS.md for exact behavior and release gates.

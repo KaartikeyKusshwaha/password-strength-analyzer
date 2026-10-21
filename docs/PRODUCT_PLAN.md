@@ -36,9 +36,11 @@ workflow. Developer checks are available as connected secondary workflows.
   review remains a separate release gate.
 - [x] Random vault data keys wrapped by unlock keys. Master changes preserve
   encrypted item data and revoke browser tokens. Review the hierarchy before sharing.
-- [x] Explicit no-recovery decision for personal master and sharing passphrases.
-  Recovery-key enrollment and revocation remain future work. A sign-in password
-  reset cannot decrypt either encrypted store.
+- [x] Development implementation of offline personal recovery kits, separate random
+  keys, explicit current/snapshot selection and real data-key rotation with scoped
+  browser/action revocation. No server escrow; advance setup and native user
+  acceptance are required. See VAULT_RECOVERY_KITS.md. A sign-in password reset
+  cannot decrypt a vault; sharing identities still have no recovery.
 - [x] Offline encrypted SQLite backups with consistent WAL snapshots, separate
   backup-key files and restore into a new directory. Recovery revokes active
   connections, interrupts queued work and pauses schedules; see BACKUP_RECOVERY.md.
@@ -143,7 +145,10 @@ workflow. Developer checks are available as connected secondary workflows.
   and separately labelled encrypted account observations after unlock. Earlier
   unrecorded events, local fills/reveals and trimmed/deleted account history
   cannot be reconstructed. This filtered log is not independent audit proof.
-- [ ] Recovery and emergency-access protocol.
+- [x] Personal offline recovery-kit protocol and UI with independent native-crypto
+  vectors, lifecycle/atomic-write tests and explicit historical-access limits.
+- [ ] Native recovery-kit credential/download acceptance, shared-identity recovery,
+  trusted contacts and emergency-access protocol; independent review remains open.
 
 ## Later enterprise work
 

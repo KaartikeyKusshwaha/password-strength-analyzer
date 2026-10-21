@@ -12,6 +12,7 @@ PERSONAL_EVENTS = (
     'vault.archived', 'vault.restored', 'vault.initialized', 'vault.saved',
     'vault.browser_saved', 'vault.protection_changed', 'vault.companion_connected',
     'vault.companions_revoked', 'vault.recovery_restored',
+    'vault.recovery_kit_activated','vault.recovered_current','vault.recovered_snapshot','vault.recovery_kits_invalidated',
 )
 TEAM_EVENTS = (
     'team_vault.created', 'team_vault.browser_policy_updated',

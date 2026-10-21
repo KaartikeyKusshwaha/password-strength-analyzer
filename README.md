@@ -2,7 +2,7 @@
 
 A cybersecurity control center evolving from Kaartikey Kusshwaha’s password-strength-analyzer internship project. The first audience is small teams and agencies managing accounts across clients.
 
-**App development build 0.15.0 / browser companion 0.12.8.** This is not an audited password manager or a production security certification. Use disposable credentials until the release gates in [the product plan](docs/PRODUCT_PLAN.md) are met.
+**App development build 0.16.0 / browser companion 0.12.8.** This is not an audited password manager or a production security certification. Use disposable credentials until the release gates in [the product plan](docs/PRODUCT_PLAN.md) are met.
 
 ## Connected workflows
 
@@ -17,7 +17,7 @@ A cybersecurity control center evolving from Kaartikey Kusshwaha’s password-st
 - **Vault ownership handoff:** an expiring signed proposal and explicit successor acceptance rotate the vault key, preserve approved member access, and revoke this vault’s existing browser connections. Addressed requests appear on the dashboard. See [the handoff protocol and limits](docs/OWNERSHIP_TRANSFER.md).
 - **Sharing passphrase maintenance:** re-encrypt your existing private sharing keys locally without replacing your fingerprint or vault grants. A signed, revision-bound change revokes your shared browser connections and cancels unfinished shared account actions across workspaces. Cached keys and older backups cannot be erased; this is not identity-key rotation or recovery.
 - **Workspace offboarding:** owner password/MFA revokes workspace sessions, device connections and shared grants, cancels active jobs and requires affected vault key rotation. Personal vaults stay with the account. Vault owners must complete a two-party handoff before offboarding. Workspace ownership and erasing cached copies are separate limitations.
-- **Vault cryptography:** new vaults use Argon2id (64 MiB, three passes) to wrap a random AES-256-GCM data key. Master changes re-wrap that key; legacy PBKDF2 vaults remain readable and have an explicit upgrade path. No master-passphrase recovery is implemented.
+- **Vault cryptography:** new vaults use Argon2id (64 MiB, three passes) to wrap a random AES-256-GCM data key. Master changes re-wrap that key; legacy PBKDF2 vaults remain readable and have an explicit upgrade path. Optional offline recovery kits must be prepared before the master is lost; shared-identity recovery remains unimplemented.
 - **Account adoption:** local login-CSV import from Chrome, Bitwarden, 1Password and LastPass, encrypted backups, local weak/reused-password checks, opt-in HIBP hash-prefix lookups, and encrypted TOTP.
 - **Account review operator:** find exact website/username duplicates and accounts due for a user review. Preview and approve up to 20 entries to mark reviewed, archive or restore. Archived entries retain encrypted credentials but are excluded from the updated companion and password-change plans. Latest eight account events stay inside the encrypted payload; unknown history stays unknown. No passwords are changed based on age alone.
 - **Vault activity:** page through recorded saves, access changes and account-action lifecycle events for one authorized vault. Private account observations appear locally after unlock. The service log contains no credential fields; earlier unrecorded activity and local fills/reveals are unavailable. See [the timeline's coverage](docs/VAULT_ACTIVITY.md).
@@ -128,3 +128,5 @@ The legacy command-line learning tool remains in `password_analyzer.py`. It is n
 Message triage decodes bounded RFC 822/MIME text, compares visible URL hosts and reply domains, and flags executable attachment names. It stores counts and sanitized observations, not sender addresses, links, attachment names or body text. Sender authentication and attachment contents remain unverified. See [message triage](docs/MESSAGE_TRIAGE.md).
 
 **Windows Update checks:** separately opt-in to offline-cache counts and update-related restart status with device agent 0.8.0. Results connect to reviews and AI task planning; no updates are installed or reboot performed. Cached zero does not prove patch coverage. See [scope and setup](docs/WINDOWS_UPDATES.md).
+
+**Offline vault recovery:** prepare an encrypted kit and a separate random key before forgetting a personal-vault master. Activation/recovery rotates the data key and revokes only that vault’s browser connections and private action queues. Current and historical sources are explicit; no server escrow or automatic snapshot substitution. [Protocol and limits](docs/VAULT_RECOVERY_KITS.md).

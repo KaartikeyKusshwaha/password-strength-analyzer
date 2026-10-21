@@ -234,6 +234,7 @@ class VaultEnvelopeV2(VaultEnvelope):
 
 class VaultWrite(Body):
     revision: int = Field(ge=0)
+    rotation_reason: Literal["recovery-kit", "recovery-current", "recovery-snapshot", "invalidate-recovery-kits"] | None = None
     envelope: VaultEnvelope | VaultEnvelopeV2 = Field(discriminator='version')
 
 
@@ -336,7 +337,7 @@ def create_app(settings=None):
             app.state.watch_service.stop()
             executor.shutdown(wait=True, cancel_futures=True)
 
-    app = FastAPI(title="SentinelOps", version="0.15.0", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title="SentinelOps", version="0.16.0", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.store, app.state.settings = store, settings
     app.state.cipher, app.state.executor = cipher, executor
     app.state.agent_transport = None
@@ -567,11 +568,20 @@ def create_app(settings=None):
                 must(body.envelope.context == row['id'], 'Encrypted vault context does not match the selected vault', 422)
             previous = json.loads(row['payload'])
             must(not previous or previous.get('version') != 2 or body.envelope.version == 2, 'This vault requires the current protected envelope format', 409)
+            rotation = getattr(body,'rotation_reason',None)
+            if rotation:
+                must(not browser and previous and previous.get('version')==2 and body.envelope.version==2,'Recovery rotations require an initialized protected personal vault',422)
+                must(previous.get('wrapped_key')!=body.envelope.wrapped_key and previous.get('iv')!=body.envelope.iv and previous.get('ciphertext')!=body.envelope.ciphertext,'Recovery rotations must replace key protection and encrypted data',422)
             if browser:
                 must(row['browser_enabled'] and row['browser_save'], 'Saving from the browser is disabled for this vault', 403)
             must(body.revision == row['revision'], "Vault changed in another tab or companion. Lock, reload and unlock before editing again.", 409)
             c.execute('UPDATE vault_spaces SET revision=?,payload=?,updated_at=? WHERE id=? AND user=?', (body.revision+1,canonical(body.envelope.model_dump()),now(),row['id'],user))
             Store.event(c,'personal:'+user,user,'vault.browser_saved' if browser else 'vault.saved' if previous else 'vault.initialized',row['id'])
+            if rotation:
+                actions=c.execute("SELECT id,user,workspace FROM credential_actions WHERE user=? AND kind='personal' AND vault_id=? AND status NOT IN ('complete','cancelled','expired')",(user,row['id'])).fetchall()
+                c.execute("UPDATE credential_actions SET status='cancelled',lease_hash=NULL,lease_connection=NULL,lease_expires=NULL WHERE user=? AND kind='personal' AND vault_id=? AND status NOT IN ('complete','cancelled','expired')",(user,row['id']))
+                record_action_cancellations(c,actions,user)
+                Store.event(c,'personal:'+user,user,{'recovery-kit':'vault.recovery_kit_activated','recovery-current':'vault.recovered_current','recovery-snapshot':'vault.recovered_snapshot','invalidate-recovery-kits':'vault.recovery_kits_invalidated'}[rotation],row['id'])
             if previous and body.envelope.version == 2 and (previous.get('version') != 2 or previous.get('wrapped_key') != body.envelope.wrapped_key):
                 record_connection_revocations(c,c.execute("SELECT * FROM companions WHERE kind='personal' AND user=? AND vault_id=?",(user,row['id'])).fetchall(),user)
                 c.execute("DELETE FROM companions WHERE kind='personal' AND user=? AND vault_id=?", (user,row['id']))
@@ -1302,7 +1312,7 @@ def create_app(settings=None):
             workspace = dict(c.execute("SELECT * FROM workspaces WHERE id=?", (session["workspace"],)).fetchone())
             data = {kind: Store.all(c, session["workspace"], kind) for kind in ("assets", "scans", "findings", "tasks", "investigations", "security_reviews")}
             audit = Store.audit(c, session["workspace"])
-        value = dict(product="SentinelOps", version="0.15.0", generated_at=now(), workspace=workspace, **data, audit=audit, limitations="User-provided observations and reviewed decisions, not a security certification. Hash links reveal some edits relative to a retained external head; a database administrator can rewrite the whole chain. No independent signing authority.")
+        value = dict(product="SentinelOps", version="0.16.0", generated_at=now(), workspace=workspace, **data, audit=audit, limitations="User-provided observations and reviewed decisions, not a security certification. Hash links reveal some edits relative to a retained external head; a database administrator can rewrite the whole chain. No independent signing authority.")
         value["content_sha256"] = hashlib.sha256(canonical(value).encode()).hexdigest()
         return JSONResponse(value, headers={"Content-Disposition": 'attachment; filename="sentinelops-evidence.json"'})
 

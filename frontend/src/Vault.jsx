@@ -23,6 +23,7 @@ import {
 import { generatePassword } from "./lab";
 import { accountHealth, changePasswordUrl } from './account-health';
 import VaultActivity from './VaultActivity';
+import VaultRecovery from './VaultRecovery';
 import VaultImport from './VaultImport';
 import BreachReview from './BreachReview';
 import AccountActions from './AccountActions';
@@ -408,8 +409,7 @@ export default function Vault({ space, otherVaults = [], me }) {
               </form>
             )}
             <p className="fine">
-              {envelope?.version === 1 ? 'Legacy PBKDF2-SHA256; 600,000 iterations.' : 'Argon2id (64 MiB, 3 passes) wraps a random AES-256 vault key.'} No master-key recovery. Keep an encrypted backup and
-              remember its passphrase.
+              {envelope?.version === 1 ? 'Legacy PBKDF2-SHA256; 600,000 iterations.' : 'Argon2id (64 MiB, 3 passes) wraps a random AES-256 vault key.'} {envelope?.version===1 ? "Upgrade while you still know the master; legacy vaults cannot use recovery kits." : "Recovery requires a previously prepared offline recovery kit and its separate key."} Keep an encrypted backup and remember its passphrase.
             </p>
             {envelope && (
               <button className="text-button" onClick={backup}>
@@ -710,6 +710,7 @@ export default function Vault({ space, otherVaults = [], me }) {
           </section>
         </>
       )}
+      {envelope?.version===2&&<VaultRecovery key={generation.current} space={space} vaultPath={vaultPath} unlocked={entries!==null} disabled={busy||!!space?.archived} onReplaced={(replacement,nextRevision,notice)=>{lock();setEnvelope(replacement);setRevision(nextRevision);setCopyNotice(notice);}}/>}
     </>
   );
 }

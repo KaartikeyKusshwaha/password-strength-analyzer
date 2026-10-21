@@ -1,4 +1,25 @@
-# Development verification — 0.15.0
+# Development verification — 0.16.0
+
+
+## Offline recovery kits — 0.16.0
+
+Full Python suite: 416 passed. Six focused recovery API cases passed including
+mid-transaction rollback, scoped queued/leased-work cancellation and unrelated
+vault preservation. Full frontend: 225 tests across 49 files plus production
+build passed; 12 focused UI cases and the final build passed after scope-wording
+corrections. The committed native vector also passed its independent Python
+reproduction check (`tests/recovery_vector.py`). Cryptographic tests include an independent native Python vector,
+subsequent encrypted writes, current-data recovery, fresh key rotation, explicit
+snapshot selection and tampered/wrong-context/key rejection. Lifecycle tests
+exclude secrets from requests and discard hidden/cancelled late results.
+
+The actual app received a fresh encrypted backup and passed 15 startup checks
+without schema or protected-data changes. No recovery key/kit was activated for
+an actual vault. Edge was not connected; the real in-app browser sign-in screen
+opened and is waiting for owner sign-in. Visual recovery setup/download/use and
+independent security review remain open. See VAULT_RECOVERY_KITS.md. Ignored
+startup evidence: `data/upgrade-0.16.0-*`; UI handoff screenshot:
+`data/browser-acceptance-0.16.0/sign-in-handoff.png`.
 
 
 ## Windows Update observations — 0.15.0

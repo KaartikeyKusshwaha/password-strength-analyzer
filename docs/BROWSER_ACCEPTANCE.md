@@ -1,4 +1,13 @@
-# Browser acceptance — SentinelOps 0.15.0 / companion 0.12.8
+# Browser acceptance — SentinelOps 0.16.0 / companion 0.12.8
+
+Offline recovery kits 0.16.0: cryptographic/API/component acceptance passed,
+but actual setup/download/recovery remains pending. Edge was absent from browser
+inventory. The in-app browser opened the actual 0.16.0 sign-in screen and its
+owner email was prepared for private sign-in. No password was retrieved and no
+recovery credential was created or activated. The tab is retained for sign-in;
+screenshot: `data/browser-acceptance-0.16.0/sign-in-handoff.png`. Do not treat this
+sign-in screen as evidence that the signed-in recovery UI was visually accepted.
+
 
 Windows Update acceptance: actual Edge retained owner sign-in after the backed-up
 schema-10 upgrade. The driver chose the local read-only update scope and ran it.
