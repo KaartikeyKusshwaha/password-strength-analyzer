@@ -30,6 +30,15 @@ Actual Edge checks verified both destinations and all three companion URL
 destinations. This tests the dashboard routing; the installed extension popup
 still needs its 0.13.0 reload and separate acceptance.
 
+Automatic device approval is bound to the workspace, selected connection,
+available checks, allowed targets and AI option. Changing this scope clears
+approval, including when returning to an earlier selection. Revoked or expired
+connections cannot silently become local checks. Ordinary heartbeat refreshes do
+not clear an unchanged scope. The API remains authoritative for execution
+permissions; a selected connection is not a guarantee it is online. Focused
+regressions cover these changes and actual Edge verified the AI-option reset
+without starting another assessment.
+
 Vault unlocks, provider sign-in/challenges and final credential changes remain
 explicit user actions. There is no universal provider MFA-enrollment or password
 change API. Agents never receive vault plaintext or authenticator keys and cannot

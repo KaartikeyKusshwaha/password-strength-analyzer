@@ -13,6 +13,7 @@
     "backend": 423,
     "react": 235,
     "direct_operator_navigation_focused_react": 13,
+    "scope_approval_and_navigation_focused_react": 15,
     "final_focused_react": 21,
     "app_build": "passed",
     "extension_build_and_package": "passed"
@@ -40,6 +41,13 @@
     "ai_planning": "complete",
     "two_factor_shortcut_reaches_locked_vault": true,
     "companion_reload_confirmation": "pending",
+    "automatic_scope_approval": {
+      "initial_run_disabled": true,
+      "explicit_approval_enables_run": true,
+      "changing_ai_option_clears_approval": true,
+      "returning_to_original_option_requires_fresh_approval": true,
+      "scan_submitted_during_this_test": false
+    },
     "dashboard_shortcut_checks": {
       "website_operator_direct_access": true,
       "dependency_operator_direct_access": true,
@@ -75,6 +83,7 @@
     "data/browser-acceptance-0.18.0/automatic-review.png",
     "data/browser-acceptance-0.18.0/agent-follow-up.png",
     "data/browser-acceptance-0.18.0/current-lockfile-watch.png",
-    "data/browser-acceptance-0.18.0/direct-dependency-operator.png"
+    "data/browser-acceptance-0.18.0/direct-dependency-operator.png",
+    "data/browser-acceptance-0.18.0/scope-approval-reset.png"
   ]
 }
