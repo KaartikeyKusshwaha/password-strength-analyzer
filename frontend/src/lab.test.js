@@ -50,4 +50,18 @@ describe("private password tools", () => {
       })),
     ).toBe(0);
   });
+  it('does not send an aborted prefix request or accept invalid counts',async()=>{
+    vi.stubGlobal('crypto',webcrypto);const controller=new AbortController();controller.abort();const fetcher=vi.fn();
+    await expect(checkBreach('password',fetcher,{signal:controller.signal})).rejects.toThrow();expect(fetcher).not.toHaveBeenCalled();
+    await expect(checkBreach('password',async()=>({ok:true,text:async()=> '1E4C9B93F3F0682250B6CF8331B7EE68FD8:999999999999999999999'}))).rejects.toThrow('not checked');
+  });
+  it('rejects conflicting rows instead of trusting the first count',async()=>{
+    vi.stubGlobal('crypto',webcrypto);
+    await expect(checkBreach('password',async()=>({ok:true,text:async()=> '1E4C9B93F3F0682250B6CF8331B7EE68FD8:0\n1E4C9B93F3F0682250B6CF8331B7EE68FD8:42'}))).rejects.toThrow('not checked');
+  });
+  it('cancels an oversized streamed response before accepting a verdict',async()=>{
+    vi.stubGlobal('crypto',webcrypto);const reader={read:vi.fn(async()=>({done:false,value:new Uint8Array(2000001)})),cancel:vi.fn(async()=>{}),releaseLock:vi.fn()};
+    await expect(checkBreach('password',async()=>({ok:true,body:{getReader:()=>reader}}))).rejects.toThrow('not checked');
+    expect(reader.cancel).toHaveBeenCalled();expect(reader.releaseLock).toHaveBeenCalled();
+  });
 });

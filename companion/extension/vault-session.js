@@ -1,6 +1,6 @@
-import { encryptVault, unlockVault, validateEntries, validOrigin, generateTotp } from '../../frontend/src/vault-crypto';
+import { encryptVault, unlockVault, validateEntries, validOrigin, generateTotp, parseOtpAuth } from '../../frontend/src/vault-crypto';
 import { serviceOrigin } from './policy';
-import {openAction} from '../../frontend/src/action-crypto';
+import {openAction,sealAction} from '../../frontend/src/action-crypto';
 import {isArchived,trackChanges} from '../../frontend/src/entry-history';
 import manifest from './public/manifest.json';
 
@@ -10,9 +10,15 @@ export class SaveSession {
   constructor(browser, fetcher = (...args) => globalThis.fetch(...args)) { this.browser = browser; this.fetcher = fetcher; this.generation=0;this.pending=new Set();this.lock(); }
   lock() {this.generation++;this.pending.forEach(controller=>controller.abort());this.pending.clear();this.material?.handle?.close();this.material = null; this.entries = null; this.revision = 0; this.config = null; this.policy = null;}
   active(generation) {if(generation!==this.generation)throw new Error('Vault locked. Unlock again to continue.');}
+  async external(task){
+    if(!this.material||!this.entries)throw new Error('Unlock your vault first.');
+    const generation=this.generation,controller=new AbortController();this.pending.add(controller);
+    try{const value=await task({signal:controller.signal,active:()=>this.active(generation)});this.active(generation);return value;}
+    finally{this.pending.delete(controller);}
+  }
   async request(body,path='/vault') {
     if(!this.config)throw new Error('Unlock your vault first.');
-    if(!/^\/(vault|actions(?:\/[a-f0-9]{24}\/(claim|result))?)$/.test(path))throw new Error('Unsupported companion request.');
+    if(!/^\/(vault|actions(?:\/context|\/[a-f0-9]{24}\/(claim|result|cancel))?)$/.test(path))throw new Error('Unsupported companion request.');
     const generation=this.generation,controller=new AbortController();this.pending.add(controller);
     try {
       // Browser fetch requires its global receiver, never this SaveSession.
@@ -99,6 +105,16 @@ export class SaveSession {
     const generation=this.generation;await this.refresh();this.active(generation);this.permitted('save');
     await this.persist(this.entries.map(entry=>{if(entry.id!==identifier||entry.type!=='totp')return entry;const {autofill_origin,...rest}=entry;return rest;}),generation);
   }
+  async addAuthenticator(title,setup,origin=''){
+    if(typeof title!=='string'||!title.trim()||title.trim().length>100||typeof setup!=='string'||!setup.trim()||setup.length>4096)throw new Error('Enter a name and supported setup key or TOTP URI.');
+    if(origin&&validOrigin(origin)!==origin)throw new Error('Choose an exact HTTPS origin.');
+    const generation=this.generation;await this.refresh();this.active(generation);this.permitted('save',origin||undefined);
+    if(!origin&&this.policy?.origins?.length)throw new Error('Link this authenticator to an allowed website for this scoped vault.');
+    const parsed=parseOtpAuth(setup.trim());
+    if(this.entries.some(entry=>entry.type==='totp'&&!isArchived(entry)&&entry.secret===parsed.secret))throw new Error('This authenticator key is already saved in this vault.');
+    const entry={id:crypto.randomUUID(),type:'totp',title:title.trim(),...parsed,...(origin?{autofill_origin:origin}:{})};
+    validateEntries([entry]);await this.persist([...this.entries,entry],generation);this.active(generation);return entry.id;
+  }
   async save(capture, confirmedUpdate = false) {
     if (!this.material || !this.entries) throw new Error('Unlock your private vault first.');
     if (!capture || !Number.isFinite(capture.expires) || capture.expires < Date.now()) throw new Error('This save request expired. Open the password assistant again.');
@@ -125,6 +141,21 @@ export class SaveSession {
   }
   async actions() {
     await this.refresh();return (await this.request(undefined,'/actions')).actions;
+  }
+  async approveChanges(identifiers){
+    if(!Array.isArray(identifiers)||!identifiers.length||identifiers.length>20||new Set(identifiers).size!==identifiers.length)throw new Error('Select 1–20 distinct saved logins.');
+    const generation=this.generation;await this.refresh();this.active(generation);
+    const descriptor=await this.request(undefined,'/actions/context');this.active(generation);
+    if(descriptor.vault_id!==this.policy?.id||descriptor.kind!==this.material.kind)throw new Error('The vault approval scope changed. Reconnect this vault.');
+    const items=identifiers.map(id=>{
+      const entry=this.entries.find(item=>item.id===id&&item.type==='login'&&!isArchived(item));
+      if(!entry||entry.pending_change)throw new Error('A login is unavailable or already has a staged change. Resolve that proposal first.');
+      if(validOrigin(entry.origin)!==entry.origin)throw new Error('Use an exact HTTPS login origin.');
+      this.permitted('save',entry.origin);this.permitted('fill',entry.origin);return {entry_id:id,origin:entry.origin};
+    });
+    const manifest={version:1,id:Array.from(crypto.getRandomValues(new Uint8Array(12)),byte=>byte.toString(16).padStart(2,'0')).join(''),...descriptor,approved_at:Math.floor(Date.now()/1000),expires_at:Math.floor(Date.now()/1000)+1800,items};
+    const envelope=this.material.kind==='shared'?await this.material.handle.sealAction(manifest):await sealAction(manifest,this.material.key);this.active(generation);
+    return this.request({id:manifest.id,vault_id:manifest.vault_id,kind:manifest.kind,entry_count:items.length,expires_at:manifest.expires_at,envelope},'/actions');
   }
   async actionPlan(job) {
     if(!this.material || !this.policy || job.vault_id!==this.policy.id || job.kind!==(this.material.kind || 'personal') || job.kind==='shared' && job.user!==this.material.identity.user)throw new Error('This plan belongs to a different vault or user.');

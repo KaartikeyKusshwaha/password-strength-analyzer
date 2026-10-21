@@ -101,11 +101,11 @@ def register(app,store,auth,companion_auth,throttle):
             expire(c,session['user'])
             return {'actions':[public(row) for row in c.execute("SELECT * FROM credential_actions WHERE user=? AND (kind='personal' OR workspace=?) ORDER BY created_at DESC LIMIT 100",(session['user'],session['workspace']))]}
 
-    @app.post('/api/account-actions')
-    def create_action(body: CreateAction,session=Depends(auth)):
+    def enqueue(body,session,connection=None):
         throttle('account-actions:'+session['user'],20)
         require(time.time()+60<=body.expires_at<=time.time()+3600,'Approve an action that expires within one hour',422)
         with store.connect(write=True) as c:
+            if connection:require_connection(c,connection)
             scope(c,session['user'],body.kind,body.vault_id,session['workspace'])
             require(not c.execute('SELECT 1 FROM credential_actions WHERE id=?',(body.id,)).fetchone(),'Action id already exists',409)
             expire(c,session['user'])
@@ -114,6 +114,10 @@ def register(app,store,auth,companion_auth,throttle):
             c.execute('INSERT INTO credential_actions VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(body.id,session['user'],body.vault_id,body.kind,session['workspace'] if body.kind=='shared' else None,canonical(body.envelope.model_dump()),body.entry_count,'queued',canonical(items),None,None,None,now(),body.expires_at))
             Store.event(c,session['workspace'] if body.kind=='shared' else 'personal:'+session['user'],session['user'],'credential_action.approved',body.id)
         return {'id':body.id,'status':'queued'}
+
+    @app.post('/api/account-actions')
+    def create_action(body:CreateAction,session=Depends(auth)):
+        return enqueue(body,session)
 
     @app.post('/api/account-actions/{identifier}/cancel')
     def cancel_action(identifier: str,session=Depends(auth)):
@@ -132,6 +136,21 @@ def register(app,store,auth,companion_auth,throttle):
             expire(c,connection['user']);scope(c,connection['user'],connection['kind'],connection['vault_id'],connection['workspace'])
             return {'actions':[public(row) for row in c.execute('SELECT * FROM credential_actions WHERE user=? AND kind=? AND vault_id=? ORDER BY created_at DESC LIMIT 50',(connection['user'],connection['kind'],connection['vault_id']))]}
 
+    @app.get('/api/companion/actions/context')
+    def browser_action_context(request:Request):
+        connection=companion_auth(request)
+        with store.connect() as c:
+            require_connection(c,connection);scope(c,connection['user'],connection['kind'],connection['vault_id'],connection['workspace'])
+        return {'actor':connection['user'],'vault_id':connection['vault_id'],'kind':connection['kind']}
+
+    @app.post('/api/companion/actions')
+    def browser_create_action(body:CreateAction,request:Request):
+        connection=companion_auth(request)
+        require(body.vault_id==connection['vault_id'] and body.kind==connection['kind'],'Approval belongs to a different vault',403)
+        with store.connect() as c:require_connection(c,connection)
+        # The same deterministic queue/policy checks as the signed-in control room.
+        return enqueue(body,{'user':connection['user'],'workspace':connection['workspace']},connection)
+
     @app.post('/api/companion/actions/{identifier}/claim')
     def claim_action(identifier: str,body: Claim,request: Request):
         connection=companion_auth(request);throttle('account-claim:'+connection['user'],60)
@@ -142,6 +161,16 @@ def register(app,store,auth,companion_auth,throttle):
             c.execute("UPDATE credential_actions SET status='running',lease_hash=?,lease_connection=?,lease_expires=? WHERE id=?",(hashlib.sha256(lease.encode()).hexdigest(),connection['token'],min(row['expires_at'],time.time()+300),identifier))
             Store.event(c,row['workspace'] or 'personal:'+row['user'],row['user'],'credential_action.resumed' if row['status']=='interrupted' else 'credential_action.claimed',identifier)
         return {'lease':lease,'action':{**public(row),'status':'running'}}
+
+    @app.post('/api/companion/actions/{identifier}/cancel')
+    def browser_cancel_action(identifier:str,request:Request):
+        connection=companion_auth(request)
+        with store.connect(write=True) as c:
+            expire(c,connection['user']);row=browser_job(c,connection,identifier)
+            require(row['status'] not in {'complete','cancelled','expired'},'This action has already stopped',409)
+            c.execute("UPDATE credential_actions SET status='cancelled',lease_hash=NULL,lease_connection=NULL,lease_expires=NULL WHERE id=?",(identifier,))
+            Store.event(c,row['workspace'] or 'personal:'+row['user'],row['user'],'credential_action.cancelled',identifier)
+        return {'ok':True,'note':'Plan stopped. Staged proposals remain encrypted; retain them if a website may already use one.'}
 
     @app.post('/api/companion/actions/{identifier}/result')
     def action_result(identifier: str,body: Result,request: Request):

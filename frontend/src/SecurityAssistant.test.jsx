@@ -8,6 +8,7 @@ it('keeps consent in the popup, requests only its approved target and renders pl
   const browser={tabs:{query:vi.fn(async()=>[{url:'https://example.com'}])},storage:{local:{get:vi.fn(async()=>saved),set:vi.fn(async value=>Object.assign(saved,value)),remove:vi.fn(async key=>delete saved[key])}}};
   const fetcher=vi.fn(async url=>({ok:true,json:async()=>url.endsWith('/context')?{workspace:'Work',scan_hosts:['approved.example'],devices:[],ai_available:true}:url.endsWith('/operations')?{id:'a'.repeat(24),status:'queued'}:{id:'a'.repeat(24),status:'complete',ai_status:'complete',summary:'One configuration needs review.',actions:[{title:'Review your site configuration',steps:['Ask the owner to inspect its header policy'],verification:'Recheck the HTTPS response'}]}}));
   vi.stubGlobal('fetch',fetcher);render(<SecurityAssistant browser={browser}/>);
+  fireEvent.click(screen.getByText('Check my security · device and project checks'));
   const run=await screen.findByRole('button',{name:'Approve and check my security'});
   expect(fetcher.mock.calls.some(([url])=>url.endsWith('/operations'))).toBe(false);
   fireEvent.click(run);

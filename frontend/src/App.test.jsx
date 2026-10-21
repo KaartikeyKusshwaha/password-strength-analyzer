@@ -90,7 +90,7 @@ describe("workspace flows", () => {
     data.findings.push({id:'new-finding',title:'Fresh watch advisory',asset_id:'asset',rule:'DEP001',severity:'unknown',confidence:'high',status:'open',kind:'dependencies',evidence:'New public provider observation',first_seen:'2026-10-21T01:00:00Z',last_seen:'2026-10-21T01:00:00Z'});
     fireEvent.click(review);
     expect(await screen.findByRole('button',{name:'Fresh watch advisory',exact:true})).toBeInTheDocument();
-    expect(screen.getByRole('button',{name:'Findings 1'})).toBeInTheDocument();
+    expect(screen.getByRole('button',{name:'Security results 1'})).toBeInTheDocument();
   },15000);
   it('opens shared-vault review from a dashboard ownership request without collecting credentials',async()=>{
     const {data,fetcher}=mockWorkspace();
@@ -166,7 +166,7 @@ describe("workspace flows", () => {
     data.findings.push({ id: 'finding', asset_id: 'asset', title: 'Fixture password hashing', rule: 'PY001', severity: 'high', confidence: 'high', status: 'open', kind: 'python', label: 'auth.py', evidence: 'Redacted fixture evidence', first_seen: new Date().toISOString(), last_seen: new Date().toISOString() });
     await renderOverview();
     await screen.findByText('Your security, handled.');
-    fireEvent.click(screen.getByRole('button', { name: 'Findings 1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Security results 1' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select Fixture password hashing' }));
     fireEvent.click(screen.getByRole('button', { name: 'Agent desk AI' }));
     const create = screen.getByLabelText('Create remediation tasks assigned to me; reuse existing active tasks.');

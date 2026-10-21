@@ -1,21 +1,23 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {AccountOperator} from './action-operator';
 
-export function ActionQueue({session,browser,onChange}) {
+export function ActionQueue({session,browser,onChange,refresh=0}) {
   const operator=useRef(new AccountOperator(session,browser)),alive=useRef(true);
   const [jobs,setJobs]=useState(null),[selected,setSelected]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
-  useEffect(()=>()=>{alive.current=false;operator.current=null;},[]);
+  useEffect(()=>{alive.current=true;return()=>{alive.current=false;operator.current=null;};},[]);
+  useEffect(()=>{if(refresh)run(load);},[refresh]);
   async function run(action) {setBusy(true);setError('');try{await action();}catch(e){if(alive.current)setError(e.message);}finally{if(alive.current){setBusy(false);onChange?.();}}}
+  async function cancel(job){await session.request({},'/actions/'+job.id+'/cancel');if(selected?.id===job.id){operator.current=new AccountOperator(session,browser);setSelected(null);}setNotice('Plan stopped. Original logins and staged replacements remain encrypted. Keep any replacement the website might already use.');await load();}
   async function load() {
     const value=await session.actions();if(!alive.current)return;setJobs(value);
     if(await operator.current.restore(value) && alive.current)setSelected(operator.current.action);
   }
   function update() {if(alive.current)setSelected({...operator.current.action});}
-  return <section><h2>Approved account actions</h2><p className="fine">Encrypted plans come from your dashboard approval. The operator stages a recoverable password and prepares supported exact-origin forms. Submit each website yourself. Sign-in, MFA and unsupported forms require your input.</p>
+  return <section><h2>Approved account actions</h2><p className="fine">Approve selected logins here in the companion or in the control room. The operator stages a recoverable password and prepares supported exact-origin forms. Submit each website yourself. Sign-in, MFA and unsupported forms require your input.</p>
     {error && <p className="error">{error}</p>}{notice && <p className="notice">{notice}</p>}
     <button className="secondary" disabled={busy} onClick={()=>run(load)}>Load approved account actions</button>
     {jobs?.length===0 && <p>No approved work for this vault.</p>}
-    {jobs?.map(job=><div key={job.id}><strong>{job.entry_count} account(s) · {job.status.replaceAll('_',' ')}</strong><p className="fine">Approval {job.id.slice(0,8)}</p>{['queued','interrupted'].includes(job.status) && <button disabled={busy} onClick={()=>run(async()=>{await operator.current.select(job,job.status==='interrupted');update();setNotice('Approval decrypted and claimed. Open each security page below. Original saved logins are retained until you confirm a change.');})}>{job.status==='interrupted'?'Resume interrupted approval':'Review and run approved plan'}</button>}{['running','awaiting_confirmation'].includes(job.status) && selected?.id!==job.id && <p className="fine">Another popup holds this action lease. Reopen it, or explicitly resume after its five-minute lease expires.</p>}</div>)}
+    {jobs?.map(job=><div key={job.id}><strong>{job.entry_count} account(s) · {job.status.replaceAll('_',' ')}</strong><p className="fine">Approval {job.id.slice(0,8)}</p>{['queued','interrupted'].includes(job.status) && <button disabled={busy} onClick={()=>run(async()=>{await operator.current.select(job,job.status==='interrupted');update();setNotice('Approval decrypted and claimed. Open each security page below. Original saved logins are retained until you confirm a change.');})}>{job.status==='interrupted'?'Resume interrupted approval':'Review and run approved plan'}</button>}{!['complete','cancelled','expired'].includes(job.status)&&<button className="secondary" disabled={busy} onClick={()=>run(()=>cancel(job))}>Stop this account plan</button>}{['running','awaiting_confirmation'].includes(job.status) && selected?.id!==job.id && <p className="fine">Another popup holds this action lease. Reopen it, or explicitly resume after its five-minute lease expires.</p>}</div>)}
     {selected && operator.current?.plan?.items.map((item,index)=>{
       const entry=session.entries.find(e=>e.id===item.entry_id),state=selected.items[index]?.state,done=['confirmed_by_user','discarded'].includes(state);
       return <article key={item.entry_id}><h3>{entry?.title || 'Approved login'}</h3><p>{item.origin}</p><p>{entry?.username} · {state?.replaceAll('_',' ')}</p>

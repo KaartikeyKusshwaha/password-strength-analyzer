@@ -32,6 +32,19 @@ def browser_token(app,client,vault,kind='personal'):
     assert response.status_code==200,response.text
     return TestClient(app),{'Authorization':'Bearer '+response.json()['token']}
 
+def test_browser_can_approve_only_its_connected_vault(system):
+    app,owner,_=system;vault=personal(owner);browser,headers=browser_token(app,owner,vault)
+    descriptor=browser.get('/api/companion/actions/context',headers=headers)
+    assert descriptor.status_code==200 and descriptor.json()=={'actor':owner.get('/api/me').json()['id'],'vault_id':vault,'kind':'personal'}
+    identifier,body=approval(owner,vault);body={**body,'id':uid()}
+    assert browser.post('/api/companion/actions',headers=headers,json={**body,'vault_id':'f'*24}).status_code==403
+    created=browser.post('/api/companion/actions',headers=headers,json=body);assert created.status_code==200,created.text
+    assert claim(browser,headers,body['id']).status_code==200
+    assert browser.post('/api/companion/actions/'+body['id']+'/cancel',headers=headers,json={}).status_code==200
+    assert claim(browser,headers,body['id']).status_code==409
+    with app.state.store.connect(write=True) as c:c.execute('UPDATE vault_spaces SET browser_save=0 WHERE id=?',(vault,))
+    assert browser.post('/api/companion/actions',headers=headers,json={**body,'id':uid()}).status_code==403
+
 
 def claim(browser,headers,identifier,resume=False):
     return browser.post('/api/companion/actions/'+identifier+'/claim',headers=headers,json={'resume':resume})
@@ -197,6 +210,7 @@ def test_cached_bearer_authorization_cannot_claim_or_read_after_revocation(syste
     register(isolated,app.state.store,lambda:None,lambda request:cached,lambda *args:None)
     stale=TestClient(isolated)
     assert stale.get('/api/companion/actions').status_code==401
+    assert stale.get('/api/companion/actions/context').status_code==401
     assert claim(stale,{},job).status_code==401
     assert result(stale,{},job,'unused-public-fixture-lease-'*3,'prepared').status_code==401
     with app.state.store.connect() as c:

@@ -71,15 +71,15 @@ const navigation = [
   ["assets", "Asset inventory", Network],
   ["scans", "Security checks", ScanLine],
   ['reviews','Security reviews',ClipboardCheck],
-  ["findings", "Findings", Radar],
+  ["findings", "Security results", Radar],
   ["tasks", "Remediation", ClipboardCheck],
   ["investigations", "Investigations", Search],
   ["agents", "Agent desk", Bot],
   ["watches", "Watches & alerts", Bell],
-  ["vault", "Vault & authenticator", LockKeyhole],
-  ["companions", "Browser & devices", Globe],
+  ["vault", "Vaults", LockKeyhole],
+  ["companions", "Connections", Globe],
   ["reports", "Evidence & activity", Activity],
-  ["settings", "Team & security", Settings2],
+  ["settings", "Settings", Settings2],
 ];
 const titles = {
   reviews:['One scope. Connected checks.','Approved assessments, combined findings and tracked follow-up work.'],
@@ -813,7 +813,7 @@ export default function App() {
               <p>{titles[page][1]}</p>
             </div>
             <div className="heading-actions">
-              {write && (
+              {write && !["vault","findings","companions","settings"].includes(page) && (
                 <>
                   <Button secondary onClick={() => setModal("asset")}>
                     <Plus size={16} />

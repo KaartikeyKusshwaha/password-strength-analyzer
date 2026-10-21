@@ -45,6 +45,9 @@ their replacement extension workflows are implemented.
    replace an external audit.
 
 Passkey vault unlocking is optional future work. Phishing detection is excluded.
+The current requirement-by-requirement state is maintained in
+[EXTENSION_ACCEPTANCE.md](EXTENSION_ACCEPTANCE.md); the list above records the
+original transition scope and is not a claim that later increments are missing.
 The local 0.14.0 build alone is not evidence that an installed browser extension
 has reloaded or that native permission prompts and actual-site checks have passed.
 
@@ -312,3 +315,56 @@ Public HTTPS status returned 200 with owner setup complete. No real sites were
 opted into monitoring. Browser inventory again reported Local browser use is
 disabled in Work settings; native permission, alarm and badge acceptance is
 unverified.
+
+
+## In-extension account protection, companion 0.20.0
+
+The unlocked popup now automatically estimates weak/repeated saved passwords
+locally. An explicitly approved breach lookup uses the public Pwned Passwords
+range API, padded responses, cookie omission and only a five-character SHA-1
+prefix. It sends no account names, website names, complete hashes or passwords.
+The provider sees the prefix and client IP. Runs are limited to twenty logins
+and deduplicate repeated passwords. Current vault policy and synchronization
+are checked before each query. Lock aborts external work and stale completions
+are rejected. No vault-health output goes to AI or persistent extension storage.
+Failed, skipped and unsupported checks stay unassessed. This is on-demand
+password-dataset checking, not email/account breach monitoring or a guarantee
+that an account is safe. Provider attribution is visible beside results.
+
+Selected account-change plans can now be approved in the unlocked popup and
+queued through the existing encrypted action pipeline without a website visit.
+The new companion creation/context routes are bound to the current connection's
+vault, user and kind. They reuse existing save/fill policies, shared-vault role
+checks, transaction-time token validation, encrypted manifests and queue limits.
+Passwords and selected origins remain inside the encrypted approval. The normal
+operator still stages recoverable replacements, prepares supported exact-origin
+forms and waits for human website submission/confirmation. A companion stop
+route cancels a plan without deleting potentially used staged replacements.
+
+Authenticator setup keys and TOTP URIs can now be added inside the extension,
+with duplicate-key detection, explicit website binding and scoped saving policy.
+Only ciphertext is synchronized. The user must confirm the first generated code
+in the external service to enable its factor. The extension does not enroll
+arbitrary accounts through a universal API or manage SMS/push as TOTP.
+
+The website's primary labels are Vaults, Security results, Connections and
+Settings; run/add-asset buttons are hidden on these primary control-room pages.
+Device/project controls in the popup are collapsed behind a single entry and
+the old three-tool website-launch menu is replaced by one control-room link.
+This does not claim all remaining acceptance-ledger items are complete.
+
+Verification: all 307 frontend tests passed, with a focused assistant UI test
+passing after collapsing its controls. Production web, content, popup and worker
+builds passed. Targeted backend account/vault/shared-connection regressions
+passed 21 tests. The actual bundled worker fixture passed. A live prefix lookup
+used only the public example password "password" and returned a valid match;
+no saved user credential was used. Full backend-suite results and deployment
+verification are recorded separately after completion. Browser acceptance and
+independent review remain required.
+
+
+Final regression run: all 459 backend tests passed with one native Windows
+symlink fixture skipped; the run completed in 223.86 seconds and its JUnit
+report is stored locally under ignored data/release020-backend-results.xml.
+All 307 frontend tests passed. No independent audit or live-browser acceptance
+is inferred from these results.

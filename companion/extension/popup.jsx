@@ -1,7 +1,8 @@
-import SecurityHub from './security-hub';
 import SecurityAssistant from './SecurityAssistant';
 import CodeFill from './CodeFill';
 import CloudConnect from './CloudConnect';
+import VaultHealth from './VaultHealth';
+import AuthenticatorSetup from './AuthenticatorSetup';
 import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { validOrigin } from "../../frontend/src/vault-crypto";
@@ -31,6 +32,7 @@ export function Popup() {
     [code, setCode] = useState(null),
     [fillStatus,setFillStatus] = useState(null);
   const [update,setUpdate]=useState(false);
+  const [actionRefresh,setActionRefresh]=useState(0);
   const session = useRef(new SaveSession(chrome));
   function lockVault() {session.current.lock();setEntries(null);setCapture(null);setCode(null);setUpdate(false);setFillStatus(null);}
   function reportError(error) {
@@ -126,7 +128,7 @@ export function Popup() {
         </div>
       </header>
       <SecurityAssistant/>
-      <details><summary>Control room · vaults and settings</summary><SecurityHub origin={config?.origin||pendingConnection?.origin||'https://sentinelops.129-225-76-232.sslip.io'}/></details>
+      <details><summary>Control room · vault administration and history</summary><p className="fine">Manage vaults, shared access, results history and account settings. Everyday checks and credential actions stay here.</p><button className="secondary" onClick={()=>chrome.tabs.create({url:(config?.origin||pendingConnection?.origin||'https://sentinelops.129-225-76-232.sslip.io')+'/#tool=passwords'})}>Open control room</button></details>
       {connections.length > 0 && <label>Connected vault<select value={config ? connections.findIndex(item=>item.token===config.token) : ''} disabled={busy} onChange={async event=>{const next=connections[Number(event.target.value)];if(!next)return;lockVault();setVaultPolicy(null);await chrome.storage.local.set({connection:next});await chrome.storage.local.remove('pendingConnection');setPendingConnection(null);setConfig(next);setReconnectRequired(false);setError('');}}><option value="" disabled>Choose a connected vault</option>{connections.map((item,index)=><option key={index} value={index}>{item.vaultName || 'Vault name not verified'}{item.vaultKind==='shared'?' · shared':''} · {new URL(item.origin).host}</option>)}</select></label>}
       {error && (
         <p className="error" role="alert">
@@ -278,7 +280,8 @@ export function Popup() {
               </button>
             </section>
           )}
-          <ActionQueue session={session.current} browser={chrome} onChange={()=>{if(session.current.entries){setEntries(session.current.entries);setRevision(session.current.revision);}}}/>
+          <VaultHealth entries={entries} session={session.current} browser={chrome} onApproved={()=>setActionRefresh(value=>value+1)}/>
+          <ActionQueue session={session.current} browser={chrome} refresh={actionRefresh} onChange={()=>{if(session.current.entries){setEntries(session.current.entries);setRevision(session.current.revision);}}}/>
           <h2>This website</h2>
           <p className="fine">
             {active?.origin ||
@@ -366,6 +369,7 @@ export function Popup() {
             </form>
           </details>}
           <h2>Authenticator codes</h2>
+          {vaultPolicy?.browser_save!==false&&<AuthenticatorSetup session={session.current} active={active} disabled={busy} onUpdated={()=>{setEntries([...session.current.entries]);setRevision(session.current.revision);}}/>}
           {entries
             .filter((e) => e.type === "totp" && !isArchived(e))
             .map((entry) => (
