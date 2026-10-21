@@ -12,7 +12,7 @@ SOURCE='import hashlib\ndef login(password):\n return hashlib.sha256(password.en
 def queued(app,client,**changes):
     body={'workspace_id':client.get('/api/me').json()['workspace'],'name':'Combined review','authorized':True,'checks':[
         {'action':'python','content':SOURCE,'authorized':True},
-        {'action':'email','content':'URGENT: verify your password. Reply with your password.','authorized':True}],**changes}
+        {'action':'python','content':'eval(user_input)\nexec(user_input)','authorized':True}],**changes}
     with patch.object(app.state.executor,'submit') as submit:
         response=post(client,'/security-reviews',body)
     assert response.status_code==200,response.text

@@ -105,13 +105,12 @@ class Asset(Body):
 
 class Scan(Body):
     asset_id: str
-    kind: Literal["python", "dependencies", "email", "website"]
+    kind: Literal["python", "dependencies", "website"]
     label: str = Field(min_length=2, max_length=100)
     content: SecretStr = SecretStr("")
     format: DependencyFormat = "requirements"
     dependency_selection: list[str] | None = Field(default=None,max_length=500)
     dependency_consent: bool = False
-    email_format: Literal["text", "eml"] = "text"
     authorized: bool
 
 
@@ -150,14 +149,13 @@ class AgentRequest(Body):
 
 
 class OperationRequest(Body):
-    action: Literal["device", "posture", "updates", "website", "python", "dependencies", "email"]
+    action: Literal["device", "posture", "updates", "website", "python", "dependencies"]
     target: str = Field(default="127.0.0.1", min_length=1, max_length=253)
     ports: list[int] = Field(default_factory=lambda: [21, 22, 23, 25, 53, 80, 110, 143, 443, 3306, 3389, 5000, 8000, 8080, 8443], min_length=1, max_length=64)
     content: SecretStr = SecretStr("")
     format: DependencyFormat = "requirements"
     dependency_selection: list[str] | None = Field(default=None,max_length=500)
     dependency_consent: bool = False
-    email_format: Literal["text", "eml"] = "text"
     authorized: bool
     ai_triage: bool = False
     device_id: str = Field(default="local", min_length=1, max_length=60)
@@ -347,7 +345,7 @@ def create_app(settings=None):
             app.state.watch_service.stop()
             executor.shutdown(wait=True, cancel_futures=True)
 
-    app = FastAPI(title="SentinelOps", version="0.17.0", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title="SentinelOps", version="0.18.0", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.store, app.state.settings = store, settings
     app.state.cipher, app.state.executor = cipher, executor
     app.state.agent_transport = None
@@ -1054,7 +1052,7 @@ def create_app(settings=None):
             elif body.action == "dependencies":
                 result = scanner.scan_dependencies(body.content.get_secret_value(), body.format, selection=body.dependency_selection)
             else:
-                result = scanner.scan_email(body.content.get_secret_value(), body.email_format)
+                raise ValueError("Unsupported assessment operator")
             with store.connect(write=True) as c:
                 member = c.execute("SELECT role FROM members WHERE workspace=? AND user=?", (workspace, actor)).fetchone()
                 if not member or member["role"] == "viewer":
@@ -1125,7 +1123,7 @@ def create_app(settings=None):
                 if body.action == "dependencies":
                     validate_dependency(body)
                 else:
-                    must(len(body.content.get_secret_value()) <= (15000 if body.action == "email" else 100000), "Submitted content exceeds the assessment limit", 422)
+                    must(len(body.content.get_secret_value()) <= 100000, "Submitted content exceeds the assessment limit", 422)
                 body.target = "Submitted " + body.action
         except ValueError as error:
             raise HTTPException(422, str(error))
@@ -1139,7 +1137,7 @@ def create_app(settings=None):
             must(body.target in json.loads(device["targets"]), "Target is outside this device connection's allowed scope", 422)
             must(body.action!='posture' or device['allow_posture'],'This device connection did not opt in to read-only posture collection. Create a consented connection and run the new agent with --allow-posture.',409)
             must(body.action!='updates' or device['allow_updates'],'This device connection did not separately opt in to update status. Create a consented connection and run agent 0.8+ with --allow-updates.',409)
-        kind = "device" if body.action in {'device','posture','updates'} else "website" if body.action == "website" else "mailbox" if body.action == "email" else "application"
+        kind = "device" if body.action in {'device','posture','updates'} else "website" if body.action == "website" else "application"
         asset = next((a for a in Store.all(c, session["workspace"], "assets") if a.get("operator_target") == body.target and a["kind"] == kind and a.get("device_id", "local") == body.device_id), None)
         if not asset:
             asset = dict(id=uid(), name=body.target, kind=kind, owner=session["email"], environment="development" if kind == "device" else "production", criticality="medium", hostname=body.target if kind == "website" else "", authorized=True, operator_target=body.target, device_id=body.device_id, created_at=now())
@@ -1193,9 +1191,6 @@ def create_app(settings=None):
             elif body.kind == "dependencies":
                 validate_dependency(body)
                 result = scanner.scan_dependencies(content, body.format, selection=body.dependency_selection)
-            elif body.kind == "email":
-                must(len(content) <= 15000, "Email must be at most 15,000 characters", 422)
-                result = scanner.scan_email(content, body.email_format)
             else:
                 result = scanner.scan_web(asset["hostname"], settings.scan_hosts)
         except ValueError as e:
@@ -1346,7 +1341,7 @@ def create_app(settings=None):
             workspace = dict(c.execute("SELECT * FROM workspaces WHERE id=?", (session["workspace"],)).fetchone())
             data = {kind: Store.all(c, session["workspace"], kind) for kind in ("assets", "scans", "findings", "tasks", "investigations", "security_reviews")}
             audit = Store.audit(c, session["workspace"])
-        value = dict(product="SentinelOps", version="0.17.0", generated_at=now(), workspace=workspace, **data, audit=audit, limitations="User-provided observations and reviewed decisions, not a security certification. Hash links reveal some edits relative to a retained external head; a database administrator can rewrite the whole chain. No independent signing authority.")
+        value = dict(product="SentinelOps", version="0.18.0", generated_at=now(), workspace=workspace, **data, audit=audit, limitations="User-provided observations and reviewed decisions, not a security certification. Hash links reveal some edits relative to a retained external head; a database administrator can rewrite the whole chain. No independent signing authority.")
         value["content_sha256"] = hashlib.sha256(canonical(value).encode()).hexdigest()
         return JSONResponse(value, headers={"Content-Disposition": 'attachment; filename="sentinelops-evidence.json"'})
 

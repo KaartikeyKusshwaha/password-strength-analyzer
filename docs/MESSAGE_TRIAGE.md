@@ -1,3 +1,5 @@
+> Retired in app 0.18.0 at the user’s request. This document records historical behavior; current submission APIs and UI do not offer email/phishing detection.
+
 # Message triage — 0.14.1
 
 Users can submit message text or explicitly select an RFC 822 `.eml` message

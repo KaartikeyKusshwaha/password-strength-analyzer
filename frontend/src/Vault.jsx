@@ -66,14 +66,14 @@ function Code({ entry }) {
     </div>
   );
 }
-export default function Vault({ space, otherVaults = [], me }) {
+export default function Vault({ space, otherVaults = [], me, initialType='login' }) {
   const vaultPath = '/vault' + (space?.id ? '?vault_id='+encodeURIComponent(space.id) : '');
   const [envelope, setEnvelope] = useState(undefined),
     [revision, setRevision] = useState(0),
     [entries, setEntries] = useState(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
-    [type, setType] = useState("login"),
+    [type, setType] = useState(initialType),
     [adding, setAdding] = useState(false),
     [health, setHealth] = useState(null),
     [copyNotice, setCopyNotice] = useState(''),
@@ -466,7 +466,7 @@ export default function Vault({ space, otherVaults = [], me }) {
               </button>
               <button className="button" disabled={!!space?.archived} onClick={() => setAdding(!adding)}>
                 <Plus size={15} />
-                Add account
+                {initialType==='totp'?'Add authenticator':'Add account'}
               </button>
             </div>
           </section>

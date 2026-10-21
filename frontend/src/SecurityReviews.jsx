@@ -7,7 +7,7 @@ import AdvisoryCoverage from './AdvisoryCoverage';
 import MailCoverage from './MailCoverage';
 import DependencyScope,{emptyDependency,dependencyReady,DependencyCoverage} from './DependencyScope';
 
-const labels={device:'Device ports',posture:'Windows protection status',updates:'Windows Update cache & restart',website:'Website headers',python:'Python security patterns',dependencies:'Dependency advisories',email:'Suspicious email indicators'};
+const labels={device:'Device ports',posture:'Windows protection status',updates:'Windows Update cache & restart',website:'Website headers',python:'Python security patterns',dependencies:'Dependency advisories'};
 const active=value=>['queued','running'].includes(value.status);
 
 function ReviewStep({step,scans=[]}) {
@@ -21,10 +21,10 @@ function ReviewStep({step,scans=[]}) {
 
 export default function SecurityReviews({data,me,refresh,go,canWrite}) {
   const [dependency,setDependency]=useState(emptyDependency);
-  const [checks,setChecks]=useState([]),[action,setAction]=useState('python'),[target,setTarget]=useState('127.0.0.1'),[content,setContent]=useState(''),[ports,setPorts]=useState('22,443'),[device,setDevice]=useState('local'),[emailFormat,setEmailFormat]=useState('text');
+  const [checks,setChecks]=useState([]),[action,setAction]=useState('python'),[target,setTarget]=useState('127.0.0.1'),[content,setContent]=useState(''),[ports,setPorts]=useState('22,443'),[device,setDevice]=useState('local');
   const [busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
   const reviews=data.security_reviews||[],reserved=reviews.some(active)||(data.operations||[]).some(active)||(data.jobs||[]).some(active);
-  const isDevice=['device','posture','updates'].includes(action),isContent=['python','dependencies','email'].includes(action);
+  const isDevice=['device','posture','updates'].includes(action),isContent=['python','dependencies'].includes(action);
   const local=data.integrations.local_device_agent,devices=(data.devices||[]).filter(d=>action==='posture'?d.allow_posture:action==='updates'?d.allow_updates:true);
   function add(event) {
     event.preventDefault();setError('');setNotice('');
@@ -41,7 +41,6 @@ export default function SecurityReviews({data,me,refresh,go,canWrite}) {
       if(action==='website'){if(!target)throw new Error('Choose an approved website first.');check.target=target;}
       if(isContent&&action!=='dependencies'){if(!content.trim())throw new Error('Enter content for this check.');check.content=content;}
       if(action==='dependencies'){if(!dependencyReady(dependency))throw new Error('Preview and approve the dependency scope first.');Object.assign(check,dependency);}
-      if(action==='email'&&emailFormat==='eml')check.email_format='eml';
       if([...checks,check].reduce((sum,item)=>sum+new TextEncoder().encode(item.content||'').length,0)>1048576)throw new Error('Combined submissions exceed 1 MiB.');
       setChecks(list=>[...list,check]);setContent('');setDependency(emptyDependency());
     }catch(e){setError(e.message);}
@@ -62,14 +61,13 @@ export default function SecurityReviews({data,me,refresh,go,canWrite}) {
         <label>Check type<select value={action} onChange={event=>{const next=event.target.value;setAction(next);setTarget(next==='website'?(data.integrations.scan_hosts?.[0]||''):'127.0.0.1');}}>{Object.entries(labels).map(([value,label])=><option value={value} key={value}>{label}</option>)}</select></label>
         {isDevice&&<><label>Operator computer<select value={device} onChange={event=>setDevice(event.target.value)}><option value="local" disabled={!local}>This computer{local?'':' · unavailable on this host'}</option>{devices.map(d=><option value={d.id} key={d.id}>{d.label}</option>)}</select></label>{action==='device'&&<><label>Authorized private IP<input value={target} onChange={event=>setTarget(event.target.value)} required/></label><label>TCP ports<input value={ports} onChange={event=>setPorts(event.target.value)} required/></label></>}{action==='updates'&&<p className="fine">Read cached Windows Update counts and update-related restart status on the selected operator computer. Cache freshness is unverified; zero cached updates does not mean fully patched. No online catalog refresh, installation or restart. Remote clients require separate update-status consent and --allow-updates.</p>}{action==='posture'&&<p className="fine">Read-only Windows firewall, Defender and system-drive BitLocker status on the selected operator computer. Unsupported or denied checks remain unassessed.</p>}</>}
         {action==='website'&&<><label>Approved website<select value={target} onChange={event=>setTarget(event.target.value)} required><option value="">Choose a website</option>{(data.integrations.scan_hosts||[]).map(host=><option key={host}>{host}</option>)}</select></label>{!data.integrations.scan_hosts?.length&&<p>No website is in the configured assessment scope yet.</p>}</>}
-        {isContent&&action!=='dependencies'&&<label>{action==='email'?'Message text':action==='dependencies'?'Pinned dependencies':'Python source'}<textarea value={content} onChange={event=>setContent(event.target.value)} rows={5} maxLength={action==='email'?15000:100000} required/></label>}
-        {action==='email'&&<label>Email format<select value={emailFormat} onChange={event=>setEmailFormat(event.target.value)}><option value="text">Message text</option><option value="eml">RFC 822 .eml message</option></select></label>}
+        {isContent&&action!=='dependencies'&&<label>{'Python source'}<textarea value={content} onChange={event=>setContent(event.target.value)} rows={5} maxLength={100000} required/></label>}
         {action==='dependencies'&&<DependencyScope value={dependency} onChange={setDependency} disabled={busy}/>}
         <button className="button secondary" disabled={!canWrite||busy||checks.length>=6}>Add check to review</button>
       </form>
       <h3>Review scope · {checks.length}/6 checks</h3>
       {checks.length?<ol>{checks.map((check,index)=><li key={index}><strong>{labels[check.action]}</strong> · {check.target||`${check.content.length} characters`}{check.ports?` · ports ${check.ports.join(', ')}`:''}<button className="text-button" disabled={busy} onClick={()=>setChecks(list=>list.filter((_,i)=>i!==index))}>Remove check {index+1}</button></li>)}</ol>:<p>Add the assessments you want this run to cover.</p>}
-      <p className="fine">Submitted source and messages are processed in memory, excluded from stored review history and AI input. AI receives allowlisted finding summaries. Paired devices have a two-minute review response window; unavailable results stay unassessed. Account/vault actions remain separately approved.</p>
+      <p className="fine">Submitted source are processed in memory, excluded from stored review history and AI input. AI receives allowlisted finding summaries. Paired devices have a two-minute review response window; unavailable results stay unassessed. Account/vault actions remain separately approved.</p>
       <form className="operator-form" onSubmit={start}>
         <label>Review name<input name="name" required minLength={2} maxLength={80}/></label>
         <label className="check"><input name="authorized" type="checkbox" required/>I own or am authorized to assess every target in this review, and approve the listed checks.</label>

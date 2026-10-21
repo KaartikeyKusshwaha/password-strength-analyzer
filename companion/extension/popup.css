@@ -147,3 +147,7 @@ footer {
   padding-top: 12px;
 }
 .fingerprint { display: block; overflow-wrap: anywhere; padding: 8px; font-size: 11px; }
+
+.security-hub { margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid #dce4d5; }
+.hub-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.hub-tools button { margin: 0; padding: 8px; font-size: 11px; }

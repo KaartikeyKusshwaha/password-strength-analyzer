@@ -6,12 +6,21 @@ scoped browser/device operators execute it and record evidence. A chatbot,
 fictional workspace, manual asset form or uploaded report is not the primary
 workflow. Developer checks are available as connected secondary workflows.
 
+## Current product scope — 0.18.0
+
+The user narrowed the product to one extension/service for password management,
+2FA and vulnerability checks, with approved agents doing collection, findings,
+planning and follow-up automatically. Email/phishing detection is removed, not a
+pending roadmap item. The default dashboard and companion link these three tools.
+A one-approval device sweep uses existing operators; it does not change passwords,
+provider MFA settings or device settings without the corresponding user workflow.
+
 ## Implemented in the current development branch
 
 | Capability | Evidence / boundary |
 | --- | --- |
 | Central control center | `ControlCenter.jsx`, `/api/operations`; target -> asset -> check -> findings -> optional authorized AI task dispatch. |
-| Combined security reviews | `SecurityReviews.jsx`, `/api/security-reviews`; one workspace-bound approval, up to six scoped child checks, combined findings and one optional AI/task pass. Live synthetic API acceptance and an actual Edge localhost port/posture review passed; partial coverage and linked AI/task results were verified. No autonomous repair or trained phishing classifier is added. |
+| Combined security reviews | `SecurityReviews.jsx`, `/api/security-reviews`; one workspace-bound approval, up to six scoped child checks, combined findings and one optional AI/task pass. Live synthetic API acceptance and an actual Edge localhost port/posture review passed; partial coverage and linked AI/task results were verified. No autonomous settings repair is claimed. |
 | Real device checks | Local operator and paired polling device client, private-IP allowlists, 64-port bound, job leases, cancel/revoke. Reported observations are not proven vulnerabilities. |
 | Windows host posture | Explicit local/connection consent, protocol-v2 capability heartbeat, fixed read-only firewall/Defender/BitLocker status tools, bounded typed reports, per-check permission/unsupported states, findings and dashboard coverage table. No recovery keys, arbitrary commands, OS changes or patch assessment. |
 | In-page password assistant | Extension `content.js`, dedicated private window `vault-frame.jsx`; recognized signup/change forms get local suggestions, generation and explicit encrypted saving. One disposable login saved/synchronized/reopened in actual Edge. After 0.12.8 reload the user reported a fill receipt and Edge inspection showed both practice fields populated, with username practice visible. Provider login acceptance timed out; other-site, shared and negative-case installed acceptance remain open. |
@@ -26,7 +35,7 @@ workflow. Developer checks are available as connected secondary workflows.
 | Encrypted TOTP | Local code generation; actual provider enrollment still required. |
 | Agent workflow | One AI planner + deterministic evidence/reference/dispatch/progress workers. Per-run write scope and independent review required. |
 | Lockfile dependency inventories | npm v2/v3 and uv v1 parsing, private-source exclusions, exact-subset preview/OSV approval, 500-version bounded batches, preserved partial coverage, multi-version watch editing. No installed-software discovery or runtime reachability. Actual Edge import/205-pin watch, exact subset/approval reset and combined local-port/lockfile review with a live Groq plan passed. Focused-form and negative cases also have automated coverage. See DEPENDENCY_INVENTORIES.md. |
-| Source/dependency/email/website checks | Bounded checks with explicit partial/failure states. OSV uses exact pins only. Message text and explicit RFC 822/MIME triage include sanitized reply-domain, visible-link and executable-name observations, per-message finding scope and unassessed content. Sender authentication, attachment contents and the assign-3 trained classifier remain unverified/unimplemented. |
+| Source/dependency/website checks | Bounded Python AST, exact-version OSV and allowlisted HTTPS checks, with explicit partial/failure states. Email detection is retired from all current submission routes and selectors. |
 | App authentication and team roles | Session/CSRF controls, scrypt, TOTP replay controls, workspace isolation, independent task reviewer. |
 | Audit and envelope migration | Linked audit records and legacy single-vault migration preserving ciphertext/revisions, backed up before updating the local owner store. Not independent signing or production Postgres. |
 

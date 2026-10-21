@@ -12,8 +12,8 @@ it('previews multiple checks and sends the approved scope once, then clears raw 
   render(<SecurityReviews data={data} me={me} canWrite refresh={refresh} go={vi.fn()}/>);
   fireEvent.change(screen.getByLabelText('Python source'),{target:{value:'private-fixture-source'}});
   fireEvent.click(screen.getByRole('button',{name:'Add check to review'}));
-  fireEvent.change(screen.getByLabelText('Check type'),{target:{value:'email'}});
-  fireEvent.change(screen.getByLabelText('Message text'),{target:{value:'private-fixture-message'}});
+  fireEvent.change(screen.getByLabelText('Check type'),{target:{value:'python'}});
+  fireEvent.change(screen.getByLabelText('Python source'),{target:{value:'private-fixture-message'}});
   fireEvent.click(screen.getByRole('button',{name:'Add check to review'}));
   expect(api).not.toHaveBeenCalled();
   expect(screen.getByRole('heading',{name:'Review scope · 2/6 checks'})).toBeInTheDocument();
@@ -23,8 +23,8 @@ it('previews multiple checks and sends the approved scope once, then clears raw 
   fireEvent.click(screen.getByRole('button',{name:'Approve and run review'}));
   await waitFor(()=>expect(refresh).toHaveBeenCalled());
   expect(api).toHaveBeenCalledTimes(1);
-  expect(api).toHaveBeenCalledWith('/security-reviews',{workspace_id:me.workspace,name:'My approved review',authorized:true,ai_triage:true,checks:[{action:'python',authorized:true,content:'private-fixture-source'},{action:'email',authorized:true,content:'private-fixture-message'}]});
-  expect(screen.getByLabelText('Message text')).toHaveValue('');
+  expect(api).toHaveBeenCalledWith('/security-reviews',{workspace_id:me.workspace,name:'My approved review',authorized:true,ai_triage:true,checks:[{action:'python',authorized:true,content:'private-fixture-source'},{action:'python',authorized:true,content:'private-fixture-message'}]});
+  expect(screen.getByLabelText('Python source')).toHaveValue('');
   expect(screen.getByRole('heading',{name:'Review scope · 0/6 checks'})).toBeInTheDocument();
 });
 
@@ -67,17 +67,9 @@ it('shows the actual child scan coverage inside a partial review',()=>{
   expect(screen.getByText('unassessed')).toBeInTheDocument();
 });
 
-it('sends the selected eml format with the approved email step',async()=>{
+it('does not offer retired email detection in the current review workflow',()=>{
   render(<SecurityReviews data={data} me={me} canWrite refresh={vi.fn()} go={vi.fn()}/>);
-  fireEvent.change(screen.getByLabelText('Check type'),{target:{value:'email'}});
-  fireEvent.change(screen.getByLabelText('Email format'),{target:{value:'eml'}});
-  fireEvent.change(screen.getByLabelText('Message text'),{target:{value:'From: fixture@example.test\n\nMessage'}});
-  fireEvent.click(screen.getByRole('button',{name:'Add check to review'}));
-  fireEvent.change(screen.getByLabelText('Review name'),{target:{value:'Email scope'}});
-  fireEvent.click(screen.getByLabelText(/I own or am authorized/));
-  fireEvent.click(screen.getByRole('button',{name:'Approve and run review'}));
-  await waitFor(()=>expect(api).toHaveBeenCalledTimes(1));
-  expect(api.mock.calls[0][1].checks[0].email_format).toBe('eml');
+  expect(screen.queryByRole('option',{name:'Suspicious email indicators'})).not.toBeInTheDocument();
 });
 
 it('adds a Windows Update check without source input and shows the report coverage',async()=>{

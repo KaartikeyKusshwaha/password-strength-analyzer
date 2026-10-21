@@ -3,18 +3,17 @@
 Security reviews coordinate one approved scope across 1–6 existing assessment
 operators. The React screen previews each selected check before submission.
 Supported steps are scoped TCP ports, fixed Windows posture, allowlisted HTTPS
-headers, Python patterns, exact PyPI/npm pins and email text indicators.
-Accounts and vault changes remain separate encrypted approvals. The assign-3
-trained classifier and inbox ingestion are not added by this coordinator.
+headers, Python patterns, exact PyPI/npm pins.
+Accounts and vault changes remain separate encrypted approvals. Email detection was removed from current submissions in app 0.18.0.
 
 `POST /api/security-reviews` binds approval to the currently selected workspace,
 name, check list and optional AI task-dispatch permission. A switched workspace
 rejects an old draft, and the component remounts on workspace switches. Existing
 contributor, target allowlist, device scope and posture consent checks apply.
-Raw submissions total at most 1 MiB, with the smaller individual Python/email
-limits unchanged. Authenticated dependency-capable requests allow a 3 MiB JSON
+Raw submissions total at most 1 MiB, with the smaller individual Python
+limit unchanged. Authenticated dependency-capable requests allow a 3 MiB JSON
 envelope. Lockfile checks require reviewed exact selection and OSV disclosure
-approval; see DEPENDENCY_INVENTORIES.md. Raw source/email is held only in worker arguments, not serialized in
+approval; see DEPENDENCY_INVENTORIES.md. Raw source is held only in worker arguments, not serialized in
 review/operation history. Individual steps cannot independently request AI.
 
 The workspace is reserved against another review, operation or manual AI job.

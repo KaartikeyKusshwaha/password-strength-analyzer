@@ -1,3 +1,4 @@
+import SetupQr from './SetupQr';
 import React, {
   Suspense,
   lazy,
@@ -30,6 +31,7 @@ import {
   LogOut,
   MailWarning,
   Menu,
+  Monitor,
   Network,
   Plus,
   Radar,
@@ -289,7 +291,7 @@ export function Auth({ setup, onDone }) {
             <em>confident action.</em>
           </h1>
           <p>
-            Bring phishing triage, exposure checks and reviewed remediation into
+            Bring account protection, exposure checks and reviewed remediation into
             one deliberate workflow.
           </p>
           <div className="auth-route">
@@ -452,6 +454,12 @@ export default function App() {
   const [ready, setReady] = useState(false);
   const [page, setPage] = useState("overview");
   const [vaultMode,setVaultMode]=useState('personal');
+  const [vaultType,setVaultType]=useState('login');
+  useEffect(()=>{
+    if(!me)return;
+    const route=()=>{const tool=new URLSearchParams(window.location.hash.slice(1)).get('tool');if(['passwords','authenticator','vulnerabilities'].includes(tool)){setVaultMode('personal');setVaultType(tool==='authenticator'?'totp':'login');setPage(tool==='vulnerabilities'?'overview':'vault');}};
+    route();window.addEventListener('hashchange',route);return()=>window.removeEventListener('hashchange',route);
+  },[me?.id,me?.workspace]);
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [page]);
@@ -526,11 +534,13 @@ export default function App() {
     }
   }
   function go(value) {
+    if(window.location.hash)window.history.replaceState(null,'',window.location.pathname+window.location.search);
     // Background watches update their own view. Refresh the shared snapshot
     // when navigating so findings and linked work reflect the completed check.
     refresh().catch(e=>setError(e.message));
+    setVaultType(value==='authenticator'?'totp':'login');
     setVaultMode(value==='shared-vaults'?'team':'personal');
-    setPage(value==='shared-vaults'?'vault':value);
+    setPage(['shared-vaults','passwords','authenticator'].includes(value)?'vault':value==='vulnerabilities'?'overview':value);
     setDetail(null);
     setMobile(false);
     setQuery("");
@@ -827,7 +837,7 @@ export default function App() {
           {page === 'reviews' && <Suspense fallback={<p>Opening security reviews…</p>}><SecurityReviews key={me.workspace} data={data} me={me} canWrite={write} refresh={refresh} go={go}/></Suspense>}
           {page === "overview" && (
             <>
-              <Suspense fallback={<p>Opening your control center…</p>}><ControlCenter key={me.workspace} data={data} refresh={refresh} go={go} canWrite={write} /></Suspense>
+              <Suspense fallback={<p>Opening your control center…</p>}><ControlCenter key={me.workspace} me={me} data={data} refresh={refresh} go={go} canWrite={write} /></Suspense>
               <div className="metric-grid">
                 {[
                   [
@@ -960,10 +970,10 @@ export default function App() {
               <div className="tool-grid">
                 {[
                   [
-                    MailWarning,
-                    "Phishing triage",
-                    "Spot credential lures and suspicious link patterns.",
-                    "email",
+                    Monitor,
+                    "Device security",
+                    "Inspect approved ports and device protection status.",
+                    "device",
                     "amber",
                   ],
                   [
@@ -1149,13 +1159,12 @@ export default function App() {
                     Honest boundaries.
                   </h2>
                   <p>
-                    Python AST patterns, exact dependency pins, selected email
-                    indicators, and one HTTPS response.
+                    Python AST patterns, exact dependency pins, device observations
+                    and one HTTPS response.
                   </p>
                   <p className="muted">
                     This workspace is not a penetration test, complete code
-                    audit or automated inbox filter. Submitted code and email
-                    bodies are processed in memory and are not sent to AI.
+                    audit. Submitted code is processed in memory and is not sent to AI.
                   </p>
                   <div className="inline">
                     <ShieldCheck size={18} />
@@ -1817,7 +1826,7 @@ export default function App() {
             <Suspense
               fallback={<div className="loading">Loading private vault…</div>}
             >
-              <Vault key={me.id+me.workspace+vaultMode} me={me} initialMode={vaultMode}/>
+              <Vault key={me.id+me.workspace+vaultMode+vaultType} me={me} initialMode={vaultMode} initialType={vaultType}/>
             </Suspense>
           )}
           {page === "companions" && (
@@ -2314,7 +2323,6 @@ function ScanForm({ assets, busy, disabled, onSubmit }) {
           >
             <option value="python">Python source review</option>
             <option value="dependencies">Dependency advisories</option>
-            <option value="email">Phishing triage</option>
             <option value="website">Website HTTPS headers</option>
           </select>
         </Field>
@@ -2337,9 +2345,7 @@ function ScanForm({ assets, busy, disabled, onSubmit }) {
           placeholder={
             kind === "python"
               ? "auth/reset.py"
-              : kind === "email"
-                ? "Reported message 001"
-                : "Primary assessment"
+              : "Primary assessment"
           }
           required
           minLength={2}
@@ -2361,9 +2367,7 @@ function ScanForm({ assets, busy, disabled, onSubmit }) {
         ) : kind!=="dependencies" && (
           <Field
             label={
-              kind === "email"
-                ? "Message text (processed in memory)"
-                : "Content to assess (processed in memory)"
+              "Content to assess (processed in memory)"
             }
           >
             <textarea
@@ -2371,7 +2375,7 @@ function ScanForm({ assets, busy, disabled, onSubmit }) {
               name="content"
               required
               rows={12}
-              maxLength={kind === "email" ? 15000 : 120000}
+              maxLength={120000}
               spellCheck="false"
               placeholder={
                 kind === "dependencies"
@@ -2435,9 +2439,10 @@ function PrivateResult({ result, onConfirm }) {
   return (
     <>
       <p>
-        Add a time-based account in your authenticator using this setup key.
+        Scan the private QR code or add a time-based account using this setup key.
         Setup expires in ten minutes.
       </p>
+      <SetupQr uri={result.uri}/>
       <label>
         Setup key
         <input readOnly value={result.secret} />

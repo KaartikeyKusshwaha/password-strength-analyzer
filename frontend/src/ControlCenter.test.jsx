@@ -1,13 +1,14 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render as renderBase, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import ControlCenter from './ControlCenter';
+function render(value){const result=renderBase(value);fireEvent.click(screen.getByText('Advanced checks and account actions'));return result;}
 
 it('sends the reviewed dependency scope to the operator only after provider consent',async()=>{
   const preview={packages:[{id:'selected-pin',ecosystem:'npm',name:'example',version:'1.0.0'}],coverage:{unique_packages:1,selected:1,excluded:0,skipped_records:0,root_records:0,duplicate_records:0}};
   const fetcher=vi.fn(async url=>({ok:true,json:async()=>url.endsWith('/preview')?preview:{status:'queued'}}));vi.stubGlobal('fetch',fetcher);
   render(<ControlCenter data={{operations:[],integrations:{local_device_agent:true}}} refresh={vi.fn()} go={vi.fn()} canWrite/>);
-  fireEvent.click(screen.getByRole('button',{name:/Review code or a message/}));
+  fireEvent.click(screen.getByRole('button',{name:/Review code & dependencies/}));
   fireEvent.change(screen.getByLabelText('Check type'),{target:{value:'dependencies'}});
   fireEvent.change(screen.getByLabelText('Dependency format'),{target:{value:'package-lock'}});
   fireEvent.change(screen.getByLabelText('Dependency source'),{target:{value:'reviewed-source'}});

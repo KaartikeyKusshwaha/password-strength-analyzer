@@ -1,0 +1,55 @@
+{
+  "date": "2026-10-21",
+  "app": "0.18.0",
+  "companion_build": "0.13.0",
+  "browser": "Microsoft Edge",
+  "tools": [
+    "password management and encrypted vaults",
+    "two-factor authentication",
+    "vulnerability checks"
+  ],
+  "retired_feature": "email/phishing detection",
+  "automated_checks": {
+    "backend": 423,
+    "react": 233,
+    "final_focused_react": 21,
+    "app_build": "passed",
+    "extension_build_and_package": "passed"
+  },
+  "actual_browser": {
+    "three_tools_home": true,
+    "phishing_buttons": 0,
+    "advanced_checks_collapsed": true,
+    "automatic_review_status": "partial",
+    "checks": [
+      {
+        "action": "device",
+        "status": "partial"
+      },
+      {
+        "action": "posture",
+        "status": "partial"
+      },
+      {
+        "action": "updates",
+        "status": "complete"
+      }
+    ],
+    "finding_count": 2,
+    "ai_planning": "complete",
+    "two_factor_shortcut_reaches_locked_vault": true,
+    "companion_reload_confirmation": "pending"
+  },
+  "boundaries": [
+    "14 selected TCP probes timed out; kept unassessed.",
+    "Two local listeners are observations, not proven vulnerabilities.",
+    "System-drive BitLocker status permission denied.",
+    "Windows Update cache freshness unverified.",
+    "No password, MFA-provider or OS setting changes performed."
+  ],
+  "screenshots": [
+    "data/browser-acceptance-0.18.0/three-tools-home.png",
+    "data/browser-acceptance-0.18.0/automatic-review.png",
+    "data/browser-acceptance-0.18.0/agent-follow-up.png"
+  ]
+}
