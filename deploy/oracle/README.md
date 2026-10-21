@@ -55,9 +55,20 @@ server encryption key and accounting for connection/session revocation. Do not
 copy a live SQLite file. See ../../docs/BACKUP_RECOVERY.md.
 
 Before valuable data is stored, configure encrypted backups with a separate key,
-off-device copies and a restore drill. Backup scheduling, database migration,
-offsite retention and independent security review remain deployment gates; the
-installer does not claim to configure them. Update/rollback is also a separate
+off-device copies and a restore drill. The optional `backup.sh`,
+`sentinelops-backup.service` and `sentinelops-backup.timer` templates create an
+encrypted online snapshot daily at 02:30 UTC (with up to ten minutes of jitter).
+Install the script as `/usr/local/sbin/sentinelops-backup`, install the units in
+`/etc/systemd/system`, create a root-only `/var/backups/sentinelops` directory,
+and generate `/etc/sentinelops/backup.key` with the backup CLI before enabling
+the timer. Keep a protected copy of that key off the VM. The fresh installer
+does not enable these optional units automatically.
+
+Snapshots remain on the VM until an operator copies them elsewhere. A timer
+alone does not protect against VM/disk loss. No automatic deletion or offsite
+transfer is configured; monitor storage and arrange retention deliberately.
+Database migration, recurring offsite retention and independent security review
+remain deployment gates. Update/rollback is also a separate
 procedure requiring a pre-update backup; rerunning this fresh installer refuses
 to overwrite an existing deployment.
 

@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily encrypted SentinelOps backup
+
+[Timer]
+OnCalendar=*-*-* 02:30:00 UTC
+RandomizedDelaySec=600
+Persistent=true
+Unit=sentinelops-backup.service
+
+[Install]
+WantedBy=timers.target
