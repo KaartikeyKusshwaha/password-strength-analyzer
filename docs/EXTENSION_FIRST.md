@@ -62,3 +62,19 @@ The hosted UI was updated with hash-verified archives after an encrypted backup.
 Prior frontend/package files were retained. Public HTML references the new
 vault-landing bundle. Browser control became disabled before rendered acceptance;
 the installed 0.14.0 popup and its real-site permission flow remain unverified.
+
+## Proactive login invitation, companion 0.14.1
+
+Focusing a supported, visible, single-password HTTPS sign-in form offers an
+in-page invitation to choose a saved login. The invitation reads no password or
+vault entries and sends no credential metadata to the page. A trusted click asks
+the worker to open the extension-owned popup. The worker requires the top frame,
+the active sender tab, its original window and unchanged origin. Unlocking and
+explicit exact-origin fill continue through the existing companion flow. Failed
+popup opening is reported, with no website submission or credential write.
+
+Chrome 127+ is required because this is the first version with general
+`action.openPopup` availability. This is an invitation, not automatic unlock,
+automatic credential filling, a post-login-success detector or TOTP autofill.
+The focused invitation/autofill regression run passed 31 tests; the companion
+production build passed. Installed native popup acceptance remains pending.

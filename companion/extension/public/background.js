@@ -14,6 +14,17 @@ chrome.windows.onRemoved.addListener(windowId=>{
 chrome.runtime.onMessage.addListener((message,sender,reply)=>{
   if(sender.id!==chrome.runtime.id)return;
   sweep();
+  if(message?.type==='open-login-companion' && sender.tab && sender.frameId===0){
+    try{
+      const page=new URL(sender.url);
+      if(page.protocol!=='https:')return;
+      chrome.tabs.get(sender.tab.id).then(tab=>{
+        if(!tab.active || new URL(tab.url).origin!==page.origin || tab.windowId!==sender.tab.windowId)throw new Error();
+        return chrome.action.openPopup({windowId:tab.windowId});
+      }).then(()=>reply({ok:true})).catch(()=>reply({ok:false}));
+      return true;
+    }catch{reply({ok:false});return;}
+  }
   if(message?.type==='open-account-change' && sender.url===chrome.runtime.getURL('popup.html')){
     try {
       const origin=new URL(message.origin);

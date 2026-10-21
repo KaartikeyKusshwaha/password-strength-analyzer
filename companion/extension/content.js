@@ -7,6 +7,7 @@ import {preparePasswordChange} from './change-form';
 import {watchPrivateFrame} from './frame-status';
 import {fillLoginForm,inspectLoginForm} from './login-form';
 import manifest from './public/manifest.json';
+import {offerLogin} from './login-assistant';
 
 const estimator = new ZxcvbnFactory({ translations: en.translations, graphs: common.adjacencyGraphs, dictionary: {...common.dictionary, ...en.dictionary} });
 const labels = ['Very guessable','Guessable','Somewhat guessable','Less guessable','Harder to guess'];
@@ -56,11 +57,15 @@ function assistant(field) {
 function attach(field) {
   if(attached.has(field))return;
   attached.add(field);
-  field.addEventListener('focus',event=>{if(event.isTrusted && isNewPassword(field) && field.getClientRects().length && formOriginAllowed(location.href,field.form?.action))assistant(field);});
+  field.addEventListener('focus',event=>{
+    if(!event.isTrusted || window.top!==window || !field.getClientRects().length || !formOriginAllowed(location.href,field.form?.action))return;
+    if(isNewPassword(field))assistant(field);
+    else {close();current=field;panel=offerLogin(document,location.href,field,chrome);}
+  });
   let timer;
   field.addEventListener('input',()=>{if(current!==field || !renderEstimate)return;clearTimeout(timer);timer=setTimeout(()=>renderEstimate?.(),150);});
 }
-function inspect(){document.querySelectorAll('input[type="password"]').forEach(attach);if(current && (!current.isConnected || (renderEstimate && !isNewPassword(current))))close();}
+function inspect(){document.querySelectorAll('input[type="password"]').forEach(attach);if(current && (!current.isConnected || !formOriginAllowed(location.href,current.form?.action) || (renderEstimate && !isNewPassword(current))))close();}
 inspect();let scanTimer;
 new MutationObserver(()=>{clearTimeout(scanTimer);scanTimer=setTimeout(inspect,250);}).observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['type','name','id','autocomplete','disabled','readonly','hidden','action']});
 document.addEventListener('keydown',event=>{if(event.isTrusted && event.key==='Escape')close();});
