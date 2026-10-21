@@ -72,3 +72,14 @@ def test_windows_checkout_exports_linux_shell_and_service_line_endings(tmp_path,
             assert archive.extractfile('deploy/oracle/'+name).read()==original.replace(b'\r\n',b'\n')
         manifest=json.load(archive.extractfile('release-manifest.json'))
         assert manifest['files']['deploy/oracle/install.sh']==hashlib.sha256(script.replace(b'\r\n',b'\n')).hexdigest()
+
+def test_incomplete_helper_build_is_never_published(tmp_path,monkeypatch):
+    root=fixture_release(tmp_path,monkeypatch)
+    helper=root/'companion/helper-dist';helper.mkdir()
+    (helper/'SentinelOpsDeviceHelper.exe').write_bytes(b'build fixture')
+    with pytest.raises(ValueError,match='Incomplete Windows helper'):build_release(root,root/'release.tar.gz')
+    (helper/'helper-manifest.json').write_text('{}',encoding='utf-8')
+    output=root/'release.tar.gz';build_release(root,output)
+    with tarfile.open(output,'r:gz') as archive:
+        assert 'companion/helper-dist/SentinelOpsDeviceHelper.exe' in archive.getnames()
+        assert 'companion/helper-dist/helper-manifest.json' in archive.getnames()

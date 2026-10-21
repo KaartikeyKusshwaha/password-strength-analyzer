@@ -19,6 +19,6 @@ export default function SiteCheck({browser=chrome}) {
     <button disabled={!scope||busy} onClick={run}>{busy?'Checking…':'Check this site'}</button>
     {error&&<p role={scope?'alert':'status'} className={scope?'error':'fine'}>{error}</p>}
     {result&&<><p className="fine">{result.coverage} {result.status&&`HTTP ${result.status}.`} This is not a verdict that a site is safe.</p>{result.actions.map(action=><details key={action.id}><summary>{action.title}</summary><p>{action.detail}</p><p className="fine">Only the site owner can change its server headers. No repair was performed.</p></details>)}</>}
-    <details><summary>Check my device</summary><p>Needs device helper · Your browser cannot inspect device ports, firewall or installed software. Automatic helper setup is being integrated; existing connections are managed in the control room.</p></details>
+    <details><summary>Check my device</summary><p>Needs device helper · Your browser cannot inspect device ports, firewall or installed software. Use Connect device helper in the security assistant below. Existing connections are managed in the control room.</p></details>
   </section>;
 }

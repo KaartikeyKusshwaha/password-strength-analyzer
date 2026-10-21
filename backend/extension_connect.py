@@ -19,12 +19,14 @@ class Proof(BaseModel):
     model_config=ConfigDict(extra='forbid')
     proof: SecretStr = Field(min_length=43,max_length=100)
     scope: Literal['vault','security'] = 'vault'
+    device_pairing: bool = False
 
 class Approval(BaseModel):
     model_config=ConfigDict(extra='forbid')
     vault_id: str | None = Field(default=None,pattern=r'^[a-f0-9]{24}$')
     workspace_id: str | None = Field(default=None,pattern=r'^[a-f0-9]{24}$')
     confirmed_code: str = Field(pattern=r'^\d{6}$')
+    device_pairing: bool = False
 
 def register(app,store,auth,throttle,cipher,settings):
     def reject(condition,message,status=403):
@@ -50,7 +52,7 @@ def register(app,store,auth,throttle,cipher,settings):
             for old in Store.all(c,SCOPE,KIND):
                 if old['expires']<=time.time():c.execute('DELETE FROM entities WHERE id=? AND workspace=? AND kind=?',(old['id'],SCOPE,KIND))
             reject(len(Store.all(c,SCOPE,KIND))<200,'Too many pending connections',429)
-            record=dict(id=uid(),origin=origin,scope=body.scope,proof_hash=digest(body.proof.get_secret_value()),code=f'{secrets.randbelow(1000000):06d}',expires=time.time()+300,status='pending')
+            record=dict(id=uid(),origin=origin,scope=body.scope,device_pairing=body.scope=='security' and body.device_pairing,proof_hash=digest(body.proof.get_secret_value()),code=f'{secrets.randbelow(1000000):06d}',expires=time.time()+300,status='pending')
             Store.put(c,SCOPE,KIND,record)
         return {'id':record['id'],'code':record['code'],'expires':record['expires'],'approval_url':settings.origin+'/#connect='+record['id']}
 
@@ -58,7 +60,7 @@ def register(app,store,auth,throttle,cipher,settings):
     def details(identifier:str,session=Depends(auth)):
         with store.connect() as c:record=lookup(c,identifier)
         result={key:record[key] for key in ('id','origin','code','expires','status')}
-        result.update(scope=record.get('scope','vault'),workspace_id=session['workspace'])
+        result.update(scope=record.get('scope','vault'),device_pairing=record.get('device_pairing',False),workspace_id=session['workspace'])
         with store.connect() as c:result['workspace_name']=c.execute('SELECT name FROM workspaces WHERE id=?',(session['workspace'],)).fetchone()[0]
         return result
 
@@ -73,7 +75,8 @@ def register(app,store,auth,throttle,cipher,settings):
                 reject(body.vault_id is None and body.workspace_id==session['workspace'],'Workspace approval does not match',409)
                 reject(session['role'] in {'owner','analyst','reviewer'},'Assessment permission required')
                 token=secrets.token_urlsafe(40)
-                grant=dict(id=digest(token),user=session['user'],workspace=session['workspace'],origin=record['origin'],expires=time.time()+30*86400)
+                reject(not body.device_pairing or record.get('device_pairing') is True,'Device pairing was not requested',409)
+                grant=dict(id=digest(token),user=session['user'],workspace=session['workspace'],origin=record['origin'],device_pairing=body.device_pairing,expires=time.time()+30*86400)
                 Store.put(c,SECURITY_SCOPE,SECURITY_KIND,grant)
                 record.update(status='approved',grant=cipher.encrypt(token.encode()).decode(),user=session['user'],workspace=session['workspace'])
                 Store.put(c,SCOPE,KIND,record)

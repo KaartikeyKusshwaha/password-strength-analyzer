@@ -34,3 +34,4 @@ coverage/
 *.backup-key
 companion/extension/dist/
 companion/extension/*.zip
+companion/helper-dist/

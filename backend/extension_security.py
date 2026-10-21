@@ -6,6 +6,7 @@ from .security import digest
 from .store import Store,now
 from .extension_connect import SECURITY_SCOPE,SECURITY_KIND
 from .scanner import RULES
+from . import helper_status
 from .dependency_inventory import DependencyFormat, preview
 from pydantic import BaseModel, SecretStr, ConfigDict, Field
 
@@ -14,7 +15,7 @@ class FilePreview(BaseModel):
     content: SecretStr = Field(min_length=1,max_length=65536)
     format: DependencyFormat
 
-def register(app,store,settings,throttle,executor,validate_operation,queue_operation,run_operation,OperationRequest,auth):
+def register(app,store,settings,throttle,executor,validate_operation,queue_operation,run_operation,OperationRequest,auth,cipher):
     def require(condition,message,status=403):
         if not condition:raise HTTPException(status,message)
     def security_auth(request:Request):
@@ -36,7 +37,16 @@ def register(app,store,settings,throttle,executor,validate_operation,queue_opera
             import json
             for device in devices:device['targets']=json.loads(device['targets'])
             name=c.execute('SELECT name FROM workspaces WHERE id=?',(session['workspace'],)).fetchone()[0]
-        return {'workspace':name,'scan_hosts':sorted(settings.scan_hosts),'devices':devices,'ai_available':bool(settings.groq_key),'local_device':not settings.secure and settings.host in {'localhost','127.0.0.1'}}
+        return {'workspace':name,'scan_hosts':sorted(settings.scan_hosts),'devices':devices,'device_pairing':session.get('device_pairing',False),'helper':helper_status.status(),'ai_available':bool(settings.groq_key),'local_device':not settings.secure and settings.host in {'localhost','127.0.0.1'}}
+
+    @app.get('/api/device-helper/windows')
+    def helper_download():
+        from fastapi.responses import FileResponse
+        require(helper_status.status()['available'],'Windows helper build unavailable',404)
+        return FileResponse(helper_status.ROOT/'SentinelOpsDeviceHelper.exe',filename='SentinelOpsDeviceHelper.exe',media_type='application/octet-stream')
+
+    from . import device_pairing
+    device_pairing.register(app,store,settings,cipher,throttle,security_auth)
 
     @app.post('/api/companion/security/inventory-preview')
     def file_preview(body:FilePreview,session=Depends(security_auth)):

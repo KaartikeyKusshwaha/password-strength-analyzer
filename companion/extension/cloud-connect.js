@@ -14,7 +14,7 @@ export async function startCloudConnection(browser,origin=CLOUD_ORIGIN,fetcher=(
   if(previous.cloudConnect&&previous.cloudConnect.expires*1000>Date.now())throw new Error('Finish or cancel the existing connection request before starting another.');
   const proof=btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
   if(!['vault','security'].includes(scope))throw new Error('Unsupported connection scope.');
-  const result=await request(origin,'start',proof,fetcher,{scope});
+  const result=await request(origin,'start',proof,fetcher,{scope,device_pairing:scope==='security'});
   if(!/^[a-f0-9]{24}$/.test(result.id)||!/^\d{6}$/.test(result.code)||!Number.isFinite(result.expires)||result.approval_url!==origin+'/#connect='+result.id)throw new Error('Unexpected connection response. Nothing was connected.');
   const pending={origin,id:result.id,proof,code:result.code,expires:result.expires,scope};
   await browser.storage.local.set({cloudConnect:pending});

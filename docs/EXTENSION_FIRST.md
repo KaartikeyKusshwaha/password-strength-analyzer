@@ -222,3 +222,36 @@ complete. Unauthenticated inventory preview returned 401, extension-origin
 preflight returned 204 and an unrelated website origin was rejected with 403.
 No real user access grant was created by verification. Native popup, file-drop
 and cloud grant acceptance still require browser verification.
+
+
+## Optional Windows helper setup, companion 0.17.0
+
+The extension offers a bundled per-user Windows helper download and short-code
+pairing. No Python installation, copied bearer token or terminal command is
+required. The helper's visible Install and get pairing code action installs in
+Local AppData, adds a Start menu shortcut and Windows uninstall entry, and
+requests a five-minute code. It does not add a startup service or elevate.
+The extension reviews exact scope and requires account password and MFA when
+enabled. Pairing is an explicit additional capability in new security-access
+approvals; existing assessment-only grants remain unable to pair devices.
+
+The helper receives its device-only token via a random proof held only in
+process memory, validates exact origin and scope, and persists the token with
+current-user Windows DPAPI. Default targets are this computer's IPv4/IPv6
+loopback only. Posture and cached-update access remain separate native and
+server consents. Closing the helper stops polling. Cancelling an unacknowledged
+handoff revokes its device and interrupts pending operations. Expiry, live role
+checks, offboarding, ordinary device revocation and backup restore still apply.
+The extension refreshes the device list and reuses its existing check/results
+surface. The installer version, digest and unsigned status are shown honestly.
+
+Verification: all 285 frontend tests passed, along with 83 focused backend
+storage/pairing/device/operations/backup/release tests. Nine final pairing and
+release tests also passed after adding cancellation and incomplete-artifact
+coverage. Both web/extension production builds passed. The actual compiled
+Windows helper exited zero in its headless self-test, importing the device
+operator and completing a real DPAPI round trip, without installing or pairing
+on the user's computer. Artifact and source hashes matched the build manifest.
+The helper is an unsigned pilot; GUI install/shortcut/uninstall and actual
+browser-to-helper acceptance remain unverified while browser control is
+unavailable. This is not an independent security audit. See DEVICE_HELPER.md.

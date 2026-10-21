@@ -154,6 +154,11 @@ def connection_file(path):
     if Path(path).stat().st_size > 12000:
         raise ValueError("Connection file is too large.")
     value = json.loads(Path(path).read_text(encoding='utf-8-sig'))
+    return validate_connection(value)
+
+
+def validate_connection(value):
+    if not isinstance(value,dict):raise ValueError('Invalid device connection.')
     url = urllib.parse.urlsplit(value['server'])
     if not (url.scheme == 'https' or url.scheme == 'http' and url.hostname in {'localhost','127.0.0.1'}) or not url.hostname or url.username or url.password or url.path not in {'','/'} or url.query or url.fragment:
         raise ValueError("Connection server must be an HTTPS origin or local loopback origin.")

@@ -2,6 +2,7 @@ import React,{useEffect,useState} from 'react';
 import CloudConnect from './CloudConnect';
 import SiteCheck from './SiteCheck';
 import FileChecks from './FileChecks';
+import DevicePairing from './DevicePairing';
 import {securityRequest} from './security-client';
 
 const PORTS=[21,22,23,25,53,80,110,143,443,3306,3389,5000,8000,8080,8443];
@@ -32,6 +33,7 @@ export default function SecurityAssistant({browser=chrome}){
       <p className="fine">{action==='website'?'One HTTPS header check on the selected approved host.':action==='device'?'Check 15 TCP ports on the selected approved device IP through its helper.':action==='posture'?'Read firewall, Defender and system-drive encryption status on the selected Windows helper.':'Read the selected Windows helper’s offline update cache and restart status.'} No software changes or automatic repairs.</p>
       <button disabled={running||!approvedTarget||(action==='website'?!target:!selected)||action==='posture'&&!selected?.allow_posture||action==='updates'&&!selected?.allow_updates} onClick={run}>{running?'Checking your security…':'Approve and check my security'}</button>
       <FileChecks connection={connection} running={running} ai={ai} onQueued={queued}/>
+      <DevicePairing connection={connection} enabled={context.device_pairing} helper={context.helper} running={running} browser={browser} onConnected={()=>load(connection)}/>
       {running&&<button className="secondary" onClick={async()=>{try{await securityRequest(connection,'/operations/'+result.id+'/cancel',{});setRunning(false);setResult({...result,status:'cancelled'});await browser.storage.local.remove('securityOperation');}catch(e){setError(e.message);}}}>Cancel check</button>}
       {result?.ai_error&&<p className="error" role="alert">{result.ai_error}</p>}
       {result?.observations?.length>0&&<details><summary>{result.finding_count} observations recorded</summary>{result.observations.map((item,index)=><article key={index}><strong>{item.title} · {item.severity}</strong><p>{item.line>0&&`Line ${item.line}. `}{item.package&&`${item.package.ecosystem} ${item.package.name}@${item.package.version} ${item.advisory||''}. `}{item.guidance}</p><a href={item.reference} target="_blank" rel="noreferrer">Review guidance</a></article>)}</details>}

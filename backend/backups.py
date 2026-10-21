@@ -136,6 +136,7 @@ def suspend_authorizations(connection):
         connection.execute(f'DELETE FROM {table}')
     connection.execute("DELETE FROM entities WHERE workspace='system:extension-connect' AND kind='extension_connect'")
     connection.execute("DELETE FROM entities WHERE workspace='system:extension-security' AND kind='security_connection'")
+    connection.execute("DELETE FROM entities WHERE workspace='system:device-pairing' AND kind='device_pairing'")
     connection.execute('DELETE FROM passkey_ceremonies')
     for row in connection.execute('SELECT id,user FROM passkey_credentials WHERE revoked_at IS NULL').fetchall():
         Store.event(connection,'personal:'+row['user'],'system:restore','auth.passkey_revoked',row['id'])

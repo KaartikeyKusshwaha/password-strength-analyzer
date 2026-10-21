@@ -358,7 +358,7 @@ def create_app(settings=None):
 
     @app.middleware("http")
     async def boundary(request, call_next):
-        companion = bool(re.fullmatch(r'/api/companion/(vault|actions(?:/[a-f0-9]{24}/(?:claim|result))?|connect/(?:start|[a-f0-9]{24}/(?:poll|ack|cancel))|security/(?:context|revoke|inventory-preview|operations(?:/[a-f0-9]{24}(?:/cancel)?)?))',request.url.path))
+        companion = bool(re.fullmatch(r'/api/companion/(vault|actions(?:/[a-f0-9]{24}/(?:claim|result))?|connect/(?:start|[a-f0-9]{24}/(?:poll|ack|cancel))|security/(?:context|revoke|inventory-preview|device-pairing/(?:details|approve)|operations(?:/[a-f0-9]{24}(?:/cancel)?)?))',request.url.path))
         extension_origin = request.headers.get("origin", "")
         extension_origin_valid = bool(re.fullmatch(r"chrome-extension://[a-p]{32}", extension_origin))
         if companion and request.method == "OPTIONS":
@@ -1165,7 +1165,7 @@ def create_app(settings=None):
         return operation
 
     from . import extension_security
-    extension_security.register(app,store,settings,throttle,executor,validate_operation,queue_operation,run_operation,OperationRequest,auth)
+    extension_security.register(app,store,settings,throttle,executor,validate_operation,queue_operation,run_operation,OperationRequest,auth,cipher)
     from . import reviews
     reviews.register(app,store,auth,writable,throttle,settings,executor,validate_operation,queue_operation,run_operation,ReviewRequest)
 

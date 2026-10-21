@@ -19,6 +19,10 @@ def build_release(root=ROOT, output=None):
              'deploy/oracle/app.env.example', 'deploy/oracle/Caddyfile.example']
     files = [root / name for name in fixed]
     files += sorted((root / 'backend').glob('*.py'))
+    helper_files=[root/'companion/helper-dist'/name for name in ('SentinelOpsDeviceHelper.exe','helper-manifest.json')]
+    if any(path.exists() for path in helper_files):
+        if not all(path.is_file() for path in helper_files):raise ValueError('Incomplete Windows helper build.')
+        files+=helper_files
     files += sorted(path for path in (root / 'frontend/dist/assets').glob('*') if path.suffix in {'.js', '.css', '.wasm'})
     if not (root / 'backend/app.py').is_file() or not (root / 'frontend/dist/assets').is_dir():
         raise ValueError('Build the application before packaging its deployment.')
