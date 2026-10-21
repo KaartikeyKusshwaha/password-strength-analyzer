@@ -509,3 +509,39 @@ no successful 0.22.0 native flow is inferred from tests.
 
 Provider protocol checked against the official documentation:
 https://haveibeenpwned.com/API/V3 and https://haveibeenpwned.com/scalar/.
+
+
+### 0.22.0 deployment and installed-browser evidence
+
+Deployed revision 5624b375cde924601d19880ca68647d9581a81b8. Archive
+SHA-256 d04b43fcaf2e81e4e0cff756dd81c3b8797fcf5b0f5e31b769726b2c620e90c0;
+ZIP SHA-256 03f5c6c460cf56b03918db93ec29aaa849bb281128be2261c96878eec170bf27.
+All 57 archive files and manifest hashes were checked. Account/vault/sharing,
+companion/device and credential-action records and the server key were
+preserved during deployment; backups passed before and after. The retired mail
+module was moved out of the current installation into its rollback directory.
+Public HTTPS returned 200, setup remained complete and the expected 0.22
+frontend bundle loaded. Signed-in Edge showed the 0.22 footer and four-section
+navigation.
+
+The user reported a 0.22 popup. Direct screenshots verified the installed login
+invitation and proactive signup assistant, without entering or submitting any
+credential. The signup overlay itself reported content 0.21.0: the local build
+changed after the user's prior reload, leaving mixed cached/bundled versions.
+The product is not considered to have passed an installed 0.22 end-to-end run.
+Browser management also confirmed a duplicate practice tab was in the background;
+its active-tab popup guard correctly refused launch. The invitation still failed
+to launch the toolbar popup from the already-active original tab, so programmatic
+popup compatibility remains unresolved. Manual toolbar opening works by user
+report. The temporary duplicate practice/signup tabs were closed; the original
+practice tab was retained.
+
+The cloud account initially had no vault. An empty default Personal vault space
+was created through its normal UI and the backend response rendered the master
+passphrase/confirmation form. No passphrase was entered and no encrypted payload
+or browser/security grant was created. This intentional setup action occurred
+after the deployment's protected-state comparison. The next credential step
+requires the user to choose the passphrase in the app. Edge then disconnected;
+fresh inventory had no Edge browser and the supported reopen call reported it
+unavailable. Native site-check results and cloud/helper acceptance remain
+pending. Evidence screenshots/JSON and test reports remain under ignored data/.

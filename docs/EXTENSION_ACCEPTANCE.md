@@ -9,9 +9,10 @@ unit test or deployed archive does not prove an installed extension workflow.
 | Device checks in extension | Scoped helper operator, progress, results, cancellation | Installed helper pairing and complete cloud scan |
 | Python and dependency file checks | Popup paste/drop, inventory preview, selected OSV disclosure, results | Native popup file-drop acceptance |
 | One assistant surface | Internal pipeline hidden; device/project controls collapsed in popup | Product usability review with real users |
-| Signup/password-change suggestions | Trusted-focus local generation and explicit secure save | Additional production-site compatibility checks |
-| Login and TOTP assistance | Exact-origin login choice, explicit linked TOTP fill, no submit | Installed cloud multi-vault acceptance; unattended TOTP is not implemented |
+| Signup/password-change suggestions | Trusted-focus local generation and explicit secure save | Login/signup invitations directly observed on practice site; content 0.21 versus popup 0.22 mismatch needs reload synchronization |
+| Login and TOTP assistance | Exact-origin login choice, explicit linked TOTP fill, no submit; installed login invitation observed | Installed cloud multi-vault acceptance; unattended TOTP is not implemented |
 | Post-login save offer | Per-site opt-in, trusted standard login submission, ephemeral worker draft, explicit private save | Native navigation/expiry acceptance; no universal success detection or locked-vault duplicate detection |
+| In-page popup launch | Toolbar popup works by user report; invitation is visible | Programmatic popup launch still fails in active Edge practice tab; diagnose native error before calling complete |
 | Quiet background site checks | Per-origin opt-in, alarms, local results, badges, opt-out | Real Chrome/Edge alarm lifecycle |
 | Password health in popup | Local weak/reuse estimates; on-demand and opt-in daily-on-unlock padded HIBP prefix checks | Installed host-permission/lock cancellation acceptance; no always-on checking while locked |
 | Approve account fixes without website | Popup selection creates encrypted plan; existing operator stages/prepares forms; stop action available | Native popup claim, form preparation and resume acceptance |
