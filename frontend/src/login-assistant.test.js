@@ -44,7 +44,26 @@ it('opens the companion only for the active sender origin and never returns vaul
 it('rejects stale-origin and frame requests without opening the popup',async()=>{
   const {chrome,listener}=worker({active:true,url:'https://other.example/',windowId:7});const reply=vi.fn();
   listener({type:'open-login-companion'},{id:'fixture',frameId:0,url:'https://accounts.example.test/',tab:{id:1,windowId:7}},reply);
-  await vi.waitFor(()=>expect(reply).toHaveBeenCalledWith({ok:false}));
+  await vi.waitFor(()=>expect(reply).toHaveBeenCalledWith({ok:false,reason:'changed_tab'}));
   listener({type:'open-login-companion'},{id:'fixture',frameId:1,url:'https://accounts.example.test/',tab:{id:1,windowId:7}},reply);
   expect(chrome.action.openPopup).not.toHaveBeenCalled();
+});
+it('distinguishes inactive tabs, missing site access and unavailable popup APIs',async()=>{
+  for(const [tab,reason] of [[{active:false,url:'https://accounts.example.test/',windowId:7},'inactive_tab'],[{active:true,windowId:7},'site_access'],[{active:true,url:'https://accounts.example.test/',windowId:9},'changed_tab']]){
+    const {chrome,listener}=worker(tab),reply=vi.fn();
+    listener({type:'open-login-companion'},{id:'fixture',frameId:0,url:'https://accounts.example.test/',tab:{id:1,windowId:7}},reply);
+    await vi.waitFor(()=>expect(reply).toHaveBeenCalledWith({ok:false,reason}));expect(chrome.action.openPopup).not.toHaveBeenCalled();
+  }
+  const {chrome,listener}=worker({active:true,url:'https://accounts.example.test/',windowId:7});delete chrome.action.openPopup;
+  const reply=vi.fn();listener({type:'open-login-companion'},{id:'fixture',frameId:0,url:'https://accounts.example.test/',tab:{id:1,windowId:7}},reply);
+  await vi.waitFor(()=>expect(reply).toHaveBeenCalledWith({ok:false,reason:'popup_api'}));
+});
+it('returns fixed diagnostic codes instead of native exception details',async()=>{
+  const {chrome,listener}=worker({active:true,url:'https://accounts.example.test/',windowId:7});
+  for(const [message,reason] of [['Browser window is not focused. private-fixture-detail','browser_focus'],['Requires user gesture. private-fixture-detail','user_gesture'],['private-fixture-detail','popup_unavailable']]){
+    chrome.action.openPopup.mockRejectedValueOnce(new Error(message));const reply=vi.fn();
+    listener({type:'open-login-companion'},{id:'fixture',frameId:0,url:'https://accounts.example.test/',tab:{id:1,windowId:7}},reply);
+    await vi.waitFor(()=>expect(reply).toHaveBeenCalledWith({ok:false,reason}));
+    expect(JSON.stringify(reply.mock.calls)).not.toContain('private-fixture-detail');
+  }
 });

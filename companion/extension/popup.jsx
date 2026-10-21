@@ -15,8 +15,10 @@ import "./popup.css";
 import { restoreConnection, prepareConnection, allowConnection } from "./connection";
 import {fillSavedLogin} from './autofill-client';
 import manifest from './public/manifest.json';
+import {runtimeVersion} from './runtime-version';
 
 export function Popup() {
+  const versions=runtimeVersion(chrome,manifest.version);
   const [config, setConfig] = useState(null),
     [pendingConnection, setPendingConnection] = useState(null),
     [ready, setReady] = useState(false),
@@ -47,6 +49,7 @@ export function Popup() {
   }
   useEffect(()=>{if(config)chrome.storage.local.get(['connections','connection']).then(saved=>setConnections(saved.connections || (saved.connection?[saved.connection]:[])));},[config]);
   useEffect(() => {
+    if(!versions.matches){setReady(true);return;}
     const hidden=()=>{if(document.hidden)lockVault();};document.addEventListener('visibilitychange',hidden);
     restoreConnection(chrome)
       .then(result => { setConfig(result.connection); setPendingConnection(result.pending); })
@@ -119,13 +122,14 @@ export function Popup() {
       setBusy(false);
     }
   }
+  if(!versions.matches)return <main><header><span className="logo">S</span><div><h1>SentinelOps</h1><small>LOADED {versions.loaded||'VERSION UNAVAILABLE'} · FILES {versions.bundled}</small></div></header><section role="alert"><h2>Finish the companion update</h2><p>The browser’s loaded extension and these files do not match. Vault controls are paused so you do not use a mixture of versions.</p><ol><li>Open your browser’s Extensions page and reload SentinelOps Security Companion.</li><li>Refresh the website where you want to save or fill a login.</li><li>Open this popup again. Its loaded version should be {versions.bundled}.</li></ol><p>No vault was unlocked by this popup.</p></section></main>;
   return (
     <main>
       <header>
         <span className="logo">S</span>
         <div>
           <h1>SentinelOps</h1>
-          <small>YOUR SECURITY COMPANION · {manifest.version}</small>
+          <small>YOUR SECURITY COMPANION · {versions.loaded}</small>
         </div>
       </header>
       <SecurityAssistant/>

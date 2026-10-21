@@ -10,7 +10,8 @@ const tab={id:1,windowId:7,url:'https://fixture.example.test/private?not-sent=1'
 const chrome={runtime:{id:'fixture',getURL:path=>'chrome-extension://fixture/'+path,onMessage:{addListener:fn=>listeners.push(fn)},onStartup:event(),onInstalled:event()},storage:{local:{get:async()=>structuredClone(saved),set:async value=>Object.assign(saved,structuredClone(value))}},permissions:{contains:async()=>true,onRemoved:event()},tabs:{query:async()=>[tab],get:async()=>tab,sendMessage:async()=>{},onUpdated:event(),onRemoved:event()},windows:{create:async options=>{windows.push(options);return {id:50,tabs:[{id:51}]};},onRemoved:event()},action:{setBadgeText:async value=>badges.push(value),setBadgeBackgroundColor:async()=>{}},alarms:{onAlarm:event(),create:async()=>{},clear:async()=>{clear=true;}}};
 const context={chrome,URL,AbortController,setTimeout:(fn,ms)=>{const timer=setTimeout(fn,ms);timer.unref();return timer;},clearTimeout,crypto:webcrypto,fetch:async(url,options)=>{requests.push({url,options});return {status:200,headers:{get:()=>null}};}};
 const send=(message,sender)=>new Promise((resolve,reject)=>{try{for(const listener of listeners)if(listener(message,sender,resolve)===true)return;reject(new Error('No asynchronous receiver.'));}catch(error){reject(error);}});
-runInNewContext(readFileSync(resolve(__dirname,'extension/dist/background.js'),'utf8'),context);
+const workerPath=process.argv[2]?resolve(process.argv[2]):resolve(__dirname,'extension/dist/background.js');
+runInNewContext(readFileSync(workerPath,'utf8'),context);
 (async()=>{
   assert.equal(context.sentinelMonitorProtocol,'sentinel-site-monitor/v1');
   const popup={id:'fixture',url:'chrome-extension://fixture/popup.html'};
@@ -35,5 +36,10 @@ runInNewContext(readFileSync(resolve(__dirname,'extension/dist/background.js'),'
   assert.equal(captured.entry.password,'public-fixture');
   assert.equal((await send({type:'capture-saved',id:captureId},privateFrame)).ok,true);
   assert.equal((await send({type:'frame-capture',id:captureId},privateFrame)).entry,null);
-  process.stdout.write(JSON.stringify({bundled_worker_boot:true,exact_origin_only:true,cookie_free:true,opt_out_clears_state:true,login_offer_to_bound_private_save:true,no_plaintext_storage:true})+'\n');
+  assert.equal((await send({type:'open-login-companion'},sender)).reason,'popup_api');
+  chrome.action.openPopup=async()=>{throw new Error('Browser window is not focused; private-fixture-detail');};
+  const denied=await send({type:'open-login-companion'},sender);
+  assert.equal(denied.reason,'browser_focus');assert.ok(!JSON.stringify(denied).includes('private-fixture-detail'));
+  chrome.action.openPopup=async()=>{};assert.equal((await send({type:'open-login-companion'},sender)).ok,true);
+  process.stdout.write(JSON.stringify({bundled_worker_boot:true,exact_origin_only:true,cookie_free:true,opt_out_clears_state:true,login_offer_to_bound_private_save:true,no_plaintext_storage:true,popup_diagnostics:true})+'\n');
 })().catch(error=>{process.stderr.write(error.stack+'\n');process.exitCode=1;});

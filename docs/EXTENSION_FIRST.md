@@ -545,3 +545,32 @@ requires the user to choose the passphrase in the app. Edge then disconnected;
 fresh inventory had no Edge browser and the supported reopen call reported it
 unavailable. Native site-check results and cloud/helper acceptance remain
 pending. Evidence screenshots/JSON and test reports remain under ignored data/.
+
+
+## Queued popup diagnostics and version guard (source only)
+
+The current 0.22 installed directory and downloadable ZIP are intentionally
+unchanged while native acceptance is pending. The source now reads the browser's
+registered manifest version for its popup header. If this differs from the file
+bundle's version (or the extension context is invalid), it pauses vault/setup
+controls before connection reads or unlocking and explains one reload plus a
+website refresh. Matching versions retain ordinary setup. This addresses the
+misleading popup/file version display observed during unpacked updates; it is
+not a claim that the underlying Edge popup-opening failure is fixed.
+
+The worker now classifies inactive/stale tabs, missing URL/site access,
+unavailable popup APIs, browser-focus/user-gesture rejections and other launch
+failures. Only fixed codes reach the content invitation; native exception text
+is not returned or persisted. Existing top-frame, HTTPS, current-origin and
+window checks are unchanged. The in-page invitation maps these codes to concrete
+next steps rather than the previous generic failure.
+
+Nineteen focused popup/capture/version tests passed, including matching-version
+setup, mismatched/invalid contexts with no vault reads, preserved origin/frame
+checks and exception redaction. Production content/popup/worker bundles were
+built only under ignored data/qa-popup-20261022T0332. The actual isolated bundled
+worker passed its private-save, monitor and popup-diagnostic fixture. Hashes of
+every file in the installed companion/extension/dist directory were compared
+before and after and remained identical. No new extension release or deployment
+of this source patch has occurred. Rebuild/version the release deliberately after
+native acceptance resumes; do not silently replace the frozen installed files.
