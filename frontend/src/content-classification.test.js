@@ -23,7 +23,7 @@ const panelCount=()=>[...document.documentElement.children].filter(e=>e.tagName=
 it('reclassifies on focus when a login submit button appears after initial attachment',()=>{
   document.querySelector('form').insertAdjacentHTML('beforeend','<button type="submit">Login</button>');
   focusPassword();expect(panelCount()).toBe(1);
-  expect(shadows.at(-1).textContent).toContain('Choose saved login');
+  expect(shadows.at(-1).textContent).toContain('Open the SentinelOps toolbar icon');
   expect(shadows.at(-1).textContent).not.toContain('Use a strong password');
 });
 it('attaches to fields that become new-password fields later and closes a stale suggestion after a form change',async()=>{
@@ -39,7 +39,7 @@ it('reclassifies a field initially marked current-password when it later becomes
   const field=document.getElementById('password');field.autocomplete='current-password';
   listeners=[];vi.resetModules();await import('../../companion/extension/content');
   focusPassword();expect(panelCount()).toBe(1);
-  expect(shadows.at(-1).textContent).toContain('Choose saved login');
+  expect(shadows.at(-1).textContent).toContain('Open the SentinelOps toolbar icon');
   field.autocomplete='new-password';field.name='new-password';
   focusPassword();expect(panelCount()).toBe(1);
   expect(shadows.at(-1).textContent).toContain('Use a strong password');

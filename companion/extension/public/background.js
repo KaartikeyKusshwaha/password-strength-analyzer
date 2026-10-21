@@ -39,26 +39,6 @@ chrome.windows.onRemoved.addListener(windowId=>{
 chrome.runtime.onMessage.addListener((message,sender,reply)=>{
   if(sender.id!==chrome.runtime.id)return;
   sweep();
-  if(message?.type==='open-login-companion'){
-    if(!sender.tab||sender.frameId!==0){reply({ok:false,reason:'invalid_source'});return;}
-    try{
-      const page=new URL(sender.url);
-      if(page.protocol!=='https:'||page.username||page.password){reply({ok:false,reason:'invalid_page'});return;}
-      chrome.tabs.get(sender.tab.id).then(async tab=>{
-        if(!tab.active)return {ok:false,reason:'inactive_tab'};
-        if(tab.windowId!==sender.tab.windowId)return {ok:false,reason:'changed_tab'};
-        if(!tab.url)return {ok:false,reason:'site_access'};
-        try{if(new URL(tab.url).origin!==page.origin)return {ok:false,reason:'changed_tab'};}catch{return {ok:false,reason:'changed_tab'};}
-        if(typeof chrome.action?.openPopup!=='function')return {ok:false,reason:'popup_api'};
-        try{await chrome.action.openPopup({windowId:tab.windowId});return {ok:true};}
-        catch(error){
-          const message=String(error?.message||'');
-          return {ok:false,reason:/focus|active window/i.test(message)?'browser_focus':/user (?:gesture|activation)/i.test(message)?'user_gesture':'popup_unavailable'};
-        }
-      }).then(reply,()=>reply({ok:false,reason:'tab_unavailable'}));
-      return true;
-    }catch{reply({ok:false,reason:'invalid_page'});return;}
-  }
   if(message?.type==='open-account-change' && sender.url===chrome.runtime.getURL('popup.html')){
     try {
       const origin=new URL(message.origin);

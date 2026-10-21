@@ -1,17 +1,18 @@
 # SentinelOps
 
-A cybersecurity control center evolving from Kaartikey Kusshwaha’s password-strength-analyzer internship project. The first audience is small teams and agencies managing accounts across clients.
+An access control tower for agencies: know who can touch each client, remove access in one approved run, and report the outcome to the client. This is the product direction; the client access map and durable offboarding workflow are not yet shipped. Existing encrypted vaults and extension workflows form the foundation.
 
-**App development build 0.18.0 / browser companion 0.13.0.** This is not an audited password manager or a production security certification. Use disposable credentials until the release gates in [the product plan](docs/PRODUCT_PLAN.md) are met.
+**Hosted app 0.22.0 / companion source 0.23.0.** Use disposable credentials until the security and acceptance gates in [the agency master plan](docs/AGENCY_MASTER_PLAN.md) pass. See [actual release and browser evidence](docs/EXTENSION_ACCEPTANCE.md); implementation is not a claim of production readiness.
 
-## Three tools, one service
+## Extension-first access workflows
 
-The extension opens **Passwords & vaults**, **Two-factor authentication**, and
-**Vulnerability checks** in the same service. The home screen offers
-**Approve and run agents**: selected device checks run in order, record results,
-and optionally let Groq prioritize findings and reuse or create follow-up tasks.
-No separate projects or servers are needed. Browser secrets stay in the encrypted
-vault workflow; agents do not receive passwords or authenticator keys.
+Normal save/fill/authenticator and supported assessment actions run in the
+extension. The website manages vaults, results, connections and settings.
+Client access mapping, approved offboarding, rotation queues and client proof
+packs are the next planned workflows. Existing scanner and investigation engines
+are supporting capabilities; they are not the product's primary proposition.
+Agents do not receive passwords, vault keys or authenticator secrets. CSV import
+from existing password managers remains the adoption path.
 
 Email/phishing detection was removed from the current product at the user's
 request. New email scan, operation and combined-review submissions are rejected.
