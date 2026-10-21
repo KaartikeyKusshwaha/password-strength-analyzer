@@ -5,7 +5,7 @@ unit test or deployed archive does not prove an installed extension workflow.
 
 | Requirement | Current implementation | Remaining evidence / work |
 | --- | --- | --- |
-| Site check starts and finishes in extension | Browser-only exact-origin header operator, plain guidance | Installed permission / badge acceptance |
+| Site check starts and finishes in extension | Browser-only exact-origin header operator, plain guidance; user screenshot confirms HTTP 200 and three header observations on practice.expandtesting.com | Manual popup result passed; permission-prompt lifecycle and quiet-check badge acceptance remain |
 | Device checks in extension | Scoped helper operator, progress, results, cancellation | Installed helper pairing and complete cloud scan |
 | Python and dependency file checks | Popup paste/drop, inventory preview, selected OSV disclosure, results | Native popup file-drop acceptance |
 | One assistant surface | Internal pipeline hidden; device/project controls collapsed in popup | Product usability review with real users |
@@ -45,3 +45,16 @@ trusted focus; evidence is saved under ignored data/oracle-deployment as
 edge-reconnected-login-invitation.png. The Personal cloud vault remains at its
 initialization form, with no passphrase entered. Native popup site-check
 acceptance still awaits the user's click.
+
+### Manual site-check acceptance — 22 October 2026
+
+The user supplied codex-clipboard-bbcfdf01-636b-458d-957d-a34d1214cdd5.png
+showing the installed extension's result for https://practice.expandtesting.com:
+HTTP 200, "3 things to review", the root HEAD/cookie-free coverage description,
+and guidance for HSTS, CSP and content-type guessing. This proves the manual
+popup site-check path returned and rendered its result. It does not prove
+quiet-check scheduling, permission revocation, automatic remediation, cloud
+vault handoff or device scanning. The observations describe the response's
+header presence, not whether the website is safe or exploitable. No screenshot
+claim is made about a permission prompt that is not pictured. The queued
+non-2xx correction is not part of this installed result.
