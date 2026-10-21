@@ -27,8 +27,9 @@ class Approval(BaseModel):
     workspace_id: str | None = Field(default=None,pattern=r'^[a-f0-9]{24}$')
     confirmed_code: str = Field(pattern=r'^\d{6}$')
     device_pairing: bool = False
+    vault_kind: Literal['personal','shared'] = 'personal'
 
-def register(app,store,auth,throttle,cipher,settings):
+def register(app,store,auth,throttle,cipher,settings,shared_metadata):
     def reject(condition,message,status=403):
         if not condition:raise HTTPException(status,message)
     def extension(request):
@@ -72,7 +73,7 @@ def register(app,store,auth,throttle,cipher,settings):
             reject(record['status']=='pending','This request was already decided',409)
             reject(hmac.compare_digest(body.confirmed_code,record['code']),'Connection code does not match')
             if record.get('scope')=='security':
-                reject(body.vault_id is None and body.workspace_id==session['workspace'],'Workspace approval does not match',409)
+                reject(body.vault_id is None and body.vault_kind=='personal' and body.workspace_id==session['workspace'],'Workspace approval does not match',409)
                 reject(session['role'] in {'owner','analyst','reviewer'},'Assessment permission required')
                 token=secrets.token_urlsafe(40)
                 reject(not body.device_pairing or record.get('device_pairing') is True,'Device pairing was not requested',409)
@@ -82,15 +83,20 @@ def register(app,store,auth,throttle,cipher,settings):
                 Store.put(c,SCOPE,KIND,record)
                 Store.event(c,session['workspace'],session['user'],'extension.security_connected','scoped-operator-access')
                 return {'approved':True,'scope':'Run explicitly approved assessments and read their results in this workspace. No vault access.'}
-            vault=c.execute('SELECT * FROM vault_spaces WHERE id=? AND user=?',(body.vault_id,session['user'])).fetchone()
-            reject(vault and not vault['archived'] and vault['browser_enabled'] and vault['payload']!='null','Choose your initialized browser-enabled vault',409)
+            reject(body.workspace_id is None,'Vault approval cannot change workspace',409)
+            if body.vault_kind=='shared':
+                vault=shared_metadata(c,session,body.vault_id)
+            else:
+                vault=c.execute('SELECT * FROM vault_spaces WHERE id=? AND user=?',(body.vault_id,session['user'])).fetchone()
+                reject(vault and not vault['archived'] and vault['browser_enabled'] and vault['payload']!='null','Choose your initialized browser-enabled vault',409)
             token=secrets.token_urlsafe(40)
-            c.execute('INSERT INTO companions(token,user,label,expires,vault_id,kind,workspace) VALUES(?,?,?,?,?,?,?)',(digest(token),session['user'],'Cloud extension',time.time()+30*86400,vault['id'],'personal',None))
-            record.update(status='approved',grant=cipher.encrypt(token.encode()).decode(),user=session['user'],vault_id=vault['id'])
+            workspace=session['workspace'] if body.vault_kind=='shared' else None
+            c.execute('INSERT INTO companions(token,user,label,expires,vault_id,kind,workspace) VALUES(?,?,?,?,?,?,?)',(digest(token),session['user'],'Cloud extension',time.time()+30*86400,vault['id'],body.vault_kind,workspace))
+            record.update(status='approved',grant=cipher.encrypt(token.encode()).decode(),user=session['user'],vault_id=vault['id'],vault_kind=body.vault_kind,workspace=workspace)
             Store.put(c,SCOPE,KIND,record)
-            Store.event(c,'personal:'+session['user'],session['user'],'vault.companion_connected',vault['id'])
+            Store.event(c,workspace or 'personal:'+session['user'],session['user'],('team_vault.' if workspace else 'vault.')+'companion_connected',vault['id'])
             Store.event(c,session['workspace'],session['user'],'companion.token_created','encrypted-vault-only')
-        return {'approved':True,'scope':'One encrypted personal vault only; no workspace or scan access.'}
+        return {'approved':True,'scope':'One encrypted shared vault and your encrypted sharing identity only; no general workspace or scan access.' if body.vault_kind=='shared' else 'One encrypted personal vault only; no workspace or scan access.'}
 
     @app.post('/api/companion/connect/{identifier}/poll')
     def poll(identifier:str,body:Proof,request:Request):
@@ -125,6 +131,6 @@ def register(app,store,auth,throttle,cipher,settings):
                     Store.event(c,record['workspace'],record['user'],'extension.security_revoked','cancelled-handoff')
                 else:
                     c.execute('DELETE FROM companions WHERE token=?',(digest(token),))
-                    Store.event(c,'personal:'+record['user'],record['user'],'companion.authorization_cancelled',record['vault_id'])
+                    Store.event(c,record.get('workspace') or 'personal:'+record['user'],record['user'],'companion.authorization_cancelled',record['vault_id'])
             c.execute('DELETE FROM entities WHERE id=? AND workspace=? AND kind=?',(identifier,SCOPE,KIND))
         return {'ok':True}

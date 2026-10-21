@@ -31,7 +31,7 @@ it('offers an authenticator invitation for an explicit code field without genera
 function worker(tab){
   let listener;
   const chrome={runtime:{id:'fixture',getURL:path=>'chrome-extension://fixture/'+path,onMessage:{addListener:fn=>listener=fn}},windows:{onRemoved:{addListener:vi.fn()}},tabs:{get:vi.fn(async()=>tab)},action:{openPopup:vi.fn(async()=>{})}};
-  new Function('chrome',background)(chrome);
+  new Function('chrome','createLoginOffers',background.replace(/^import .*;\r?\n/,''))(chrome,()=>({install:()=>{}}));
   return {chrome,listener};
 }
 it('opens the companion only for the active sender origin and never returns vault contents',async()=>{

@@ -8,7 +8,7 @@ function worker() {
   const badge=vi.fn(),storage=vi.fn();
   const chrome={runtime:{id:'fixture-extension',getURL:path=>'chrome-extension://fixture-extension/'+path,onMessage:{addListener:fn=>{handler=fn;}}},action:{setBadgeText:badge,setBadgeBackgroundColor:vi.fn()},storage:{local:{set:storage}},tabs:{create:vi.fn(async()=>({id:5})),sendMessage:vi.fn(async()=>{})},windows:{create:vi.fn(async()=>({id:50,tabs:[{id:51}]})),onRemoved:{addListener:fn=>{removed=fn;}}}};
   const workerSource = readFileSync(resolve(process.cwd(), '../companion/extension/public/background.js'),'utf8');
-  runInNewContext(workerSource,{chrome,Date:{now:()=>current},crypto:{randomUUID:()=>Math.random().toString(36)},setTimeout:()=>{},URL});
+  runInNewContext(workerSource.replace(/^import .*;\r?\n/,''),{createLoginOffers:()=>({install:()=>{}}),chrome,Date:{now:()=>current},crypto:{randomUUID:()=>Math.random().toString(36)},setTimeout:()=>{},URL});
   return {message:(message,sender)=>new Promise(resolve=>{if(handler(message,sender,resolve)!==true)resolve(undefined);}),advance:()=>{current+=180001;},remove:id=>removed(id),storage,open:chrome.tabs.create,window:chrome.windows.create,ready:chrome.tabs.sendMessage};
 }
 const content={id:'fixture-extension',frameId:0,tab:{id:1},url:'https://example.test/register'};

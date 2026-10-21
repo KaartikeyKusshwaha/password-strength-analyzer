@@ -345,7 +345,7 @@ def create_app(settings=None):
             app.state.watch_service.stop()
             executor.shutdown(wait=True, cancel_futures=True)
 
-    app = FastAPI(title="SentinelOps", version="0.18.0", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title="SentinelOps", version="0.21.0", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.store, app.state.settings = store, settings
     app.state.cipher, app.state.executor = cipher, executor
     app.state.agent_transport = None
@@ -534,7 +534,7 @@ def create_app(settings=None):
             return {"vaults":[vault_metadata(row) for row in c.execute('SELECT * FROM vault_spaces WHERE user=? ORDER BY is_default DESC,created_at', (session['user'],))]}
 
     from . import extension_connect
-    extension_connect.register(app,store,auth,throttle,cipher,settings)
+    extension_connect.register(app,store,auth,throttle,cipher,settings,lambda c,session,identifier:shared_companions['metadata'](c,session,identifier))
 
     @app.post('/api/vaults')
     def create_vault_space(body: VaultProperties, session=Depends(auth)):
@@ -1347,7 +1347,7 @@ def create_app(settings=None):
             workspace = dict(c.execute("SELECT * FROM workspaces WHERE id=?", (session["workspace"],)).fetchone())
             data = {kind: Store.all(c, session["workspace"], kind) for kind in ("assets", "scans", "findings", "tasks", "investigations", "security_reviews")}
             audit = Store.audit(c, session["workspace"])
-        value = dict(product="SentinelOps", version="0.18.0", generated_at=now(), workspace=workspace, **data, audit=audit, limitations="User-provided observations and reviewed decisions, not a security certification. Hash links reveal some edits relative to a retained external head; a database administrator can rewrite the whole chain. No independent signing authority.")
+        value = dict(product="SentinelOps", version="0.21.0", generated_at=now(), workspace=workspace, **data, audit=audit, limitations="User-provided observations and reviewed decisions, not a security certification. Hash links reveal some edits relative to a retained external head; a database administrator can rewrite the whole chain. No independent signing authority.")
         value["content_sha256"] = hashlib.sha256(canonical(value).encode()).hexdigest()
         return JSONResponse(value, headers={"Content-Disposition": 'attachment; filename="sentinelops-evidence.json"'})
 

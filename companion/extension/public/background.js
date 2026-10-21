@@ -1,8 +1,32 @@
+import {createLoginOffers} from '../login-offers';
 // Plaintext captures are tab-bound, in worker memory, and expire after 3 minutes.
 // They are never written to extension storage or returned to a website.
 const captures = new Map();
 function releaseCapture(id){const value=captures.get(id);captures.delete(id);if(value)globalThis.sentinelMonitor?.setCapture(value.tab,false);}
 function sweep() { for(const [id,value] of captures) if(value.expires<=Date.now()) releaseCapture(id); }
+function captureEntry(entry,sender,deadline=Date.now()+180000){
+  const origin=new URL(sender.url).origin;
+  if(!sender.tab || sender.frameId!==0 || !origin.startsWith('https://') || origin!==entry?.origin || typeof entry.password!=='string' || !entry.password.length || entry.password.length>256 || typeof entry.username!=='string' || entry.username.length>254)throw new Error('Invalid save entry.');
+  for(const [id,value] of captures)if(value.tab===sender.tab.id)releaseCapture(id);
+  if(captures.size>=10)releaseCapture(captures.keys().next().value);
+  const id=crypto.randomUUID();
+  const expires=Math.min(deadline,Date.now()+180000);
+  if(!Number.isFinite(expires)||expires<=Date.now())throw new Error('Save entry expired.');
+  captures.set(id,{origin,username:entry.username,password:entry.password,tab:sender.tab.id,expires});
+  globalThis.sentinelMonitor?.setCapture(sender.tab.id,true);
+  chrome.action.setBadgeText({text:'1'});chrome.action.setBadgeBackgroundColor({color:'#28684c'});
+  setTimeout(()=>{sweep();if(!captures.size)chrome.action.setBadgeText({text:''});},expires-Date.now());
+  return id;
+}
+async function openPrivateSave(id,value){
+  if(value.windowReady)throw new Error('Save window already opened.');
+  value.windowReady=chrome.windows.create({url:chrome.runtime.getURL('vault-frame.html')+'#'+id,type:'popup',width:470,height:740,focused:true}).then(window=>{
+    if(!Number.isInteger(window?.id) || !Number.isInteger(window.tabs?.[0]?.id))throw new Error('Private save window unavailable.');
+    return window;
+  });
+  try{const window=await value.windowReady;value.windowId=window.id;}catch(error){releaseCapture(id);throw error;}
+}
+createLoginOffers(chrome,{save:async(entry,sender,expires)=>{const id=captureEntry(entry,sender,expires);await openPrivateSave(id,captures.get(id));}}).install();
 async function privateReceiver(value,sender) {
   if(!value?.windowReady || sender.frameId!==0)return false;
   const window=await value.windowReady;
@@ -37,27 +61,14 @@ chrome.runtime.onMessage.addListener((message,sender,reply)=>{
   if(message?.type==='capture'){
     if(!sender.tab || sender.frameId!==0)return;
     try {
-      const origin=new URL(sender.url).origin, entry=message.entry;
-      if(!origin.startsWith('https://') || origin!==entry?.origin || typeof entry.password!=='string' || !entry.password.length || entry.password.length>256 || typeof entry.username!=='string' || entry.username.length>254)throw new Error();
-      for(const [id,value] of captures)if(value.tab===sender.tab.id)releaseCapture(id);
-      if(captures.size>=10)releaseCapture(captures.keys().next().value);
-      const id=crypto.randomUUID();
-      captures.set(id,{origin,username:entry.username,password:entry.password,tab:sender.tab.id,expires:Date.now()+180000});
-      globalThis.sentinelMonitor?.setCapture(sender.tab.id,true);
-      chrome.action.setBadgeText({text:'1'});chrome.action.setBadgeBackgroundColor({color:'#28684c'});
-      setTimeout(()=>{sweep();if(!captures.size)chrome.action.setBadgeText({text:''});},180000);
+      const id=captureEntry(message.entry,sender);
       reply({ok:true,id});
     }catch{reply({ok:false});}
   }
   if(message?.type==='open-private-save' && sender.tab && sender.frameId===0){
     const value=captures.get(message.id);
     if(!value || value.tab!==sender.tab.id || new URL(sender.url).origin!==value.origin){reply({ok:false});return;}
-    if(value.windowReady){reply({ok:false});return;}
-    value.windowReady=chrome.windows.create({url:chrome.runtime.getURL('vault-frame.html')+'#'+message.id,type:'popup',width:470,height:740,focused:true}).then(window=>{
-      if(!Number.isInteger(window?.id) || !Number.isInteger(window.tabs?.[0]?.id))throw new Error('Private save window unavailable.');
-      return window;
-    });
-    value.windowReady.then(window=>{value.windowId=window.id;reply({ok:true});}).catch(()=>{releaseCapture(message.id);reply({ok:false});});
+    openPrivateSave(message.id,value).then(()=>reply({ok:true})).catch(()=>reply({ok:false}));
     return true;
   }
   const frame=sender.tab && sender.url?.split('#')[0]===chrome.runtime.getURL('vault-frame.html');

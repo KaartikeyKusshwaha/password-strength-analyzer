@@ -368,3 +368,64 @@ symlink fixture skipped; the run completed in 223.86 seconds and its JUnit
 report is stored locally under ignored data/release020-backend-results.xml.
 All 307 frontend tests passed. No independent audit or live-browser acceptance
 is inferred from these results.
+
+
+## Account protection deployment, companion 0.20.0
+
+Deployed revision 14e1e04e58825c302a903a3f82f014a21d628d9c after an
+archive SHA-256 check (84fa09f11d8bf528dcf5602d792bff902ff305891040aced0c46525ff31e0b18).
+Accounts, workspace memberships, personal/shared vaults, device/browser
+connections, credential-action records and the server encryption key were
+unchanged. Encrypted backups passed before and after. Public HTTPS returned
+200 with owner setup complete and the expected frontend bundle. Unsigned
+companion context returned 401; extension preflight returned 204 and an
+untrusted web-origin preflight returned 403.
+
+Edge browser control connected successfully. The signed-in cloud interface
+rendered Vaults, Security results, Connections and Settings. No cloud vault
+exists in this account yet, so no unlocked cloud-vault acceptance is claimed.
+The practice tab interrupted browser control; a fresh Edge cloud tab restored
+control and rendered Settings. These observations do not verify an installed
+0.20.0 extension, native permissions or helper installation.
+
+## Login save offers and shared sign-in, companion 0.21.0
+
+The popup can explicitly opt into login save offers per HTTPS origin (up to
+50). Before this opt-in, login submissions are not read for this feature.
+Only a trusted top-frame standard same-origin POST login with a single current
+password and username creates a draft. The worker rechecks the origin, site
+access and preference, bounds the entry and keeps at most ten tab-bound drafts
+in memory. It never writes their passwords to extension storage, a server or
+AI. Drafts expire after three minutes and are inaccessible after expiry,
+worker restart, leaving the origin, dismissal or tab closure. Removing host
+permissions clears drafts. Timers are best effort while the browser runs;
+JavaScript memory is not guaranteed to be physically zeroed.
+
+When the password form disappears, the page can offer private saving. The
+prompt explicitly requires the user to confirm that login succeeded. It cannot
+universally infer success or compare an encrypted locked vault. Clicking opens
+the existing dedicated extension window; its exact window/tab binding, unlock,
+policy checks, conflict handling and encrypted-write confirmation remain in
+force. Cross-origin and unusual/SPA forms may not be supported. Nothing is
+saved automatically.
+
+Cloud connection approval now offers accepted, browser-enabled shared vaults
+alongside initialized personal vaults. Each approval grants exactly one vault;
+shared grants also expose only that user's encrypted sharing identity. Current
+roles and browser policy remain enforced, and policy removal/offboarding revoke
+access. Changing the selected vault clears the code-confirmation checkbox.
+The extension's existing connection verifier reads the actual vault kind rather
+than trusting new token metadata. Shared owner fingerprint verification remains
+mandatory on unlock. Manual tokens remain available as an advanced option.
+
+Connections now directs normal device onboarding to the Windows helper and
+short-code pairing inside the extension. Python/manual connection forms and the
+old dashboard operator are collapsed under Advanced.
+
+Verification: 314 frontend tests passed across 71 files. Targeted cloud-handoff
+regressions passed seven tests; shared companion/security suites passed their
+existing cases. Production web/content/popup/worker builds passed. The actual
+bundled worker fixture exercised opt-in draft creation, opening the bound
+private window, reading only from that receiver, confirmation cleanup and no
+plaintext storage. Native installed-extension and helper acceptance, periodic
+breach monitoring and an independent audit remain outstanding.

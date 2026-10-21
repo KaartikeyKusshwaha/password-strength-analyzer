@@ -9,13 +9,42 @@ import {fillLoginForm,inspectLoginForm} from './login-form';
 import manifest from './public/manifest.json';
 import {offerLogin} from './login-assistant';
 import {inspectOtp,fillOtp} from './otp-form';
+import {loginSubmission} from './login-submit';
 
 const estimator = new ZxcvbnFactory({ translations: en.translations, graphs: common.adjacencyGraphs, dictionary: {...common.dictionary, ...en.dictionary} });
 const labels = ['Very guessable','Guessable','Somewhat guessable','Less guessable','Harder to guess'];
 let panel = null, current = null, renderEstimate = null, stopFrameWatch = null;
+let loginOffersEnabled=false,loginOfferCandidate=true,loginOfferBusy=false,shownLoginOffer=null;
 const attached = new WeakSet();
 const style = `:host{all:initial}*{box-sizing:border-box}section{font:14px/1.6 system-ui;color:#25392d;background:#f6f8f1;border:1px solid #c8d9be;border-radius:14px;box-shadow:0 15px 55px #10291c40;padding:22px;width:365px;max-width:calc(100vw - 24px)}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}h2{font-size:20px;line-height:1.3;margin:8px 0}p{margin:10px 0}small{display:block;font-size:11px;color:#5b6c58}button{font:13px system-ui;cursor:pointer;border:1px solid #b9ceb6;border-radius:6px;padding:9px 12px;background:#fff;color:#23543c;margin:4px 6px 4px 0}button.primary{background:#28684c;color:white}button:disabled{opacity:.5;cursor:wait}meter{width:100%;height:9px}iframe{display:block;border:0;width:100%;height:470px;background:#f6f8f1;border-radius:8px}a{color:#28684c}`;
 function close() { stopFrameWatch?.();stopFrameWatch=null;panel?.remove(); panel=null; current=null; renderEstimate=null; }
+async function inspectSaveOffer(){
+  if(window.top!==window||location.protocol!=='https:'||!loginOfferCandidate||loginOfferBusy)return;
+  loginOfferBusy=true;
+  try{
+    const result=await chrome.runtime.sendMessage({type:'login-offer-check'});
+    loginOffersEnabled=result?.enabled===true;
+    if(!result?.available){loginOfferCandidate=false;return;}
+    if(panel?.isConnected||document.querySelector('input[type="password"]')||result.id===shownLoginOffer)return;
+    const id=result.id;shownLoginOffer=id;loginOfferCandidate=false;close();
+    const host=document.createElement('div');host.style.cssText='position:fixed;right:18px;bottom:18px;z-index:2147483647';
+    const shadow=host.attachShadow({mode:'closed'}),css=document.createElement('style');css.textContent=style;
+    const section=document.createElement('section');section.setAttribute('role','dialog');section.setAttribute('aria-label','SentinelOps login save offer');
+    const brand=document.createElement('strong');brand.textContent='SentinelOps · private save offer';
+    const title=document.createElement('h2');title.textContent='Save the login you just submitted?';
+    const detail=document.createElement('p');detail.textContent=location.origin+' · Check that you signed in successfully. This offer does not confirm acceptance and may also appear for an existing saved login.';
+    const status=document.createElement('p');status.setAttribute('role','status');
+    const save=document.createElement('button');save.className='primary';save.textContent='Review and save securely';
+    save.onclick=async event=>{if(!event.isTrusted)return;save.disabled=true;try{const result=await chrome.runtime.sendMessage({type:'login-offer-save',id});if(!result?.ok)throw new Error('Offer expired. Submit the login again or use manual secure save.');status.textContent='Unlock and confirm in the private SentinelOps extension window. Nothing is saved until you confirm.';}catch(error){status.textContent=error.message;}};
+    const dismiss=document.createElement('button');dismiss.textContent='Not now';dismiss.onclick=event=>{if(event.isTrusted){chrome.runtime.sendMessage({type:'login-offer-dismiss',id}).catch(()=>{});close();}};
+    section.append(brand,title,detail,save,dismiss,status);shadow.append(css,section);document.documentElement.append(host);panel=host;
+  }catch{/* No draft is recoverable after worker restart. */}finally{loginOfferBusy=false;}
+}
+document.addEventListener('submit',event=>{
+  if(!event.isTrusted||window.top!==window||!loginOffersEnabled)return;
+  const entry=loginSubmission(event.target,location.href);if(!entry)return;
+  chrome.runtime.sendMessage({type:'login-offer-submit',entry}).then(result=>{if(result?.ok){loginOfferCandidate=true;shownLoginOffer=null;inspectSaveOffer();}}).catch(()=>{});
+},true);
 function assistant(field) {
   if (current === field && panel?.isConnected && renderEstimate) return;
   close(); current=field;
@@ -67,11 +96,12 @@ function attach(field) {
   let timer;
   field.addEventListener('input',()=>{if(current!==field || !renderEstimate)return;clearTimeout(timer);timer=setTimeout(()=>renderEstimate?.(),150);});
 }
-function inspect(){document.querySelectorAll('input[type="password"],input[autocomplete="one-time-code"]').forEach(attach);if(current && (!current.isConnected || !formOriginAllowed(location.href,current.form?.action) || (renderEstimate && !isNewPassword(current))))close();}
+function inspect(){document.querySelectorAll('input[type="password"],input[autocomplete="one-time-code"]').forEach(attach);if(current && (!current.isConnected || !formOriginAllowed(location.href,current.form?.action) || (renderEstimate && !isNewPassword(current))))close();if(loginOfferCandidate)inspectSaveOffer();}
 inspect();let scanTimer;
 new MutationObserver(()=>{clearTimeout(scanTimer);scanTimer=setTimeout(inspect,250);}).observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['type','name','id','autocomplete','disabled','readonly','hidden','action']});
 document.addEventListener('keydown',event=>{if(event.isTrusted && event.key==='Escape')close();});
 chrome.runtime.onMessage.addListener((message,sender,reply)=>{
+  if(sender.id===chrome.runtime.id&&message?.type==='login-offer-permission'){loginOffersEnabled=message.enabled===true;if(!loginOffersEnabled){loginOfferCandidate=false;if(shownLoginOffer)close();}reply({ok:true});return;}
   if(sender.id===chrome.runtime.id && ['inspect-otp','fill-otp'].includes(message?.type)){
     if(window.top!==window){reply({ok:false,reason:'frame'});return;}
     reply({... (message.type==='inspect-otp'?inspectOtp(document,location.href,message.origin):fillOtp(document,location.href,message)),version:manifest.version});return;

@@ -74,3 +74,42 @@ def test_approval_cannot_select_another_users_vault_or_skip_csrf(system):
     payload={'vault_id':'f'*24,'confirmed_code':pending['code']}
     assert owner.post('/api/extension-connect/'+pending['id']+'/approve',json=payload).status_code==403
     assert post(owner,'/extension-connect/'+pending['id']+'/approve',payload).status_code==409
+
+
+def test_shared_cloud_connection_requires_acceptance_preserves_role_and_is_revocable(system):
+    from test_shared_companions import shared
+    from test_sharing import payload
+    app,owner,member,_,_,identifier=shared(system,'viewer','viewer')
+    client,pending=start(app)
+    approval={'vault_id':identifier,'vault_kind':'shared','confirmed_code':pending['code']}
+    path='/extension-connect/'+pending['id']+'/approve'
+    assert post(member,path,approval).status_code==409
+    assert post(member,'/team-vaults/'+identifier+'/accept',{}).status_code==200
+    assert post(member,path,approval).status_code==200
+    handoff='/api/companion/connect/'+pending['id']
+    token=client.post(handoff+'/poll',json=PROOF,headers={'Origin':ORIGIN}).json()['token']
+    headers={'Origin':ORIGIN,'Authorization':'Bearer '+token}
+    data=client.get('/api/companion/vault',headers=headers).json()
+    assert data['kind']=='shared' and data['vault']['id']==identifier
+    assert data['vault']['browser_fill'] and not data['vault']['browser_save']
+    assert client.get('/api/workspace',headers=headers).status_code==401
+    assert client.post('/api/companion/vault',headers=headers,json={'revision':1,'envelope':payload(identifier)}).status_code==403
+    assert client.post(handoff+'/cancel',json=PROOF,headers={'Origin':ORIGIN}).status_code==200
+    assert client.get('/api/companion/vault',headers=headers).status_code==401
+
+
+def test_shared_cloud_approval_rejects_disabled_policy_and_wrong_vault_kind(system):
+    from test_sharing import setup_identity,create
+    app,owner,_=system
+    identifier=create(owner,setup_identity(owner))
+    client,pending=start(app)
+    path='/extension-connect/'+pending['id']+'/approve'
+    approval={'vault_id':identifier,'confirmed_code':pending['code']}
+    assert post(owner,path,approval).status_code==409
+    assert post(owner,'/team-vaults/'+identifier+'/browser-policy',{'browser_enabled':False}).status_code==200
+    assert post(owner,path,{**approval,'vault_kind':'shared'}).status_code==409
+    assert post(owner,'/team-vaults/'+identifier+'/browser-policy',{'browser_enabled':True}).status_code==200
+    assert post(owner,path,{**approval,'vault_kind':'shared'}).status_code==200
+    token=client.post('/api/companion/connect/'+pending['id']+'/poll',json=PROOF,headers={'Origin':ORIGIN}).json()['token']
+    assert post(owner,'/team-vaults/'+identifier+'/browser-policy',{'browser_enabled':False}).status_code==200
+    assert client.get('/api/companion/vault',headers={'Origin':ORIGIN,'Authorization':'Bearer '+token}).status_code==401
