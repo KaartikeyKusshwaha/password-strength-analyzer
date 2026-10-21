@@ -41,7 +41,7 @@ function mockWorkspace() {
           ? user
           : url === "/api/workspace"
             ? data
-            : {};
+            : url === '/api/vaults' || url === '/api/team-vaults' ? {vaults:[]} : {};
     if (url === "/api/assets" && options?.method === "POST") {
       const asset = { ...JSON.parse(options.body), id: "asset" };
       data.assets.push(asset);
@@ -53,7 +53,23 @@ function mockWorkspace() {
   return { data, fetcher };
 }
 
+async function renderOverview(){
+  render(<App/>);
+  fireEvent.click(await screen.findByText('Advanced'));
+  fireEvent.click(screen.getByRole('button',{name:'Control center',exact:true}));
+  await screen.findByText('Your security, handled.');
+}
+
 describe("workspace flows", () => {
+  it('lands in vault management with four primary destinations and collapsed advanced tools',async()=>{
+    mockWorkspace();render(<App/>);
+    expect(await screen.findByText('Your accounts, under your control.')).toBeInTheDocument();
+    const advanced=screen.getByText('Advanced');
+    expect(advanced.closest('details').open).toBe(false);
+    const nav=advanced.closest('nav');
+    expect([...nav.children].filter(element=>element.tagName==='BUTTON')).toHaveLength(4);
+    expect(screen.getByRole('button',{name:'Agent desk AI'}).closest('details')).toBe(advanced.closest('details'));
+  });
   it('refreshes findings after following a completed background watch alert',async()=>{
     const {data,fetcher}=mockWorkspace();
     const original=fetcher.getMockImplementation();
@@ -66,7 +82,7 @@ describe("workspace flows", () => {
       if(url==='/api/notifications')return Promise.resolve({ok:true,json:async()=>({unread:1,notifications:[{id:'alert',kind:'advisory',watch_name:'Public package fixture',at:'2026-10-21T01:00:00Z',count:1,read:false,finding_ids:['new-finding']}]})});
       return original(url,options);
     });
-    render(<App/>);
+    await renderOverview();
     await screen.findByText('Your security, handled.');
     fireEvent.click(screen.getByRole('button',{name:'Watches & alerts'}));
     const review=await screen.findByRole('button',{name:'Review findings'},{timeout:5000});
@@ -86,14 +102,14 @@ describe("workspace flows", () => {
       if(url==='/api/sharing/directory')return Promise.resolve({ok:true,json:async()=>({members:[]})});
       return original(url,options);
     });
-    render(<App/>);
+    await renderOverview();
     fireEvent.click(await screen.findByRole('button',{name:'Review shared vault ownership'},{timeout:5000}));
     expect(await screen.findByRole('heading',{name:'Create your sharing identity'},{timeout:5000})).toBeInTheDocument();
     expect(fetcher.mock.calls.some(([url,options])=>url.endsWith('/ownership/accept') && options?.method==='POST')).toBe(false);
   },15000);
   it("shows real empty states instead of simulated security metrics", async () => {
     mockWorkspace();
-    render(<App />);
+    await renderOverview();
     expect(
       await screen.findByText("Your security, handled."),
     ).toBeInTheDocument();
@@ -115,7 +131,7 @@ describe("workspace flows", () => {
   });
   it("registers an authorized asset with CSRF protection", async () => {
     const { fetcher } = mockWorkspace();
-    render(<App />);
+    await renderOverview();
     await screen.findByText("Your security, handled.");
     fireEvent.click(screen.getByRole("button", { name: "Add asset" }));
     fireEvent.change(screen.getByLabelText("Asset name"), {
@@ -148,7 +164,7 @@ describe("workspace flows", () => {
     const { data, fetcher } = mockWorkspace();
     data.integrations.groq_configured = true;
     data.findings.push({ id: 'finding', asset_id: 'asset', title: 'Fixture password hashing', rule: 'PY001', severity: 'high', confidence: 'high', status: 'open', kind: 'python', label: 'auth.py', evidence: 'Redacted fixture evidence', first_seen: new Date().toISOString(), last_seen: new Date().toISOString() });
-    render(<App />);
+    await renderOverview();
     await screen.findByText('Your security, handled.');
     fireEvent.click(screen.getByRole('button', { name: 'Findings 1' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select Fixture password hashing' }));

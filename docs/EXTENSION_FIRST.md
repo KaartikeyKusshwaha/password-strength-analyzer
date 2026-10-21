@@ -23,8 +23,9 @@ No cloud account, vault unlock, Groq call or website allowlist is needed for thi
 browser-local check. Device checks still require the existing scoped helper.
 
 The web sidebar exposes its four primary destinations and puts the existing
-operational panels under Advanced. Those panels have not yet been removed from
-normal-task routing, and the previous control-center landing remains.
+operational panels under a collapsed Advanced section. The web landing opens
+vault management. Legacy task routes remain available under Advanced while
+their replacement extension workflows are implemented.
 
 ## Remaining implementation and acceptance
 
@@ -46,3 +47,18 @@ normal-task routing, and the previous control-center landing remains.
 Passkey vault unlocking is optional future work. Phishing detection is excluded.
 The local 0.14.0 build alone is not evidence that an installed browser extension
 has reloaded or that native permission prompts and actual-site checks have passed.
+
+## Verification, 21 October 2026
+
+The first full frontend run passed 259 tests and exposed one initial-context
+message regression. That message was changed from an error to a normal status
+hint; the affected popup regression passed afterward. The final focused run
+passed 22 tests, including exact-origin permission, denied access, navigation,
+cookie/referrer exclusion, unavailable checks, HTTP-only warnings, reconnect and
+vault-first navigation. Python packaging/status/deployment checks passed 24 with
+one native Windows symlink fixture skipped. React and companion builds passed.
+
+The hosted UI was updated with hash-verified archives after an encrypted backup.
+Prior frontend/package files were retained. Public HTML references the new
+vault-landing bundle. Browser control became disabled before rendered acceptance;
+the installed 0.14.0 popup and its real-site permission flow remain unverified.

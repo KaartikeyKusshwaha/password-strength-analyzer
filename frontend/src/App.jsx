@@ -452,7 +452,7 @@ export default function App() {
   const [data, setData] = useState(null);
   const [setup, setSetup] = useState(false);
   const [ready, setReady] = useState(false);
-  const [page, setPage] = useState("overview");
+  const [page, setPage] = useState("vault");
   const [vaultMode,setVaultMode]=useState('personal');
   const [vaultType,setVaultType]=useState('login');
   useEffect(()=>{
@@ -734,7 +734,7 @@ export default function App() {
               {id === "agents" && <i className="nav-ai">AI</i>}
             </button>
           ))}
-          <details open={!['vault','findings','companions','settings'].includes(page)}><summary>Advanced</summary>
+          <details><summary>Advanced</summary>
             {navigation.filter(([id])=>!['vault','findings','companions','settings'].includes(id)).map(([id,label,Icon])=><button key={id} className={page===id?'active':''} onClick={()=>go(id)}><Icon size={18}/><span>{label}</span>{id==='agents'&&<i className="nav-ai">AI</i>}</button>)}
           </details>
         </nav>
