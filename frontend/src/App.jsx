@@ -720,9 +720,9 @@ export default function App() {
           </select>
           <ChevronDown size={14} />
         </div>
-        <span className="nav-label">WORKSPACE</span>
+        <span className="nav-label">CONTROL ROOM</span>
         <nav>
-          {navigation.map(([id, label, Icon]) => (
+          {navigation.filter(([id])=>['vault','findings','companions','settings'].includes(id)).map(([id, label, Icon]) => (
             <button
               key={id}
               className={page === id ? "active" : ""}
@@ -734,6 +734,9 @@ export default function App() {
               {id === "agents" && <i className="nav-ai">AI</i>}
             </button>
           ))}
+          <details open={!['vault','findings','companions','settings'].includes(page)}><summary>Advanced</summary>
+            {navigation.filter(([id])=>!['vault','findings','companions','settings'].includes(id)).map(([id,label,Icon])=><button key={id} className={page===id?'active':''} onClick={()=>go(id)}><Icon size={18}/><span>{label}</span>{id==='agents'&&<i className="nav-ai">AI</i>}</button>)}
+          </details>
         </nav>
         <div className="sidebar-bottom">
           <div className="agent-status">
