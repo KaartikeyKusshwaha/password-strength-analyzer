@@ -47,9 +47,10 @@ export default function Companions({ assets, refresh, canWrite, go, devices = []
               site access permissions.
             </li>
             <li>
-              Create a pairing token below and paste it, with this app’s origin,
-              into the extension popup. Choose Pair companion, then allow app
-              access when requested. If the popup closes, reopen it to finish.
+              In the extension, choose “Sign in and connect.” Sign in here,
+              compare the short code and approve one initialized personal vault.
+              Reopen the extension to finish automatically. Manual tokens below
+              remain available for local installations and shared vaults.
             </li>
             <li>
               Unlock with your separate personal master or sharing passphrase.
@@ -66,7 +67,7 @@ export default function Companions({ assets, refresh, canWrite, go, devices = []
             Download companion
           </a>
           <p className="fine">
-            Chromium prototype; not yet published to an extension store.
+            Chromium 127+ prototype; not yet published to an extension store.
             Version {companionManifest.version} includes the in-page assistant, private encrypted saving and personal or shared vault connections. Reload the extension after an update. New-password detection works with standard DOM fields and selected
             naming hints. Native dialogs, cross-origin frames, closed shadow
             roots and unusual custom forms may not be detected. Your existing

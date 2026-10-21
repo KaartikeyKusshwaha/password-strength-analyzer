@@ -1,4 +1,5 @@
 import SetupQr from './SetupQr';
+import ExtensionApproval from './ExtensionApproval';
 import React, {
   Suspense,
   lazy,
@@ -448,6 +449,8 @@ export function Auth({ setup, onDone }) {
 }
 
 export default function App() {
+  const [connectionRequest,setConnectionRequest]=useState(()=>new URLSearchParams(window.location.hash.slice(1)).get('connect')||'');
+  useEffect(()=>{const changed=()=>setConnectionRequest(new URLSearchParams(window.location.hash.slice(1)).get('connect')||'');window.addEventListener('hashchange',changed);return()=>window.removeEventListener('hashchange',changed);},[]);
   const [me, setMe] = useState(null);
   const [data, setData] = useState(null);
   const [setup, setSetup] = useState(false);
@@ -564,6 +567,7 @@ export default function App() {
         <Auth setup={setup} onDone={refresh} />
       </>
     );
+  if(/^[a-f0-9]{24}$/.test(connectionRequest))return <ExtensionApproval identifier={connectionRequest} onClose={()=>{window.location.hash='';setConnectionRequest('');}}/>;
   if (!data)
     return (
       <div className="loading">

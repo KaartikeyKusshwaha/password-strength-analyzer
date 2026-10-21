@@ -358,7 +358,7 @@ def create_app(settings=None):
 
     @app.middleware("http")
     async def boundary(request, call_next):
-        companion = bool(re.fullmatch(r'/api/companion/(vault|actions(?:/[a-f0-9]{24}/(?:claim|result))?)',request.url.path))
+        companion = bool(re.fullmatch(r'/api/companion/(vault|actions(?:/[a-f0-9]{24}/(?:claim|result))?|connect/(?:start|[a-f0-9]{24}/(?:poll|ack|cancel)))',request.url.path))
         extension_origin = request.headers.get("origin", "")
         extension_origin_valid = bool(re.fullmatch(r"chrome-extension://[a-p]{32}", extension_origin))
         if companion and request.method == "OPTIONS":
@@ -532,6 +532,9 @@ def create_app(settings=None):
     def list_vaults(session=Depends(auth)):
         with store.connect() as c:
             return {"vaults":[vault_metadata(row) for row in c.execute('SELECT * FROM vault_spaces WHERE user=? ORDER BY is_default DESC,created_at', (session['user'],))]}
+
+    from . import extension_connect
+    extension_connect.register(app,store,auth,throttle,cipher,settings)
 
     @app.post('/api/vaults')
     def create_vault_space(body: VaultProperties, session=Depends(auth)):

@@ -1,0 +1,39 @@
+import {serviceOrigin} from './policy';
+import {prepareConnection} from './connection';
+export const CLOUD_ORIGIN='https://sentinelops.129-225-76-232.sslip.io';
+async function request(origin,path,proof,fetcher){
+  const response=await fetcher(origin+'/api/companion/connect/'+path,{method:'POST',credentials:'omit',redirect:'error',headers:{'Content-Type':'application/json'},body:JSON.stringify({proof}),signal:AbortSignal.timeout(10000)});
+  if(!response.ok)throw new Error('The connection request failed or expired. Start again from the extension.');
+  return response.json();
+}
+export async function startCloudConnection(browser,origin=CLOUD_ORIGIN,fetcher=(...args)=>globalThis.fetch(...args)){
+  origin=serviceOrigin(origin);
+  const granted=await browser.permissions.request({origins:[origin+'/*']});
+  if(!granted)throw new Error('App access was declined. Nothing was connected.');
+  const proof=btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  const result=await request(origin,'start',proof,fetcher);
+  if(!/^[a-f0-9]{24}$/.test(result.id)||!/^\d{6}$/.test(result.code)||!Number.isFinite(result.expires)||result.approval_url!==origin+'/#connect='+result.id)throw new Error('Unexpected connection response. Nothing was connected.');
+  const pending={origin,id:result.id,proof,code:result.code,expires:result.expires};
+  await browser.storage.local.set({cloudConnect:pending});
+  await browser.tabs.create({url:result.approval_url});
+  return pending;
+}
+export async function finishCloudConnection(browser,fetcher=(...args)=>globalThis.fetch(...args)){
+  const {cloudConnect:pending}=await browser.storage.local.get('cloudConnect');
+  if(!pending||pending.expires*1000<=Date.now())throw new Error('Connection request expired. Start again.');
+  const origin=serviceOrigin(pending.origin);
+  if(!/^[a-f0-9]{24}$/.test(pending.id))throw new Error('Invalid pending request.');
+  const result=await request(origin,pending.id+'/poll',pending.proof,fetcher);
+  if(result.status==='pending')return null;
+  if(result.status!=='approved'||result.origin!==origin)throw new Error('Unexpected connection response.');
+  const connection=await prepareConnection(browser,origin,result.token,fetcher);
+  if(!connection.connection)throw new Error('App access is missing. Allow access and retry.');
+  await browser.storage.local.remove('cloudConnect');
+  try{await request(origin,pending.id+'/ack',pending.proof,fetcher);}catch{/* Saved grant remains valid; proof handoff expires server-side. */}
+  return connection.connection;
+}
+export async function cancelCloudConnection(browser,fetcher=(...args)=>globalThis.fetch(...args)){
+  const {cloudConnect:pending}=await browser.storage.local.get('cloudConnect');
+  if(pending&&pending.expires*1000>Date.now())await request(serviceOrigin(pending.origin),pending.id+'/cancel',pending.proof,fetcher);
+  await browser.storage.local.remove('cloudConnect');
+}

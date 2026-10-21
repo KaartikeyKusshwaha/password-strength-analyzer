@@ -1,6 +1,7 @@
 import SecurityHub from './security-hub';
 import SiteCheck from './SiteCheck';
 import CodeFill from './CodeFill';
+import CloudConnect from './CloudConnect';
 import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { validOrigin } from "../../frontend/src/vault-crypto";
@@ -157,7 +158,8 @@ export function Popup() {
         </>
       ) : !config ? (
         <>
-          <h2>Pair your private vault</h2>
+          <CloudConnect onConnected={connection=>{setConfig(connection);setPendingConnection(null);setNotice('Cloud vault connected. Unlock below.');}}/>
+          <details><summary>Advanced · manual or local connection</summary><h2>Pair your private vault</h2>
           <p>
             In the dashboard, open Browser & devices and create a scoped
             companion token.
@@ -202,6 +204,7 @@ export function Popup() {
             are never saved. This prototype requires independent review before
             valuable credentials are stored.
           </p>
+          </details>
         </>
       ) : reconnectRequired ? (
         <>

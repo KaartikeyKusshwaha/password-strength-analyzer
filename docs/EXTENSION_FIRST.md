@@ -102,3 +102,28 @@ post-login save detection and in-extension TOTP enrollment remain pending.
 Regression testing caught a real transition bug: a login invitation could stop
 the generation assistant from replacing it when a dynamic form became signup.
 The panel reuse condition was corrected and the transition tests passed.
+
+## Cloud sign-in authorization, companion 0.15.0
+
+An unpaired popup now offers Sign in and connect against the pilot cloud origin.
+An exact app-origin host grant is requested, a random 256-bit proof remains in
+extension storage, and a five-minute approval request opens in a normal sign-in
+tab. Only its random request ID appears in the URL. The user compares the six
+digit code and explicitly approves one initialized, active, browser-enabled
+personal vault. Neither the proof nor the resulting bearer token is displayed
+on the approval page. No master passphrase is requested there.
+
+Reopening the popup automatically finishes an approved connection; Finish
+connection is also available. The vault response is verified through the
+existing connection path before saving it. Existing local/multiple connections
+are retained. Encrypted grant delivery is repeatable until acknowledged so a
+lost network reply does not require re-approval. Pending handoffs expire, are
+bound to the originating extension and proof, and are removed during backup
+restore. Cancelling the request revokes its grant if approval had already
+occurred. Normal connection revocation continues to apply.
+
+The grant lasts up to thirty days and gives encrypted personal-vault access
+only. It does not grant scanner/workspace access, connect all vaults silently,
+unlock a vault, replace shared-vault trust verification, or install a device
+helper. Shared-vault/local pairing remains in Advanced. Real browser approval
+and popup acceptance remain pending; this is not a claim of independent audit.
