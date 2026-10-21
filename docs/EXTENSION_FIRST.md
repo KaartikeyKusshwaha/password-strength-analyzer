@@ -429,3 +429,33 @@ bundled worker fixture exercised opt-in draft creation, opening the bound
 private window, reading only from that receiver, confirmation cleanup and no
 plaintext storage. Native installed-extension and helper acceptance, periodic
 breach monitoring and an independent audit remain outstanding.
+
+
+### 0.21.0 deployment and live Edge verification
+
+Deployed revision 64a88627ab459c0ba9ecbfe9ef3407c9be712084. Archive
+SHA-256 a123d1ee062dfb1bf223776d1abca0166dc742a34e8be225e9bd2a8d04c51dd3;
+companion ZIP SHA-256 d0b06cb532a484e9fc8ba83fbf8f311df47ecab0ef6102eb2a776a8842684ae5.
+Inventory and every archive payload hash were checked. Protected account,
+vault, sharing, device/companion and credential-action tables and the server
+key were unchanged; encrypted backups passed before and after. An initial
+health probe omitted the configured Host header and triggered rollback; the
+corrected probe passed on the retry without weakening host validation.
+
+The live signed-in Edge account rendered version 0.21.0, the four primary
+navigation items and the new device-helper instructions with manual/Python
+setup collapsed. The actual signed-in companion download reached the browser's
+Downloads folder; its ZIP integrity, version and checksum matched the local
+release. Unauthenticated download correctly returned 401. Public HTTPS status
+returned 200 with setup complete and the expected frontend bundle. A screenshot
+and structured verification record are stored under ignored data/oracle-deployment.
+
+The browser security policy rejected navigation to edge://extensions/ and
+explicitly prohibits alternate automation workarounds. Installed-extension
+reload and native popup acceptance require the user's click. No new cloud
+vault or scoped security connection exists in this account yet, so unlocked
+cloud-vault, shared multi-user and helper pairing acceptance are not claimed.
+Final focused capture/offer regressions passed 17 tests, targeted backend
+handoff/shared/security/package tests passed 30 with one native skip, and five
+deployment packaging tests passed. Independent audit and periodic breach
+monitoring remain outside this verified increment.
