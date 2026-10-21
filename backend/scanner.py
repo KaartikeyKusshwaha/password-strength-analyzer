@@ -144,90 +144,58 @@ def scan_email(text, format='text'):
 
 
 def parse_dependencies(text, format):
-    packages, skipped = [], []
-    if format == "requirements":
-        for line, raw in enumerate(text.splitlines(), 1):
-            raw = raw.strip()
-            if not raw or raw.startswith("#"):
-                continue
-            m = re.fullmatch(r"([A-Za-z0-9][A-Za-z0-9._-]*)==([A-Za-z0-9][A-Za-z0-9.+_-]*)\s*(?:#.*)?", raw)
-            if m:
-                packages.append(dict(ecosystem="PyPI", name=m[1], version=m[2], line=line))
-            else:
-                skipped.append(f"Line {line}: not an unconditional exact pin.")
-    else:
-        try:
-            manifest = json.loads(text)
-            if not isinstance(manifest, dict):
-                raise ValueError()
-            for group in ("dependencies", "devDependencies"):
-                values = manifest.get(group, {})
-                if not isinstance(values, dict):
-                    raise ValueError()
-                for package, version in values.items():
-                    if re.fullmatch(r"(?:@[a-z0-9._-]+/)?[a-z0-9._-]+", package) and isinstance(version, str) and re.fullmatch(r"\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?", version):
-                        packages.append(dict(ecosystem="npm", name=package, version=version, line=0))
-                    else:
-                        skipped.append("Package uses a range, URL, alias or unsupported version.")
-        except (ValueError, TypeError, AttributeError) as e:
-            raise ValueError("package.json must contain dependency maps.") from e
-    if len(packages) > 20:
-        raise ValueError("Submit at most 20 exact pins per scan.")
-    return packages, skipped
+    from .dependency_inventory import inventory
+    parsed=inventory(text,format)
+    return parsed['packages'],parsed['skipped']
 
 
-def scan_dependencies(text, format, transport=None):
-    packages, skipped = parse_dependencies(text, format)
-    result = scan_watch(packages, transport)
-    result['skipped'] = skipped
-    return result
+def scan_dependencies(text, format, transport=None, selection=None):
+    from .dependency_inventory import inventory,apply_coverage
+    scope=inventory(text,format,selection)
+    return apply_coverage(scan_watch(scope['packages'],transport),scope)
 
 
 def scan_watch(packages,transport=None):
-    """Bounded OSV matching, alias lookup and sourced CVSS base ratings."""
+    """Bounded OSV batches; preserve completed coverage when later batches fail."""
+    from .dependency_inventory import MAX_PACKAGES,pin
+    if not isinstance(packages,list) or len(packages)>MAX_PACKAGES:raise ValueError('Use at most 500 exact pins.')
+    for package in packages:pin(package['ecosystem'],package['name'],package['version'])
     items,checked,error=[],[],None
-    try:
-        queries=[{'package':{'ecosystem':p['ecosystem'],'name':p['name']},'version':p['version']} for p in packages]
-        started=time.monotonic()
-        with httpx.Client(timeout=8,transport=transport,follow_redirects=False) as client:
-            if not packages:
-                # An empty parsed inventory is not an assessment or an API call.
-                return dict(findings=[],packages=[],checked=[],skipped=[],error=None,
-                            advisory_details={'total':0,'attempted':0,'completed':0,'grouped_matches':0,'status':'complete',
-                                              'severity':{'total':0,'scored':0,'partial':0}},
-                            limits='No exact pins were supplied; no packages were assessed.')
-            with client.stream('POST','https://api.osv.dev/v1/querybatch',json={'queries':queries}) as response:
-                response.raise_for_status();raw=bytearray()
-                for chunk in response.iter_bytes():
-                    raw.extend(chunk)
-                    if len(raw)>1000000 or time.monotonic()-started>20:
-                        raise ValueError()
-        value=json.loads(raw)
-        if not isinstance(value,dict) or not isinstance(value.get('results'),list) or len(value['results'])!=len(packages):
-            raise ValueError()
-        for package,result in zip(packages,value['results']):
-            if not isinstance(result,dict) or not isinstance(result.get('vulns',[]),list) or len(result.get('vulns',[]))>100:
-                error='OSV returned unsupported or over-limit results. Coverage is incomplete.';continue
-            current=[];seen=set()
-            for vuln in result.get('vulns',[]):
-                advisory=vuln.get('id') if isinstance(vuln,dict) else None
-                if not isinstance(advisory,str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,99}',advisory) or advisory in seen:
-                    raise ValueError()
-                seen.add(advisory)
-                current.append(finding('DEP001',package['line'],f"OSV batch matches {package['ecosystem']} {package['name']}@{package['version']} to {advisory}.",'high',advisory=advisory,package=package))
-                current[-1]['reference']='https://osv.dev/vulnerability/'+advisory
-            if len(items)+len(current)>200:
-                error='OSV advisory coverage exceeded this check limit; review a narrower inventory.';continue
-            items.extend(current)
-            if result.get('next_page_token'):
-                error='OSV results were paginated. Returned matches are recorded, but coverage is incomplete.'
-            else:
-                checked.append(package)
-    except (httpx.HTTPError,ValueError,TypeError,AttributeError):
-        error='OSV request failed or returned unsupported data. Coverage is incomplete; no safe result was inferred.'
+    deadline=time.monotonic()+60;received=0
+    with httpx.Client(timeout=8,transport=transport,follow_redirects=False) as client:
+        for offset in range(0,len(packages),50):
+            batch=packages[offset:offset+50]
+            try:
+                if time.monotonic()>=deadline:raise ValueError()
+                queries=[{'package':{'ecosystem':p['ecosystem'],'name':p['name']},'version':p['version']} for p in batch]
+                with client.stream('POST','https://api.osv.dev/v1/querybatch',json={'queries':queries},timeout=min(8,max(.1,deadline-time.monotonic()))) as response:
+                    response.raise_for_status();raw=bytearray()
+                    for chunk in response.iter_bytes(chunk_size=16384):
+                        raw.extend(chunk);received+=len(chunk)
+                        if len(raw)>1000000 or received>4000000 or time.monotonic()>deadline:raise ValueError()
+                value=json.loads(raw)
+                if not isinstance(value,dict) or not isinstance(value.get('results'),list) or len(value['results'])!=len(batch):raise ValueError()
+                for package,result in zip(batch,value['results']):
+                    if not isinstance(result,dict) or not isinstance(result.get('vulns',[]),list) or len(result.get('vulns',[]))>100:
+                        error='OSV returned unsupported or over-limit results. Coverage is incomplete.';continue
+                    current=[];seen=set()
+                    for vuln in result.get('vulns',[]):
+                        advisory=vuln.get('id') if isinstance(vuln,dict) else None
+                        if not isinstance(advisory,str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,99}',advisory) or advisory in seen:raise ValueError()
+                        seen.add(advisory)
+                        current.append(finding('DEP001',package['line'],f"OSV batch matches {package['ecosystem']} {package['name']}@{package['version']} to {advisory}.",'high',advisory=advisory,package=package))
+                        current[-1]['reference']='https://osv.dev/vulnerability/'+advisory
+                    if len(items)+len(current)>200:
+                        error='OSV advisory coverage exceeded this check limit; review a narrower inventory.';continue
+                    items.extend(current)
+                    if result.get('next_page_token'):error='OSV results were paginated. Returned matches are recorded, but coverage is incomplete.'
+                    else:checked.append(package)
+            except (httpx.HTTPError,ValueError,TypeError,AttributeError):
+                error='OSV request failed or returned unsupported data. Coverage is incomplete; no safe result was inferred.'
+                break
     from .advisories import enrich
     items,detail_coverage=enrich(items,transport)
-    return dict(findings=items,packages=packages,checked=checked,skipped=[],error=error,advisory_details=detail_coverage,limits='OSV matches for submitted exact PyPI/npm versions only. Up to 20 detail requests group returned aliases and calculate base ratings from valid CVSS vectors. Package, detail and severity coverage are separate; unavailable ratings remain unknown. No transitive discovery, range resolution or exploit reachability. Missing matches do not certify safety.')
+    return dict(findings=items,packages=packages,checked=checked,skipped=[],error=error,advisory_details=detail_coverage,limits='OSV matches for selected exact PyPI/npm versions only; at most 500 pins in batches of 50 with a 60-second batch budget and 200 recorded matches. Up to 20 detail requests group aliases and calculate valid CVSS base ratings. Package, source-exclusion, detail and severity coverage are separate; unavailable ratings remain unknown. No package installation, runtime graph resolution or exploit reachability. Missing matches do not certify safety.' if packages else 'No exact pins were supplied; no packages were assessed.')
 
 
 def inspect_headers(headers, status=200):

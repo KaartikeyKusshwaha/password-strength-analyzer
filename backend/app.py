@@ -25,6 +25,7 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from . import agents, scanner
+from .dependency_inventory import DependencyFormat, inventory, preview
 from .security import consume_factor, digest, hash_password, password_policy, verify_password, check_totp
 from .store import Store, canonical, now, uid
 from .sharing import TeamPayload
@@ -107,9 +108,16 @@ class Scan(Body):
     kind: Literal["python", "dependencies", "email", "website"]
     label: str = Field(min_length=2, max_length=100)
     content: SecretStr = SecretStr("")
-    format: Literal["requirements", "package-json"] = "requirements"
+    format: DependencyFormat = "requirements"
+    dependency_selection: list[str] | None = Field(default=None,max_length=500)
+    dependency_consent: bool = False
     email_format: Literal["text", "eml"] = "text"
     authorized: bool
+
+
+class DependencyPreview(Body):
+    content: SecretStr
+    format: DependencyFormat
 
 
 class Task(Body):
@@ -146,7 +154,9 @@ class OperationRequest(Body):
     target: str = Field(default="127.0.0.1", min_length=1, max_length=253)
     ports: list[int] = Field(default_factory=lambda: [21, 22, 23, 25, 53, 80, 110, 143, 443, 3306, 3389, 5000, 8000, 8080, 8443], min_length=1, max_length=64)
     content: SecretStr = SecretStr("")
-    format: Literal["requirements", "package-json"] = "requirements"
+    format: DependencyFormat = "requirements"
+    dependency_selection: list[str] | None = Field(default=None,max_length=500)
+    dependency_consent: bool = False
     email_format: Literal["text", "eml"] = "text"
     authorized: bool
     ai_triage: bool = False
@@ -337,7 +347,7 @@ def create_app(settings=None):
             app.state.watch_service.stop()
             executor.shutdown(wait=True, cancel_futures=True)
 
-    app = FastAPI(title="SentinelOps", version="0.16.0", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title="SentinelOps", version="0.17.0", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.store, app.state.settings = store, settings
     app.state.cipher, app.state.executor = cipher, executor
     app.state.agent_transport = None
@@ -363,13 +373,18 @@ def create_app(settings=None):
                 return JSONResponse({"detail": "Origin not allowed"}, status_code=403)
             if request.headers.get("sec-fetch-site") == "cross-site" and not (companion and extension_origin_valid):
                 return JSONResponse({"detail": "Cross-site request rejected"}, status_code=403)
+            expanded = request.url.path in {"/api/dependency-inventory/preview", "/api/scans", "/api/operations", "/api/security-reviews", "/api/watches"} or bool(re.fullmatch(r"/api/watches/[a-f0-9]{24}/update",request.url.path))
+            if expanded:
+                try: auth(request)
+                except HTTPException as error: return JSONResponse({"detail":error.detail},status_code=error.status_code)
+            limit = 3_145_728 if expanded else 160_000
             length = request.headers.get("content-length", "0")
-            if not length.isdigit() or int(length) > 160_000:
+            if not length.isdigit() or int(length) > limit:
                 return JSONResponse({"detail": "Request too large"}, status_code=413)
             content = bytearray()
             async for chunk in request.stream():
                 content.extend(chunk)
-                if len(content) > 160_000:
+                if len(content) > limit:
                     return JSONResponse({"detail": "Request too large"}, status_code=413)
             request._body = bytes(content)
         response = await call_next(request)
@@ -1037,7 +1052,7 @@ def create_app(settings=None):
             elif body.action == "python":
                 result = scanner.scan_python(body.content.get_secret_value())
             elif body.action == "dependencies":
-                result = scanner.scan_dependencies(body.content.get_secret_value(), body.format)
+                result = scanner.scan_dependencies(body.content.get_secret_value(), body.format, selection=body.dependency_selection)
             else:
                 result = scanner.scan_email(body.content.get_secret_value(), body.email_format)
             with store.connect(write=True) as c:
@@ -1075,6 +1090,21 @@ def create_app(settings=None):
 
     app.state.run_operation = run_operation
 
+    def validate_dependency(body):
+        # Lockfile import requires a reviewed exact subset and separate external disclosure consent.
+        must(body.dependency_consent,"Approve sending package names and versions to OSV first",422)
+        if body.format in {"package-lock","uv-lock","exact-inventory"} or body.dependency_selection is not None:
+            must(body.dependency_consent and body.dependency_selection is not None,"Preview and approve selected package names and versions for OSV first",422)
+        scope=inventory(body.content.get_secret_value(),body.format,body.dependency_selection)
+        must(scope["packages"],"Select at least one exact package version",422)
+
+    @app.post("/api/dependency-inventory/preview")
+    def dependency_preview(body: DependencyPreview,session=Depends(auth)):
+        writable(session)
+        throttle("inventory-preview:"+session["workspace"],60)
+        try: return preview(body.content.get_secret_value(),body.format)
+        except ValueError as error: raise HTTPException(422,str(error))
+
     def validate_operation(body,session):
         from .device_checks import validate_target
         writable(session)
@@ -1092,7 +1122,10 @@ def create_app(settings=None):
                 must(body.target in settings.scan_hosts, "Website must be in the server operator's SCAN_HOSTS allowlist", 422)
             else:
                 must(bool(body.content.get_secret_value().strip()), "Attach or paste content to assess", 422)
-                must(len(body.content.get_secret_value()) <= (15000 if body.action == "email" else 100000), "Submitted content exceeds the assessment limit", 422)
+                if body.action == "dependencies":
+                    validate_dependency(body)
+                else:
+                    must(len(body.content.get_secret_value()) <= (15000 if body.action == "email" else 100000), "Submitted content exceeds the assessment limit", 422)
                 body.target = "Submitted " + body.action
         except ValueError as error:
             raise HTTPException(422, str(error))
@@ -1158,7 +1191,8 @@ def create_app(settings=None):
             if body.kind == "python":
                 result = scanner.scan_python(content)
             elif body.kind == "dependencies":
-                result = scanner.scan_dependencies(content, body.format)
+                validate_dependency(body)
+                result = scanner.scan_dependencies(content, body.format, selection=body.dependency_selection)
             elif body.kind == "email":
                 must(len(content) <= 15000, "Email must be at most 15,000 characters", 422)
                 result = scanner.scan_email(content, body.email_format)
@@ -1312,7 +1346,7 @@ def create_app(settings=None):
             workspace = dict(c.execute("SELECT * FROM workspaces WHERE id=?", (session["workspace"],)).fetchone())
             data = {kind: Store.all(c, session["workspace"], kind) for kind in ("assets", "scans", "findings", "tasks", "investigations", "security_reviews")}
             audit = Store.audit(c, session["workspace"])
-        value = dict(product="SentinelOps", version="0.16.0", generated_at=now(), workspace=workspace, **data, audit=audit, limitations="User-provided observations and reviewed decisions, not a security certification. Hash links reveal some edits relative to a retained external head; a database administrator can rewrite the whole chain. No independent signing authority.")
+        value = dict(product="SentinelOps", version="0.17.0", generated_at=now(), workspace=workspace, **data, audit=audit, limitations="User-provided observations and reviewed decisions, not a security certification. Hash links reveal some edits relative to a retained external head; a database administrator can rewrite the whole chain. No independent signing authority.")
         value["content_sha256"] = hashlib.sha256(canonical(value).encode()).hexdigest()
         return JSONResponse(value, headers={"Content-Disposition": 'attachment; filename="sentinelops-evidence.json"'})
 

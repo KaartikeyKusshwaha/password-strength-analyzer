@@ -11,8 +11,10 @@ trained classifier and inbox ingestion are not added by this coordinator.
 name, check list and optional AI task-dispatch permission. A switched workspace
 rejects an old draft, and the component remounts on workspace switches. Existing
 contributor, target allowlist, device scope and posture consent checks apply.
-Raw submissions total at most 120 KB; the ordinary request-body limit also
-applies. Raw source/email is held only in worker arguments, not serialized in
+Raw submissions total at most 1 MiB, with the smaller individual Python/email
+limits unchanged. Authenticated dependency-capable requests allow a 3 MiB JSON
+envelope. Lockfile checks require reviewed exact selection and OSV disclosure
+approval; see DEPENDENCY_INVENTORIES.md. Raw source/email is held only in worker arguments, not serialized in
 review/operation history. Individual steps cannot independently request AI.
 
 The workspace is reserved against another review, operation or manual AI job.

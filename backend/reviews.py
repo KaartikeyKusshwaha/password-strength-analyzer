@@ -136,7 +136,7 @@ def register(app,store,auth,writable,throttle,settings,executor,validate,queue,e
         require(not any(check.ai_triage for check in body.checks),'Approve AI triage once for the whole review',422)
         try:submitted_bytes=sum(len(check.content.get_secret_value().encode('utf-8')) for check in body.checks)
         except UnicodeError:raise HTTPException(422,'Review submissions must be valid UTF-8')
-        require(submitted_bytes<=120000,'Combined review submissions exceed 120 KB',422)
+        require(submitted_bytes<=1048576,'Combined review submissions exceed 1 MiB',422)
         for check in body.checks:validate(check,session)
         with store.connect(write=True) as c:
             member=c.execute('SELECT role FROM members WHERE workspace=? AND user=?',(session['workspace'],session['user'])).fetchone()

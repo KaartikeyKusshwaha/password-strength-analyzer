@@ -50,6 +50,7 @@ import MailCoverage from "./MailCoverage";
 import PortCoverage from "./PortCoverage";
 import AdvisorySeverity from './AdvisorySeverity';
 import AdvisoryCoverage from './AdvisoryCoverage';
+import DependencyScope,{emptyDependency,dependencyReady,DependencyCoverage} from './DependencyScope';
 import {version as productVersion} from '../package.json';
 import WatchIndicator from "./WatchIndicator";
 import ConnectionStatus from './ConnectionStatus';
@@ -822,11 +823,11 @@ export default function App() {
             </div>
           )}
 
-          {page === "watches" && <Suspense fallback={<p>Opening dependency watches…</p>}><Watches canWrite={write} go={go}/></Suspense>}
+          {page === "watches" && <Suspense fallback={<p>Opening dependency watches…</p>}><Watches key={me.workspace} canWrite={write} go={go}/></Suspense>}
           {page === 'reviews' && <Suspense fallback={<p>Opening security reviews…</p>}><SecurityReviews key={me.workspace} data={data} me={me} canWrite={write} refresh={refresh} go={go}/></Suspense>}
           {page === "overview" && (
             <>
-              <Suspense fallback={<p>Opening your control center…</p>}><ControlCenter data={data} refresh={refresh} go={go} canWrite={write} /></Suspense>
+              <Suspense fallback={<p>Opening your control center…</p>}><ControlCenter key={me.workspace} data={data} refresh={refresh} go={go} canWrite={write} /></Suspense>
               <div className="metric-grid">
                 {[
                   [
@@ -1109,6 +1110,7 @@ export default function App() {
                 </div>
                 {data.assets.length ? (
                   <ScanForm
+                    key={me.workspace}
                     assets={data.assets}
                     busy={busy}
                     disabled={!write}
@@ -1203,7 +1205,7 @@ export default function App() {
                     <DevicePosture report={s.posture}/>
                     <DeviceUpdates report={s.updates}/>
                     <PortCoverage observations={s.observations}/>
-                    <AdvisoryCoverage coverage={s.advisory_details}/>
+                    <AdvisoryCoverage coverage={s.advisory_details}/><DependencyCoverage coverage={s.dependency_inventory}/>
                     {s.error && <p className="notice error">{s.error}</p>}
                     {s.skipped?.length > 0 && (
                       <p>Not assessed: {s.skipped.join(" ")}</p>
@@ -2290,6 +2292,7 @@ export default function App() {
 }
 
 function ScanForm({ assets, busy, disabled, onSubmit }) {
+  const [dependency,setDependency]=useState(emptyDependency);
   const [kind, setKind] = useState("python");
   const [asset, setAsset] = useState(assets[0].id);
   return (
@@ -2298,6 +2301,7 @@ function ScanForm({ assets, busy, disabled, onSubmit }) {
         e.preventDefault();
         const body = Object.fromEntries(new FormData(e.currentTarget));
         body.authorized = body.authorized === "on";
+        if(kind==='dependencies'){if(!dependencyReady(dependency))return;Object.assign(body,dependency);}
         onSubmit(body);
       }}
     >
@@ -2341,16 +2345,7 @@ function ScanForm({ assets, busy, disabled, onSubmit }) {
           minLength={2}
           maxLength={100}
         />
-        {kind === "dependencies" && (
-          <Field label="Dependency format">
-            <select name="format">
-              <option value="requirements">
-                requirements.txt (exact pins)
-              </option>
-              <option value="package-json">package.json (exact pins)</option>
-            </select>
-          </Field>
-        )}
+        {kind === "dependencies" && <DependencyScope value={dependency} onChange={setDependency}/>}
         {kind === "website" ? (
           <div className="notice">
             Hostname:{" "}
@@ -2363,7 +2358,7 @@ function ScanForm({ assets, busy, disabled, onSubmit }) {
               verified HTTPS HEAD request; no redirects or exploitation.
             </p>
           </div>
-        ) : (
+        ) : kind!=="dependencies" && (
           <Field
             label={
               kind === "email"
@@ -2392,7 +2387,7 @@ function ScanForm({ assets, busy, disabled, onSubmit }) {
           <input name="authorized" type="checkbox" required />I am authorized to
           assess this content or system.
         </label>
-        <Button type="submit" disabled={busy || disabled}>
+        <Button type="submit" disabled={busy || disabled || (kind==='dependencies'&&!dependencyReady(dependency))}>
           {busy ? (
             <LoaderCircle className="spin" size={16} />
           ) : (

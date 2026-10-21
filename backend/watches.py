@@ -11,6 +11,7 @@ from fastapi import Depends,HTTPException
 from pydantic import BaseModel,ConfigDict,Field,SecretStr
 
 from . import scanner
+from .dependency_inventory import DependencyFormat,inventory,apply_coverage
 from .store import Store,canonical,now,uid
 
 
@@ -20,7 +21,8 @@ class Body(BaseModel):
 
 class Configuration(Body):
     name: str=Field(min_length=2,max_length=70)
-    format: Literal['requirements','package-json']
+    format: DependencyFormat
+    dependency_selection: list[str] | None = Field(default=None,max_length=500)
     content: SecretStr
     interval_hours: Literal[6,12,24,72,168]=24
     enabled: bool=False
@@ -51,20 +53,13 @@ def require(value,message='Watch not found',status=404):
     return value
 
 
-def packages_of(body):
-    raw=body.content.get_secret_value()
-    require(len(raw.encode())<=20000,'Use an exact-pin manifest under 20 KB',422)
-    try:packages,skipped=scanner.parse_dependencies(raw,body.format)
+def scope_of(body):
+    try:scope=inventory(body.content.get_secret_value(),body.format,body.dependency_selection)
     except ValueError as error:raise HTTPException(422,str(error))
-    require(packages and not skipped,'Register 1–20 unconditional exact versions only. Remove ranges, URLs, markers and unsupported entries rather than silently skipping them.',422)
-    unique={}
-    for package in packages:
-        name=package['name'];name=re.sub(r'[-_.]+','-',name.lower()) if package['ecosystem']=='PyPI' else name
-        require(len(name)<=150 and len(package['version'])<=100,'Package names/versions exceed this watch limit',422)
-        key=(package['ecosystem'],name)
-        require(key not in unique or unique[key]['version']==package['version'],'Use separate watches for different versions of the same package',422)
-        unique[key]={'ecosystem':package['ecosystem'],'name':name,'version':package['version'],'line':0}
-    return sorted(unique.values(),key=lambda p:(p['ecosystem'],p['name'],p['version']))
+    require(scope['packages'] and (not scope['skipped'] or body.dependency_selection is not None),'Preview and approve an exact subset when records are unsupported; at least one exact version is required.',422)
+    require(body.format in {'requirements','package-json'} or body.dependency_selection is not None,'Preview the lockfile and approve its selected package versions first.',422)
+    scope['packages']=sorted([dict(p,line=0) for p in scope['packages']],key=lambda p:(p['ecosystem'],p['name'],p['version']))
+    return scope
 
 
 class WatchService:
@@ -158,6 +153,7 @@ class WatchService:
                     self.stop_watch(c,workspace,watch,'Watch permission removed; explicit owner takeover required.','cancelled');self.notification(c,workspace,watch,identifier,'paused');return
                 run.update(status='running',started_at=now());Store.put(c,workspace,'watch_runs',run)
             result=scanner.scan_watch(watch['packages'],self.transport)
+            if watch.get('dependency_inventory'):apply_coverage(result,{'coverage':watch['dependency_inventory'],'skipped':[]})
             with self.store.connect(write=True) as c:
                 current=Store.get(c,workspace,'watches',watch['id']);run=Store.get(c,workspace,'watch_runs',identifier)
                 if not current or current.get('active_run')!=identifier or current['revision']!=watch['revision'] or not run or run['status']!='running':return
@@ -177,7 +173,7 @@ class WatchService:
                         task={'id':uid(),'finding_id':finding_id,'assignee':current['created_by'],'due':'','title':finding['title'],'status':'open','created_by':run['actor'],'created_at':now(),'history':[],'watch_id':current['id']}
                         Store.put(c,workspace,'tasks',task);tasks.append(task['id']);Store.event(c,workspace,run['actor'],'watch.task_created',task['id'])
                 current.update(active_run=None,last_status=scan['status'],last_checked=now(),last_scan=scan['id'],observed=sorted(found if scan['status']=='complete' else seen|found))
-                run.update(status=scan['status'],finished_at=now(),scan_id=scan['id'],checked=len(scan['checked']),total=len(current['packages']),new_matches=len(fresh),tasks=tasks,error=scan.get('error'),advisory_details=scan.get('advisory_details'))
+                run.update(status=scan['status'],finished_at=now(),scan_id=scan['id'],checked=len(scan['checked']),total=len(current['packages']),new_matches=len(fresh),tasks=tasks,error=scan.get('error'),advisory_details=scan.get('advisory_details'),dependency_inventory=scan.get('dependency_inventory'))
                 Store.put(c,workspace,'watches',current);Store.put(c,workspace,'watch_runs',run);Store.event(c,workspace,run['actor'],'watch.check_finished',identifier)
                 for old in [r for r in Store.all(c,workspace,'watch_runs') if r['watch_id']==current['id']][100:]:
                     c.execute("DELETE FROM entities WHERE id=? AND workspace=? AND kind='watch_runs'",(old['id'],workspace))
@@ -208,12 +204,12 @@ def register(app,store,auth,writable,throttle,persist_scan):
     def create_watch(body: Configuration,session=Depends(auth)):
         writable(session);throttle('watch-config:'+session['user'],15)
         require(body.consent,'Approve storing package metadata and sending exact names/versions to OSV',422)
-        packages=packages_of(body)
+        scope=scope_of(body);packages=scope['packages']
         with store.connect(write=True) as c:
             require(sum(not w.get('archived') for w in Store.all(c,session['workspace'],'watches'))<20,'This workspace supports up to 20 active watches',409)
             identifier=uid();asset={'id':uid(),'name':body.name,'kind':'application','owner':session['email'],'environment':'development','criticality':'medium','hostname':'','authorized':True,'created_at':now(),'watch_id':identifier}
             Store.put(c,session['workspace'],'assets',asset)
-            value={'id':identifier,'asset_id':asset['id'],'created_by':session['user'],'name':body.name,'format':body.format,'packages':packages,'interval_hours':body.interval_hours,'enabled':body.enabled,'create_tasks':body.create_tasks,'revision':1,'next_due':service.clock()+body.interval_hours*3600 if body.enabled else None,'active_run':None,'last_status':'not_checked','observed':[],'created_at':now()}
+            value={'id':identifier,'asset_id':asset['id'],'created_by':session['user'],'name':body.name,'format':body.format,'packages':packages,'dependency_inventory':scope['coverage'],'interval_hours':body.interval_hours,'enabled':body.enabled,'create_tasks':body.create_tasks,'revision':1,'next_due':service.clock()+body.interval_hours*3600 if body.enabled else None,'active_run':None,'last_status':'not_checked','observed':[],'created_at':now()}
             Store.put(c,session['workspace'],'watches',value);Store.event(c,session['workspace'],session['user'],'watch.created',identifier)
         return value
 
@@ -233,13 +229,13 @@ def register(app,store,auth,writable,throttle,persist_scan):
     def update_watch(identifier: str,body: Update,session=Depends(auth)):
         writable(session);throttle('watch-config:'+session['user'],15)
         require(body.consent,'Approve storing package metadata and sending exact names/versions to OSV',422)
-        packages=packages_of(body)
+        scope=scope_of(body);packages=scope['packages']
         with store.connect(write=True) as c:
             watch=managed(c,session,identifier);require(watch['revision']==body.revision,'Watch changed; reload before editing',409)
             require(not watch.get('archived'),'Archived watches cannot be edited',409)
             service.stop_watch(c,session['workspace'],watch,'Watch configuration changed; the old result was cancelled.','cancelled')
             if packages!=watch['packages']:watch['observed']=[]
-            watch.update(name=body.name,format=body.format,packages=packages,interval_hours=body.interval_hours,enabled=body.enabled,create_tasks=body.create_tasks,created_by=session['user'],next_due=service.clock()+body.interval_hours*3600 if body.enabled else None,last_status='not_checked')
+            watch.update(name=body.name,format=body.format,packages=packages,dependency_inventory=scope['coverage'],interval_hours=body.interval_hours,enabled=body.enabled,create_tasks=body.create_tasks,created_by=session['user'],next_due=service.clock()+body.interval_hours*3600 if body.enabled else None,last_status='not_checked')
             Store.put(c,session['workspace'],'watches',watch)
             asset=Store.get(c,session['workspace'],'assets',watch['asset_id'])
             if asset:asset['name']=body.name;Store.put(c,session['workspace'],'assets',asset)

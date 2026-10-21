@@ -23,8 +23,9 @@ This deterministic workflow has no LLM input, provider calls or key requirement.
 
 ## Dependency watch operator (0.8)
 
-In **Watches & alerts**, register 1–20 exact versions in requirements syntax or
-package.json. Review the provider disclosure, cadence and task permission.
+In **Watches & alerts**, preview and register 1–500 exact package versions from requirements,
+package.json, npm lockfiles, uv.lock or normalized exact inventory. Exclude private
+names before approving transmission. See DEPENDENCY_INVENTORIES.md. Review the provider disclosure, cadence and task permission.
 Schedules and task creation default off. Saving registers an application asset;
 **Check now** queues the first check. Enabled schedules start at their next due
 interval while the server runs. This fixed OSV operator needs no Groq key.

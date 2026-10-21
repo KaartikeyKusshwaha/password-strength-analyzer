@@ -3,6 +3,25 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import ControlCenter from './ControlCenter';
 
+it('sends the reviewed dependency scope to the operator only after provider consent',async()=>{
+  const preview={packages:[{id:'selected-pin',ecosystem:'npm',name:'example',version:'1.0.0'}],coverage:{unique_packages:1,selected:1,excluded:0,skipped_records:0,root_records:0,duplicate_records:0}};
+  const fetcher=vi.fn(async url=>({ok:true,json:async()=>url.endsWith('/preview')?preview:{status:'queued'}}));vi.stubGlobal('fetch',fetcher);
+  render(<ControlCenter data={{operations:[],integrations:{local_device_agent:true}}} refresh={vi.fn()} go={vi.fn()} canWrite/>);
+  fireEvent.click(screen.getByRole('button',{name:/Review code or a message/}));
+  fireEvent.change(screen.getByLabelText('Check type'),{target:{value:'dependencies'}});
+  fireEvent.change(screen.getByLabelText('Dependency format'),{target:{value:'package-lock'}});
+  fireEvent.change(screen.getByLabelText('Dependency source'),{target:{value:'reviewed-source'}});
+  expect(screen.getByRole('button',{name:'Run security operator'})).toBeDisabled();
+  fireEvent.click(screen.getByRole('button',{name:'Preview package scope'}));
+  await screen.findByLabelText('npm · example@1.0.0');
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByLabelText(/I approve sending/));
+  fireEvent.click(screen.getByLabelText(/I own this target/));
+  fireEvent.click(screen.getByRole('button',{name:'Run security operator'}));
+  await screen.findByText(/Operator started/);
+  expect(JSON.parse(fetcher.mock.calls.find(([url])=>url==='/api/operations')[1].body)).toMatchObject({action:'dependencies',content:'reviewed-source',format:'package-lock',dependency_selection:['selected-pin'],dependency_consent:true});
+});
+
 it('starts a device check directly from a target with explicit authority and no prerequisite asset form', async () => {
   const refresh=vi.fn(),go=vi.fn(),fetcher=vi.fn(async()=>({ok:true,json:async()=>({status:'queued'})}));
   vi.stubGlobal('fetch',fetcher);
