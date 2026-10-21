@@ -209,3 +209,16 @@ non-retention and separately scoped authorization. Actual installed extension
 acceptance remains pending browser-control access. This does not complete
 helper onboarding, background monitoring, post-login save offers, shared-vault
 onboarding or independent security review.
+
+
+Deployment: 0.16.1 was installed on the Oracle pilot from revision
+d77f9042c3a7c6f07451b591bd7bd567655e9420 after verifying archive SHA-256
+ca3c85f608ee59a32e9f4db17be8a8ee7eea532dc511fd1cc2f48ef8b9cc6225 and
+all payload hashes. The installed package manifest reports 0.16.1. Account,
+membership, workspace, personal/shared vault, companion and device rows and
+the encryption key were unchanged across deployment. Encrypted backups passed
+before and after the update. Public HTTPS remained healthy with owner setup
+complete. Unauthenticated inventory preview returned 401, extension-origin
+preflight returned 204 and an unrelated website origin was rejected with 403.
+No real user access grant was created by verification. Native popup, file-drop
+and cloud grant acceptance still require browser verification.
