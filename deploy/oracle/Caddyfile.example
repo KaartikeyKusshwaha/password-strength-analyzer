@@ -1,0 +1,5 @@
+# Replace security.example.com with a DNS hostname pointing to the Oracle VM.
+security.example.com {
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:8110
+}

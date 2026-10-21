@@ -67,6 +67,8 @@ Create the vault yourself and choose its master passphrase locally. The app sign
 
 SQLite remains the **local development** store. [Encrypted operator backups and isolated restore tooling](docs/BACKUP_RECOVERY.md) are available. Postgres migration, production deployment/backup operations, independent client/sharing audit, mobile clients, native passkey acceptance and extension-store publication are unfinished production gates. Shared vaults are a development preview with explicit limitations in the threat model.
 
+For a persistent Python/SQLite pilot, [Oracle VM deployment files](deploy/oracle/README.md) provide a no-Docker systemd/HTTPS setup and a release bundle that excludes local data and secrets. Actual VM deployment and public browser acceptance still require verification.
+
 ## Browser companion
 
 Build/package as above. In Edge or Chrome’s extension-management page, enable developer mode and load **`companion/extension/dist`**, the folder containing `manifest.json`. Do not load the nested `assets` folder. After rebuilding, reload the installed extension.
