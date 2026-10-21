@@ -297,3 +297,18 @@ API fixtures and verified exact-origin cookie-free requests and opt-out cleanup.
 Packaging refuses an unbundled monitoring worker. Installed browser acceptance
 remains pending; this does not implement breach monitoring or post-login save
 offers, nor replace independent security review. See QUIET_SITE_CHECKS.md.
+
+
+Deployment: companion 0.18.0 was atomically published on Oracle from revision
+da3542b2548f34ede206ab58e4d08fd7b63ecde4. Release archive SHA-256:
+3a70260e70495b980146e11c0e77e417985eddfc9fe136bf984781ed24bc23a7;
+installed companion ZIP SHA-256:
+8142f25eb897f33809f5edc049f194779676eea4640a7e9060a7018fdfaaa973.
+The archive inventory and payload hashes were validated, along with the ZIP
+manifest, bundled-monitor protocol and ZIP integrity. Accounts, workspace and
+membership, personal/shared vaults, companions/devices and server key remained
+unchanged. Encrypted backups passed before/after; no app restart was needed.
+Public HTTPS status returned 200 with owner setup complete. No real sites were
+opted into monitoring. Browser inventory again reported Local browser use is
+disabled in Work settings; native permission, alarm and badge acceptance is
+unverified.
