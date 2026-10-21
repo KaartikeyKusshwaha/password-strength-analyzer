@@ -255,3 +255,19 @@ on the user's computer. Artifact and source hashes matched the build manifest.
 The helper is an unsigned pilot; GUI install/shortcut/uninstall and actual
 browser-to-helper acceptance remain unverified while browser control is
 unavailable. This is not an independent security audit. See DEVICE_HELPER.md.
+
+
+Deployment verification: companion 0.17.0 / helper 0.1.0 was deployed from
+c0cae00bb808b4119a6a08c8f80e29fe92897b13. Release SHA-256:
+e52588f5decbcc5bd2924c03884a57df21e246abd30159c2e89e02f5d85c2c5b.
+The archive inventory and each payload digest were checked before installation.
+Existing account, membership, workspace, personal/shared vault, companion and
+device rows and the server encryption key remained unchanged. Encrypted
+backups completed before and after the update. HTTPS status returned 200 with
+owner setup complete. The public installer download was 12,629,618 bytes and
+matched SHA-256 8b57c38b285e067d0641aa8ccf68aa6add27ca02b25a17a2ee9bd71f3be880d7.
+The real helper client successfully started, polled and cancelled a disposable
+pending request against the cloud. Unsigned extension approval returned 401;
+post-cancellation polling returned 410. This created no real device grant and
+did not install the helper. GUI installation and actual extension pairing/
+scanning/uninstall acceptance remain pending.
