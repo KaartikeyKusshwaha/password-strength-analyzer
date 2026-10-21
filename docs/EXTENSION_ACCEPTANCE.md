@@ -58,3 +58,21 @@ vault handoff or device scanning. The observations describe the response's
 header presence, not whether the website is safe or exploitable. No screenshot
 claim is made about a permission prompt that is not pictured. The queued
 non-2xx correction is not part of this installed result.
+
+### Companion 0.22.1 release — 22 October 2026
+
+After the manual popup site-check acceptance, the installed local directory and
+cloud download were deliberately advanced to 0.22.1 in one build. This releases
+the registered-version guard, fixed-code popup diagnostics and non-2xx unknown
+result behavior described above. All 336 frontend tests across 73 files passed;
+content, popup and worker production builds and the actual bundled-worker
+fixture passed. The package SHA-256 is
+48242862fc70edf4dd9ffbb64fb1913996eb539df8ba23caebdd22834a27798b.
+
+The Oracle deployment replaced only the downloadable companion ZIP atomically,
+retaining the prior ZIP for rollback. The encrypted backup passed, the service
+remained active and no database/config/frontend/backend change was performed.
+The website remains app version 0.22.0; the companion is 0.22.1. The registered
+Edge extension still needs one user reload and practice-page refresh before
+native acceptance of this patch. Diagnostics are not a claim that programmatic
+Edge popup launch has been repaired. No credentials or permissions were added.
