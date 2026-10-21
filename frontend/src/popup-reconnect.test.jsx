@@ -1,13 +1,14 @@
 import {afterEach,expect,it,vi} from 'vitest';
 import {cleanup,fireEvent,render,screen} from '@testing-library/react';
 import {Popup} from '../../companion/extension/popup';
+import manifest from '../../companion/extension/public/manifest.json';
 
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
 it('replaces an invalid connection unlock form with a scoped re-pairing path without deleting other vaults',async()=>{
   const connection={origin:'http://127.0.0.1:8110',token:'fixture-only'};
   const saved={connection,connections:[connection]};
   const remove=vi.fn(async key=>{delete saved[key];});
-  vi.stubGlobal('chrome',{storage:{local:{get:vi.fn(async()=>({...saved})),remove,set:vi.fn()}},runtime:{sendMessage:vi.fn(async()=>null)},tabs:{query:vi.fn(async()=>[])}});
+  vi.stubGlobal('chrome',{storage:{local:{get:vi.fn(async()=>({...saved})),remove,set:vi.fn()}},runtime:{getManifest:()=>manifest,sendMessage:vi.fn(async()=>null)},tabs:{query:vi.fn(async()=>[])}});
   const fetcher=vi.fn(async()=>({status:401,ok:false}));vi.stubGlobal('fetch',fetcher);
   render(<Popup/>);
   await screen.findByLabelText('Master passphrase');

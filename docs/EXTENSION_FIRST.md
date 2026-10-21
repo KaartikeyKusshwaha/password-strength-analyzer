@@ -574,3 +574,16 @@ every file in the installed companion/extension/dist directory were compared
 before and after and remained identical. No new extension release or deployment
 of this source patch has occurred. Rebuild/version the release deliberately after
 native acceptance resumes; do not silently replace the frozen installed files.
+
+
+Final queued-patch regression: all 327 frontend tests passed across 73 files.
+The first full run exposed three old browser mocks missing runtime.getManifest;
+the mocks were updated to the actual browser API shape, keeping production's
+version guard fail-closed. Existing personal/shared autofill and reconnect
+regressions passed again. The installed 0.22 ZIP retained SHA-256
+03f5c6c460cf56b03918db93ec29aaa849bb281128be2261c96878eec170bf27.
+A limited credential-pattern review scanned 728 new reachable Git blobs across
+53 commits relative to the local origin/main reference, finding no Groq-key,
+GitHub-token, private-key or AWS-access-ID patterns. No data/.env/key paths were
+tracked. This is not a comprehensive secret scan, live-key validation or external
+security audit. The ignored report records its exact scope and scanned head.

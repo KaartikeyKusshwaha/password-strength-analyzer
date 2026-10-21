@@ -1,6 +1,7 @@
 import {afterEach,beforeEach,expect,it,vi} from 'vitest';
 import {cleanup,fireEvent,render,screen,within,waitFor} from '@testing-library/react';
 import {Popup} from '../../companion/extension/popup';
+import extensionManifest from '../../companion/extension/public/manifest.json';
 
 const fixture=vi.hoisted(()=>({instances:[]}));
 vi.mock('../../companion/extension/vault-session',()=>({SaveSession:class {
@@ -18,7 +19,7 @@ beforeEach(()=>{
   vi.stubGlobal('chrome',{
     storage:{local:{get:vi.fn(async()=>({connection,connections:[connection]})),set:vi.fn(),remove:vi.fn()}},
     tabs:{query:vi.fn(async()=>[{id:77,url:'https://practice.expandtesting.com/login'}]),sendMessage:vi.fn()},
-    runtime:{sendMessage:vi.fn()},
+    runtime:{getManifest:()=>extensionManifest,sendMessage:vi.fn()},
   });
 });
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
