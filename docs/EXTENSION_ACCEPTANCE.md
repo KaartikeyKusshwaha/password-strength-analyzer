@@ -95,3 +95,16 @@ sign-in action. This does not establish cloud autofill or multi-vault acceptance
 The helper endpoint returned HTTP 200 and 12,629,618 bytes from the server.
 Edge did not report a completed native download during the observed timeout.
 No browser warning was bypassed and no helper executable was run or installed.
+
+### Cloud personal-vault authorization — 22 October 2026
+
+After the previous request expired, the user started a new proof-bound connection
+and completed its comparison-code approval. The actual Connections page now
+lists Cloud extension, Personal vault, expiring 21 November 2026. A fresh UI
+refresh still reports no successful vault contact and no reported version.
+This proves scoped authorization exists, not that the native popup exchanged its
+proof or read/unlocked the vault. The next step is reopening the popup to finish
+handoff. Evidence: data/oracle-deployment/cloud-vault-connection-approved.png.
+No security-agent grant is listed and no scan permission is inferred from this
+vault authorization. No operator-side token copying or direct grant insertion
+was used.
