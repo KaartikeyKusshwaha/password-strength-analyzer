@@ -1,5 +1,31 @@
 # Development verification — 0.13.3
 
+## Edge fill feedback — companion 0.12.8 — 21 October 2026
+
+Actual Edge website control returned. The stopped local app was started again;
+its signed-out UI rendered. The unused blank tab, two duplicate app tabs and
+the Add-ons tab were closed on request. Both live practice inputs remain blank;
+their observed attributes and same-origin submit destination match the supported
+form fixture. A read-only local check of only the Browser acceptance test vault
+verified its master and public demo login. No owner password was retrieved.
+
+The user reports that Fill does nothing. The installed toolbar popup is outside
+the browser controls, so no exact popup outcome has yet been observed. Companion
+0.12.8 adds entry-local progress/errors, a changing disabled busy button and
+five-second page acknowledgements. A late preflight cannot use a newly unlocked
+session, an unanswered preflight does not release credentials, and an uncertain
+fill is never resent. The response may already have arrived; the UI says so.
+
+All 203 frontend tests across 44 files passed and both companion builds passed.
+Fourteen focused client cases also passed after strengthening the lock-during-
+fetch fixture. The 12-file ZIP matches every build byte, retains the same
+permissions and has no web-accessible private pages. SHA-256:
+3a45956f56c8e08038d3da9f87aab1e11ee5f34ceb9cf2ed998916864c63767f.
+No backend or app build changed; the live app remains 0.13.3. The existing
+pairing/vault was retained. Installed 0.12.8 reload, exact popup feedback and
+actual field-retention acceptance remain pending. See
+companion-0.12.8-fill-feedback.md and BROWSER_ACCEPTANCE.md.
+
 ## Sourced dependency severity — 21 October 2026
 
 Manual checks and registered watches now share bounded batch matching, alias

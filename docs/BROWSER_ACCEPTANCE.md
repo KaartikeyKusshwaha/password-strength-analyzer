@@ -1,13 +1,30 @@
-# Browser acceptance — SentinelOps 0.13.3 / companion 0.12.7
+# Browser acceptance — SentinelOps 0.13.3 / companion 0.12.8
+
+Edge access returned on 21 October. The stopped local app was started again;
+the actual signed-out app rendered. Four blank/duplicate/unused tabs were
+closed at the user's request, keeping one app, Extensions and the practice
+login. Both practice fields were observed empty. Their form action is the
+same-origin `/authenticate`; there is one visible password field, one username
+field and an exact Login submit control. The misleading new-password hint is
+already covered by the current sign-in policy and its regression fixture.
+
+The service received a 0.12.7 contact report. A read-only local verification of
+only the disposable Browser acceptance vault confirmed the supplied test
+master and the public practice login. This does not prove installed filling.
+The user reported that clicking Fill did nothing. The extension toolbar popup
+is not exposed to browser control, so its actual message was not observed.
+Companion 0.12.8 adds per-entry progress/errors and bounded page-message waits;
+installed acceptance remains pending reload and another user click. Never
+replace that click with direct credential filling by the test driver.
 
 App 0.13.3 adds sourced CVSS severity for dependency findings and separate
 severity coverage in manual-check history and watch runs. Automated provider,
 UI and persistence tests pass; a live public-package API probe passed. The
 backed-up local app runs 0.13.3 with protected records preserved. These checks
 do not establish actual browser rendering or companion autofill acceptance.
-Browser control most recently reported local browser use disabled, exposing
-neither Edge nor a native desktop surface. The installed companion remains
-unverified; its pairing was retained for the pending acceptance workflow.
+The earlier disabled-browser condition is resolved for website control. The
+installed companion remains unverified; its pairing was retained for the
+pending acceptance workflow. Native desktop windows remain unavailable.
 
 Individual browser disconnection now has an exact named confirmation and Keep
 option. Automated account isolation, other-connection preservation, lease

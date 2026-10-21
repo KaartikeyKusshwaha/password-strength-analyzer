@@ -24,10 +24,11 @@ export function Popup() {
     [notice, setNotice] = useState(""),
     [capture, setCapture] = useState(null),
     [active, setActive] = useState(null),
-    [code, setCode] = useState(null);
+    [code, setCode] = useState(null),
+    [fillStatus,setFillStatus] = useState(null);
   const [update,setUpdate]=useState(false);
   const session = useRef(new SaveSession(chrome));
-  function lockVault() {session.current.lock();setEntries(null);setCapture(null);setCode(null);setUpdate(false);}
+  function lockVault() {session.current.lock();setEntries(null);setCapture(null);setCode(null);setUpdate(false);setFillStatus(null);}
   function reportError(error) {
     if(error.code==='CONNECTION_INVALID'){lockVault();setReconnectRequired(true);}
     setError(error.message);
@@ -285,18 +286,23 @@ export function Popup() {
                   disabled={busy}
                   onClick={async () => {
                     setError("");setNotice('');setBusy(true);
+                    const generation=session.current.generation;
+                    const progress=text=>{if(session.current.generation===generation)setFillStatus({id:entry.id,text,error:false,pending:true});};
+                    progress('Starting autofill…');
                     try {
-                      const filled=await fillSavedLogin(chrome,session.current,entry.id,active,manifest.version);
-                      setNotice(
-                        filled==='login'?"Username and password filled. Review the website before submitting.":"Password filled. This form has no detected username field; review the account before submitting.",
-                      );
+                      const filled=await fillSavedLogin(chrome,session.current,entry.id,active,manifest.version,progress);
+                      session.current.active(generation);
+                      const text=filled==='login'?"Username and password filled. Review the website before submitting.":"Password filled. This form has no detected username field; review the account before submitting.";
+                      setFillStatus({id:entry.id,text,error:false,pending:false});
                     } catch (e) {
-                      reportError(e);
+                      if(session.current.generation===generation)setFillStatus({id:entry.id,text:e.message,error:true,pending:false});
+                      if(e.code==='CONNECTION_INVALID' || session.current.generation!==generation)reportError(e);
                     } finally {setBusy(false);}
                   }}
                 >
-                  Fill this login
+                  {fillStatus?.id===entry.id && fillStatus.pending?'Filling…':'Fill this login'}
                 </button>
+                {fillStatus?.id===entry.id&&<p className={fillStatus.error?'error':'notice'} role={fillStatus.error?'alert':'status'} aria-live="polite">{fillStatus.text}</p>}
               </section>
             ))}
           {!entries.some(

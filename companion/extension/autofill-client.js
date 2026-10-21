@@ -11,19 +11,34 @@ export function autofillError(reason) {
   })[reason] || 'The website did not confirm autofill. Nothing was submitted.';
 }
 
-export async function fillSavedLogin(browser,session,entryId,active,version) {
+async function messageWithDeadline(browser,tab,message) {
+  let timer;
+  try {
+    return await Promise.race([
+      browser.tabs.sendMessage(tab,message,{frameId:0}),
+      new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('No page acknowledgement')),5000);}),
+    ]);
+  } finally {clearTimeout(timer);}
+}
+
+export async function fillSavedLogin(browser,session,entryId,active,version,progress=()=>{}) {
   // Establish the page/version before decrypting an entry for transmission.
   // Never include native messaging errors, URLs or credential values in diagnostics.
+  const generation=session.generation;
   let check;
-  try {check=await browser.tabs.sendMessage(active.id,{type:'inspect-login',origin:active.origin},{frameId:0});}
-  catch {throw new Error('The website companion is unavailable. Reload SentinelOps in Extensions, then refresh this website and reopen the companion.');}
+  progress('Checking this sign-in form…');
+  try {check=await messageWithDeadline(browser,active.id,{type:'inspect-login',origin:active.origin});}
+  catch {throw new Error('The website companion did not answer. Reload SentinelOps in Extensions, then refresh this website and reopen the companion. No saved credentials were sent.');}
   if(check?.version!==version)throw new Error('The website is using an older companion. Refresh this website, then reopen SentinelOps and try again.');
   if(!check.ok)throw new Error(autofillError(check.reason));
-  const generation=session.generation,selected=await session.fill(entryId,active.origin);
   session.active(generation);
+  progress('Checking current vault access…');
+  const selected=await session.fill(entryId,active.origin);
+  session.active(generation);
+  progress('Filling the selected login; waiting for the website…');
   let result;
-  try {result=await browser.tabs.sendMessage(active.id,{type:'fill-login',entry:selected},{frameId:0});}
-  catch {throw new Error('The website companion disconnected. Refresh the website and try again. Nothing was submitted.');}
+  try {result=await messageWithDeadline(browser,active.id,{type:'fill-login',entry:selected});}
+  catch {throw new Error('The website did not acknowledge filling. Check its fields before retrying: the message may have arrived. Nothing was submitted and SentinelOps did not retry.');}
   if(!result?.ok)throw new Error(autofillError(result?.reason));
   if(!['login','password'].includes(result.filled))throw new Error('The website companion did not confirm the filled fields. Refresh the website and try again. Nothing was submitted.');
   return result.filled;
