@@ -117,3 +117,16 @@ downloadable build. This verifies the installed extension finished the cloud
 handoff and performed an authorized encrypted-vault read. It does not prove
 local decryption, a saved item, autofill, shared-vault access or security-agent
 permissions. Evidence: data/oracle-deployment/cloud-companion-first-contact-0.22.1.png.
+
+### Approved cloud demo entry saved; autofill pending
+
+The user explicitly approved saving the public practice.expandtesting.com demo
+login in the Personal cloud test vault. Through the normal control-room UI,
+the existing vault was unlocked and Practice cloud acceptance was encrypted and
+saved. The UI showed one entry with the exact HTTPS origin and public username.
+This is a control-room save, not installed extension secure-save acceptance.
+Evidence: data/oracle-deployment/cloud-demo-login-saved.png.
+The practice username and password fields were then cleared through UI controls;
+no login form was submitted. Native companion retrieval/fill awaits the user's
+popup click, after which both field values can be verified without exposing
+real credentials. The public test vault must not store valuable credentials.
