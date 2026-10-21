@@ -4,6 +4,19 @@ import { expect, it, vi } from 'vitest';
 import ControlCenter from './ControlCenter';
 function render(value){const result=renderBase(value);fireEvent.click(screen.getByText('Advanced checks and account actions'));return result;}
 
+it.each([['Check my website','Website hostname'],['Check my dependencies','Dependency source']])('opens %s directly without starting a scan',async(button,label)=>{
+  const fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);
+  renderBase(<ControlCenter data={{operations:[],integrations:{local_device_agent:true}}} me={{workspace:'workspace'}} refresh={vi.fn()} go={vi.fn()} canWrite/>);
+  const details=screen.getByText('Advanced checks and account actions').closest('details');
+  expect(details).not.toHaveAttribute('open');
+  fireEvent.click(screen.getByRole('button',{name:button,exact:true}));
+  expect(details).toHaveAttribute('open');
+  expect(screen.getByLabelText(label)).toBeVisible();
+  await waitFor(()=>expect(screen.getByRole('region',{name:'Selected security operator'})).toHaveFocus());
+  expect(screen.getByLabelText(/I own this target/)).not.toBeChecked();
+  expect(fetcher).not.toHaveBeenCalled();
+});
+
 it('sends the reviewed dependency scope to the operator only after provider consent',async()=>{
   const preview={packages:[{id:'selected-pin',ecosystem:'npm',name:'example',version:'1.0.0'}],coverage:{unique_packages:1,selected:1,excluded:0,skipped_records:0,root_records:0,duplicate_records:0}};
   const fetcher=vi.fn(async url=>({ok:true,json:async()=>url.endsWith('/preview')?preview:{status:'queued'}}));vi.stubGlobal('fetch',fetcher);

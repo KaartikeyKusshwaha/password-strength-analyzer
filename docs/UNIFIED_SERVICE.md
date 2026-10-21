@@ -23,6 +23,13 @@ and optionally use Groq for one planning call. The dispatcher links existing
 active tasks and creates missing follow-up work. Recurring execution is not
 implicitly enabled, and the hosting server is not substituted for a user device.
 
+The automatic agent section also offers **Check my website** and **Check my
+dependencies**. Each opens and focuses the matching operator directly, expanding
+the advanced section without running a request or assuming target authorization.
+Actual Edge checks verified both destinations and all three companion URL
+destinations. This tests the dashboard routing; the installed extension popup
+still needs its 0.13.0 reload and separate acceptance.
+
 Vault unlocks, provider sign-in/challenges and final credential changes remain
 explicit user actions. There is no universal provider MFA-enrollment or password
 change API. Agents never receive vault plaintext or authenticator keys and cannot

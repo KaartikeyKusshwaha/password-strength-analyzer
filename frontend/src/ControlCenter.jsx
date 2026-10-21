@@ -1,5 +1,5 @@
 import SecuritySweep from './SecuritySweep';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Bot, Monitor, Globe, KeyRound, FileSearch, ArrowRight, ShieldCheck, LoaderCircle } from 'lucide-react';
 import { api } from './api';
 import {ActionFeed} from './AccountActions';
@@ -16,6 +16,9 @@ const options = [
 export default function ControlCenter({ data, me, refresh, go, canWrite }) {
   const [contentKind,setContentKind]=useState('python'),[dependency,setDependency]=useState(emptyDependency);
   const [deviceMode,setDeviceMode]=useState('device');
+  const [advanced,setAdvanced]=useState(false),[checkRequest,setCheckRequest]=useState(0),advancedPanel=useRef(null);
+  function chooseCheck(kind){setAction(kind==='dependencies'?'python':kind);if(kind==='dependencies')setContentKind('dependencies');setError('');setNotice('');setAdvanced(true);setCheckRequest(v=>v+1);}
+  useEffect(()=>{if(checkRequest){advancedPanel.current?.scrollIntoView?.({behavior:'smooth',block:'start'});advancedPanel.current?.focus();}},[checkRequest]);
   const [action, setAction] = useState('device'), [busy, setBusy] = useState(false),
     [error, setError] = useState(''), [notice, setNotice] = useState('');
   const operations = data.operations || [];
@@ -26,12 +29,12 @@ export default function ControlCenter({ data, me, refresh, go, canWrite }) {
   const active = operations.some(o => ['queued', 'running'].includes(o.status));
   return <>
     <section className="panel spaced"><span className="eyebrow">YOUR SECURITY TOOLS</span><h2>One service for your everyday security.</h2><div className="operator-options"><button className="operator-option" onClick={()=>go('passwords')}><KeyRound size={22}/><strong>Passwords & vaults</strong><span>Suggestions, generation, encrypted saving and autofill.</span></button><button className="operator-option" onClick={()=>go('authenticator')}><ShieldCheck size={22}/><strong>Two-factor authentication</strong><span>Private authenticator codes and account protection.</span></button><button className="operator-option" onClick={()=>document.getElementById('automatic-device-check')?.scrollIntoView({behavior:'smooth',block:'center'})}><Monitor size={22}/><strong>Vulnerability checks</strong><span>Device ports, website headers and dependency checks.</span></button></div></section>
-    {me&&<SecuritySweep data={data} me={me} canWrite={canWrite} refresh={refresh} go={go}/>}
+    {me&&<SecuritySweep data={data} me={me} canWrite={canWrite} refresh={refresh} go={go} chooseCheck={chooseCheck}/>}
 
 
     {!!data.ownership_requests?.length && <section className="panel spaced"><span className="eyebrow">OWNERSHIP REQUESTS</span><h2>A shared vault needs your decision.</h2>{data.ownership_requests.map(request=><p key={request.id}><strong>{request.vault_name}</strong> · proposal expires {new Date(request.expires_at*1000).toLocaleString()}</p>)}<button className="button" onClick={()=>go('shared-vaults')}>Review shared vault ownership</button><p className="fine">Open your sharing identity and verify the current owner before accepting. Ownership has not changed yet.</p></section>}
     <div className="connection-strip"><button onClick={() => go('vault')}><KeyRound size={16}/>{data.connections?.vault_created ? 'Personal vault created' : 'Create your private vault'}</button><button onClick={() => go('companions')}><Globe size={16}/>{data.connections?.browser_tokens ? `${data.connections.browser_tokens} browser token(s) issued` : 'Connect your browser'}</button><span><Monitor size={16}/>{data.integrations.local_device_agent ? 'Local device operator available' : 'Device connection needed'}</span></div>
-    <details className="spaced"><summary>Advanced checks and account actions</summary><section className="panel control-center">
+    <details className="spaced" open={advanced} onToggle={event=>setAdvanced(event.currentTarget.open)}><summary>Advanced checks and account actions</summary><section ref={advancedPanel} tabIndex={-1} aria-label="Selected security operator" className="panel control-center">
       <button className="button secondary" onClick={()=>go('reviews')}>Plan a combined security review</button><div className="control-intro"><span className="eyebrow">YOUR SECURITY CONTROL CENTER</span><h2>What should we take care of?</h2><p>Choose an outcome. Your operators collect evidence, record findings and carry approved work forward.</p></div>
       <div className="operator-options">{options.map(([id, Icon, title, description]) => <button key={id} className={action === id ? 'operator-option selected' : 'operator-option'} onClick={() => { setAction(id); setError(''); setNotice(''); }}><Icon size={22} /><strong>{title}</strong><span>{description}</span></button>)}</div>
       {error && <p role="alert" className="notice error">{error}</p>}

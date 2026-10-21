@@ -1,12 +1,13 @@
 import {useState} from 'react';
 import {api} from './api';
 
-export default function SecuritySweep({data,me,canWrite,refresh,go}) {
+export default function SecuritySweep({data,me,canWrite,refresh,go,chooseCheck}) {
   const devices=data.devices||[],local=data.integrations.local_device_agent;
   const [device,setDevice]=useState(local?'local':devices[0]?.id||''),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const selected=devices.find(d=>d.id===device),tools=['device',...(device==='local'||selected?.allow_posture?['posture']:[]),...(device==='local'||selected?.allow_updates?['updates']:[])];
   const active=[...(data.operations||[]),...(data.jobs||[]),...(data.security_reviews||[])].some(v=>['queued','running'].includes(v.status));
   return <section id="automatic-device-check" className="panel spaced"><span className="eyebrow">AUTOMATIC SECURITY AGENTS</span><h2>Check my device and organize the work.</h2><p>One approval starts the available device checks. Agents record findings, prepare an AI plan and link or create follow-up tasks.</p>
+    {chooseCheck&&<div className="inline" role="group" aria-label="Other vulnerability operators"><button className="button secondary" onClick={()=>chooseCheck('website')}>Check my website</button><button className="button secondary" onClick={()=>chooseCheck('dependencies')}>Check my dependencies</button></div>}
     {error&&<p role="alert" className="notice error">{error}</p>}
     <form className="operator-form" onSubmit={async event=>{
       event.preventDefault();setBusy(true);setError('');
