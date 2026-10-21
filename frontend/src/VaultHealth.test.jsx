@@ -4,6 +4,7 @@ import {cleanup,fireEvent,render,screen,waitFor} from '@testing-library/react';
 import {webcrypto} from 'node:crypto';
 import VaultHealth from '../../companion/extension/VaultHealth';
 import {SaveSession} from '../../companion/extension/vault-session';
+import {scheduleKey,enableSchedule,loadSchedule,BREACH_INTERVAL} from '../../companion/extension/breach-schedule';
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
 function fixture(){
   vi.stubGlobal('crypto',webcrypto);
@@ -63,4 +64,46 @@ it('creates an action approval only for explicitly selected logins',async()=>{
   fireEvent.click(screen.getByRole('button',{name:'Approve password changes for 1 selected logins'}));
   await waitFor(()=>expect(onApproved).toHaveBeenCalled());expect(props.session.approveChanges).toHaveBeenCalledWith(['a']);
   expect(props.browser.runtime.sendMessage).not.toHaveBeenCalled();
+});
+
+function recurringFixture(){
+  const props=fixture(),saved={},listeners=new Set();
+  props.session.config={origin:'https://security.example.test'};
+  props.session.policy={id:'a'.repeat(24),origins:[],browser_enabled:true,browser_fill:true,browser_save:true};
+  props.browser.permissions.contains=vi.fn(async()=>true);
+  props.browser.storage={local:{get:vi.fn(async()=>structuredClone(saved)),set:vi.fn(async value=>{Object.assign(saved,structuredClone(value));}),remove:vi.fn(async keys=>{for(const key of Array.isArray(keys)?keys:[keys])delete saved[key];})},onChanged:{addListener:fn=>listeners.add(fn),removeListener:fn=>listeners.delete(fn)}};
+  return {props,saved,listeners,key:scheduleKey(props.session)};
+}
+it('waits for opt-in and a later unlock, then rechecks daily without another permission prompt',async()=>{
+  const {props,key}=recurringFixture(),fetcher=vi.fn(async()=>({ok:true,text:async()=> '0'.repeat(35)+':0'}));vi.stubGlobal('fetch',fetcher);
+  const first=render(<VaultHealth {...props}/>);
+  const enable=await screen.findByRole('button',{name:'Allow daily checks on unlock for this vault'});
+  expect(fetcher).not.toHaveBeenCalled();fireEvent.click(enable);
+  await screen.findByRole('button',{name:'Disable recurring password checks'});expect(fetcher).not.toHaveBeenCalled();first.unmount();
+  const second=render(<VaultHealth {...props}/>);
+  await waitFor(()=>expect(fetcher).toHaveBeenCalledTimes(1));
+  await waitFor(async()=>expect((await loadSchedule(props.browser,key)).checkedAt).toBeGreaterThan(0));
+  expect(props.browser.permissions.request).toHaveBeenCalledTimes(1);expect(props.browser.permissions.contains).toHaveBeenCalled();second.unmount();
+  render(<VaultHealth {...props}/>);await screen.findByRole('button',{name:'Disable recurring password checks'});
+  expect(fetcher).toHaveBeenCalledTimes(1);expect((await loadSchedule(props.browser,key)).checkedAt+BREACH_INTERVAL).toBeGreaterThan(Date.now());
+});
+it('aborts a recurring lookup when consent is disabled from another window',async()=>{
+  const {props,key,saved,listeners}=recurringFixture();await enableSchedule(props.browser,key);let signal;
+  const fetcher=vi.fn((url,options)=>new Promise((resolve,reject)=>{signal=options.signal;signal.addEventListener('abort',()=>reject(new DOMException('Stopped','AbortError')),{once:true});}));vi.stubGlobal('fetch',fetcher);
+  render(<VaultHealth {...props}/>);await waitFor(()=>expect(fetcher).toHaveBeenCalledTimes(1));
+  const oldValue=saved[key];delete saved[key];for(const callback of listeners)callback({[key]:{oldValue}},'local');
+  await waitFor(()=>expect(signal.aborted).toBe(true));
+  await screen.findByRole('button',{name:'Allow daily checks on unlock for this vault'});
+  expect((await loadSchedule(props.browser,key)).enabled).toBe(false);
+  expect(screen.queryByText(/not found in password dataset/)).not.toBeInTheDocument();
+});
+
+it('does not advance successful-check time or cursor after a recurring provider failure',async()=>{
+  const {props,key}=recurringFixture();await enableSchedule(props.browser,key);
+  const fetcher=vi.fn(async()=>({ok:false}));vi.stubGlobal('fetch',fetcher);
+  render(<VaultHealth {...props}/>);await waitFor(()=>expect(fetcher).toHaveBeenCalled());
+  await waitFor(async()=>expect((await loadSchedule(props.browser,key)).retryAt).toBeGreaterThan(Date.now()));
+  const after=await loadSchedule(props.browser,key);expect(after.checkedAt).toBe(0);expect(after.offset).toBe(0);
+  expect(props.browser.permissions.request).not.toHaveBeenCalled();
+  expect(screen.queryByText(/not found in password dataset/)).not.toBeInTheDocument();
 });

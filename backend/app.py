@@ -95,7 +95,7 @@ class Workspace(Body):
 
 class Asset(Body):
     name: str = Field(min_length=2, max_length=80)
-    kind: Literal["application", "website", "mailbox", "service", "device"]
+    kind: Literal["application", "website", "service", "device"]
     owner: str = Field(min_length=2, max_length=80)
     environment: Literal["production", "staging", "development"]
     criticality: Literal["critical", "high", "medium", "low"]
@@ -345,7 +345,7 @@ def create_app(settings=None):
             app.state.watch_service.stop()
             executor.shutdown(wait=True, cancel_futures=True)
 
-    app = FastAPI(title="SentinelOps", version="0.21.0", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title="SentinelOps", version="0.22.0", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.store, app.state.settings = store, settings
     app.state.cipher, app.state.executor = cipher, executor
     app.state.agent_transport = None
@@ -986,8 +986,6 @@ def create_app(settings=None):
         fingerprints = {v["fingerprint"]: v for v in existing}
         ids = []
         scope = dict(asset_id=asset["id"], kind=body.kind, label=body.label)
-        if body.kind == "email" and result.get("message_digest"):
-            scope["message_digest"] = result.pop("message_digest")
         for previous in existing:
             if all(previous.get(k) == v for k, v in scope.items()):
                 previous["observed_in_latest"] = False
@@ -1347,7 +1345,7 @@ def create_app(settings=None):
             workspace = dict(c.execute("SELECT * FROM workspaces WHERE id=?", (session["workspace"],)).fetchone())
             data = {kind: Store.all(c, session["workspace"], kind) for kind in ("assets", "scans", "findings", "tasks", "investigations", "security_reviews")}
             audit = Store.audit(c, session["workspace"])
-        value = dict(product="SentinelOps", version="0.21.0", generated_at=now(), workspace=workspace, **data, audit=audit, limitations="User-provided observations and reviewed decisions, not a security certification. Hash links reveal some edits relative to a retained external head; a database administrator can rewrite the whole chain. No independent signing authority.")
+        value = dict(product="SentinelOps", version="0.22.0", generated_at=now(), workspace=workspace, **data, audit=audit, limitations="User-provided observations and reviewed decisions, not a security certification. Hash links reveal some edits relative to a retained external head; a database administrator can rewrite the whole chain. No independent signing authority.")
         value["content_sha256"] = hashlib.sha256(canonical(value).encode()).hexdigest()
         return JSONResponse(value, headers={"Content-Disposition": 'attachment; filename="sentinelops-evidence.json"'})
 

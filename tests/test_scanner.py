@@ -41,12 +41,10 @@ def test_submitted_code_is_never_executed(tmp_path):
     assert not marker.exists()
 
 
-def test_email_indicators_no_raw_message_no_false_safe_claim():
-    raw = 'URGENT: account suspended. Verify your password at https://bit.ly/private-fixture. Reply with your password.'
-    result = scanner.scan_email(raw)
-    assert {f['rule'] for f in result['findings']} == {'MAIL001','MAIL002','MAIL003'}
-    assert 'private-fixture' not in json.dumps(result)
-    assert scanner.scan_email('Meeting notes attached for Monday')['outcome'] == 'No listed indicators found'
+def test_python_coverage_lists_python_rules_independently_of_other_operators():
+    result = scanner.scan_python('answer = 42')
+    assert result['rules_checked'] == ['PY001','PY002','PY003','PY004','PY005','PY006','PY007','PY008']
+    assert not result['findings']
 
 
 def test_dependencies_do_not_silently_resolve_ranges():

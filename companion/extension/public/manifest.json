@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SentinelOps Security Companion",
-  "version": "0.21.0",
+  "version": "0.22.0",
   "description": "Passwords, encrypted vaults, TOTP codes and a connected device-security agent service.",
   "minimum_chrome_version": "127",
   "permissions": ["storage", "activeTab", "alarms"],

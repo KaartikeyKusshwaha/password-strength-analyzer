@@ -98,7 +98,7 @@ const titles = {
   ],
   assets: [
     "Know what you protect.",
-    "Applications, websites and inboxes with clear ownership.",
+    "Applications, websites and devices with clear ownership.",
   ],
   scans: [
     "Look closer. Act earlier.",
@@ -1104,7 +1104,7 @@ export default function App() {
               ) : (
                 <Empty
                   title="Start with an asset you operate"
-                  text="Give each application, website or team inbox an owner and environment."
+                  text="Give each application, website or device an owner and environment."
                   action={
                     write && (
                       <Button onClick={() => setModal("asset")}>
@@ -2099,7 +2099,6 @@ export default function App() {
                       <select name="kind">
                         <option value="application">Application</option>
                         <option value="website">Website</option>
-                        <option value="mailbox">Team inbox</option>
                         <option value="service">Service</option>
                         <option value="device">Personal device</option>
                       </select>

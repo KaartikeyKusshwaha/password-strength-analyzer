@@ -459,3 +459,53 @@ Final focused capture/offer regressions passed 17 tests, targeted backend
 handoff/shared/security/package tests passed 30 with one native skip, and five
 deployment packaging tests passed. Independent audit and periodic breach
 monitoring remain outside this verified increment.
+
+
+## Recurring unlocked-vault review and retirement cleanup, 0.22.0
+
+The popup now offers recurring Pwned Passwords checks, off by default and
+scoped to an exact service, personal/shared kind and verified vault ID. Explicit
+consent covers current and future eligible logins. Enabling does not immediately
+query: on the next unlock, a due batch checks at most twenty eligible logins;
+success waits at least 24 hours and rotates the next batch. Larger vaults are
+not claimed to be fully checked each day. The popup must remain unlocked;
+no worker holds decryption material or runs these queries while locked. There
+is no guaranteed background SLA and no email/account breach monitor.
+
+Recurring work uses the existing bounded, padded five-character-prefix client,
+with per-entry revocation/policy refresh, lock abort and response validation.
+The browser's existing provider permission is checked without prompting during
+automatic runs; granting it requires the explicit enable click. There are no
+queries as users type. Full passwords, hashes, names, site names and results are
+not written to preferences or sent to AI. Stored scheduling metadata includes
+the vault/service binding, opaque consent generation, last completed date,
+retry date and batch cursor. Results remain ephemeral in the unlocked popup.
+
+Consent and progress use separate local-storage keys. Late completions cannot
+write the consent key, and a new opt-in gets a fresh generation. Stale progress
+is ignored. Consent changes in another extension window abort the current
+lookup; every next entry also rechecks the current generation. Errors and
+aborts do not advance the completed date or cursor and can defer a retry for an
+hour. A lookup already sent cannot be recalled from its provider.
+
+The unused email-detection function, MIME parser module, MAIL rules and their
+retired feature tests were removed. Existing API rejection regressions remain:
+email scan, operation and combined-review requests are rejected before queuing
+or persisting raw input. New assets no longer offer the inbox category. Older
+persisted records remain readable; their history is not erased. Repository
+integration documentation no longer advertises phishing triage. Python scan
+coverage was corrected to list all eight PY rules rather than the first eight
+entries in a mixed host/update/Python rule dictionary.
+
+Verification: 431 backend tests passed with one native symlink skip in the full
+suite (231.79 seconds). All 320 frontend tests then present passed; the final
+recurrence failure case and related app/schedule regressions passed in a
+subsequent focused run of 22 tests. Web, content, popup and bundled worker builds
+passed, including the actual bundled-worker private-save fixture. Native
+installed popup, cloud-vault and helper acceptance and independent audit remain
+required. Live 0.21.0 practice-page inspection found no field invitation after
+trusted focus, so installed version/profile/site-access diagnosis is pending;
+no successful 0.22.0 native flow is inferred from tests.
+
+Provider protocol checked against the official documentation:
+https://haveibeenpwned.com/API/V3 and https://haveibeenpwned.com/scalar/.
