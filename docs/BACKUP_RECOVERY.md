@@ -1,6 +1,6 @@
 # SQLite operator backup and recovery
 
-The offline tool `python -m backend.backups` supports schema-8 and schema-9
+The offline tool `python -m backend.backups` supports schema-8, schema-9 and schema-10
 SQLite application databases. It uses SQLite's online backup API to include committed WAL
 pages while the app runs. It encrypts the database and server MFA-encryption
 key together with AES-256-GCM, a fresh 96-bit nonce and a version-bound header.
@@ -59,7 +59,7 @@ archive paths are extracted. Plaintext staging exists briefly on disk; normal
 cleanup is not secure erasure and a machine crash can leave staging behind.
 Use an encrypted disk, private parent directory and inspect it after failures.
 
-A schema-8 archive is validated in its original form, then upgraded to schema 9
+A schema-8 or schema-9 archive is validated in its original form, then upgraded to schema 10
 only in the new destination. The encrypted manifest must match the actual
 database version. Schema-9 backups additionally require both passkey tables,
 their expected layout and global credential-ID uniqueness constraint. Missing,
@@ -109,3 +109,15 @@ promoted. See PASSKEY_MIGRATION.md for exact evidence and limits.
 - [Python SQLite Connection.backup](https://docs.python.org/3.13/library/sqlite3.html#sqlite3.Connection.backup)
 - [SQLite online backup consistency](https://sqlite.org/backup.html)
 - [Cryptography AESGCM and authenticated decryption](https://cryptography.io/en/stable/hazmat/primitives/aead/#cryptography.hazmat.primitives.ciphers.aead.AESGCM)
+
+
+## Schema 10 update-status migration — 21 October 2026
+
+A fresh encrypted backup of the actual schema-9 owner store restored into a new
+ignored directory at schema 10. Eleven comparisons/checks confirmed unchanged
+source, preserved personal/shared ciphertext and key, restored integrity and
+revoked destination sessions/device grants. The main app then migrated after
+inactive-work and protected-record checks; all 16 upgrade checks passed. No
+existing connection acquired the new permission. Evidence is retained under
+`data/upgrade-0.15.0-*` and the operator backup directory. This does not configure
+offsite backups or recover a lost vault master passphrase.

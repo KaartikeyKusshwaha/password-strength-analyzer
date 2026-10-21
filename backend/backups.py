@@ -19,7 +19,7 @@ from backend.passkey_migration import validate_layout
 MAGIC = b'SNTLBK01'
 MAX_BYTES = 128 * 1024 * 1024
 SCHEMA = SCHEMA_VERSION
-SUPPORTED_SCHEMAS = (8, SCHEMA)
+SUPPORTED_SCHEMAS = (8, 9, SCHEMA)
 
 
 class BackupError(ValueError):
@@ -71,6 +71,10 @@ def validate_database(connection, server_key):
     if schema >= 9:
         try: validate_layout(connection)
         except ValueError: raise BackupError('Passkey schema validation failed.') from None
+    if schema >= 10:
+        from .device_update_migration import validate_layout as validate_device_updates
+        try: validate_device_updates(connection)
+        except ValueError: raise BackupError("Device update schema validation failed.") from None
     cipher = Fernet(server_key)
     # Detect a missing/mismatched server key before declaring recovery possible.
     for row in connection.execute('SELECT mfa,mfa_draft FROM users'):

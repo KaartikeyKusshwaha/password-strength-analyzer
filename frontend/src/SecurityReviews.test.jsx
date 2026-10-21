@@ -79,3 +79,16 @@ it('sends the selected eml format with the approved email step',async()=>{
   await waitFor(()=>expect(api).toHaveBeenCalledTimes(1));
   expect(api.mock.calls[0][1].checks[0].email_format).toBe('eml');
 });
+
+it('adds a Windows Update check without source input and shows the report coverage',async()=>{
+  render(<SecurityReviews data={{...data,security_reviews:[{id:'review-update',name:'Update check',status:'partial',created_at:'2026-10-21T00:00:00Z',finding_ids:[],checks:[{index:0,action:'updates',target:'127.0.0.1',status:'partial',scan_id:'scan-update'}]}],scans:[{id:'scan-update',updates:{platform:'windows',generated_at:'2026-10-21T00:00:00Z',cache:{state:'unassessed',reason:'permission_denied'},reboot:{state:'observed',required:true}}}]}} me={me} canWrite refresh={vi.fn()} go={vi.fn()}/>);
+  expect(screen.getByText('permission denied')).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Check type'),{target:{value:'updates'}});
+  expect(screen.queryByLabelText('Python source')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Add check to review'}));
+  fireEvent.change(screen.getByLabelText('Review name'),{target:{value:'Update scope'}});
+  fireEvent.click(screen.getByLabelText(/I own or am authorized/));
+  fireEvent.click(screen.getByRole('button',{name:'Approve and run review'}));
+  await waitFor(()=>expect(api).toHaveBeenCalledTimes(1));
+  expect(api.mock.calls[0][1].checks).toEqual([{action:'updates',authorized:true,device_id:'local',target:'127.0.0.1'}]);
+});

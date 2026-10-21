@@ -1,4 +1,26 @@
-# Development verification — 0.14.1
+# Development verification — 0.15.0
+
+
+## Windows Update observations — 0.15.0
+
+The final complete Python suite (`tests` plus `test_analyzer.py`) passed 411
+checks. A legacy migration test fixture was corrected to construct schema 8
+without leaving the new version-10 marker behind. Focused crypto/migration/update
+regressions passed 57 tests. React: 215 tests across 47 files passed, then 17
+focused UI tests passed after a final finding-count label/scope-text correction.
+The final production build passed. Existing TestClient/Vite warnings remain.
+
+A live fixed Windows collector and actual Edge operation both reported zero
+cached pending updates and no update-related restart; cache freshness remained
+unverified. The real operation completed, its typed result rendered, no finding
+or AI job was fabricated, and the audit chain remained valid. No updates were
+installed or machine settings changed. New paired permission/lease paths have
+API/client tests, not a claim of real remote-device acceptance.
+
+The actual schema-9 backup restored to a separate schema-10 directory with 11
+checks passing. The live upgrade passed 16 preservation/default-denial checks.
+See WINDOWS_UPDATES.md and BACKUP_RECOVERY.md. Ignored screenshot and result:
+`data/browser-acceptance-0.15.0/`.
 
 
 ## Message triage — 0.14.1

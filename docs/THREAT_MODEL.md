@@ -469,3 +469,17 @@ A SHA-256 message scope prevents unrelated messages replacing findings or being
 counted as rechecks; it leaks equality and permits guesses of known content.
 There is no trained classifier, inbox connector, antivirus attachment engine,
 quarantine or deletion action. See MESSAGE_TRIAGE.md for the exact boundaries.
+
+
+## Windows Update cache/reboot observations (0.15.0)
+
+Update status is separate from posture permission. Schema-10 migration defaults
+existing connections to denied; protocol-3 capability and the client flag must
+also consent. Fixed local COM calls use an offline WUA search and update-reboot
+boolean. Counts and errors are typed/bounded, not raw OS inventory. Sender/job
+text cannot supply commands. The old posture allowlist never runs update tools.
+Cached zero and successful execution do not establish patch coverage, and paired
+results remain untrusted self-reports rather than independent attestation. The
+app performs no online refresh, download, installation, reboot or settings
+change. Updates form a separate scan scope and cannot resolve port/protection
+findings. See WINDOWS_UPDATES.md for permissions, protocol and limitations.

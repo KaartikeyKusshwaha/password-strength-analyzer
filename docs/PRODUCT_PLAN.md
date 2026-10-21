@@ -65,7 +65,7 @@ workflow. Developer checks are available as connected secondary workflows.
   A pinned-library protocol, isolated single-use ceremony store and transactional
   credential persistence have 74 tests.
   Migration/backup integration and an isolated actual-data restore drill now
-  pass; the backed-up local store now runs schema 9. Account/session/MFA routes
+  pass; the backed-up local store now runs schema 10 (passkeys began in schema 9). Account/session/MFA routes
   and enrollment/removal UI are implemented. Real signed HTTP proofs and UI
   tests pass. Native Edge enrollment and sign-in passed in a separate disposable
   localhost app; remaining lifecycle acceptance is pending. The current
@@ -113,8 +113,12 @@ workflow. Developer checks are available as connected secondary workflows.
   status through fixed read-only tools, separate connection/local opt-in, strict
   report validation and honest unsupported/permission states. A live local probe
   verified four enabled states and one permission-denied disk check.
-- [ ] OS update/patch coverage, full disk/other antivirus assessment and macOS/Linux
-  posture collectors. Current observations do not establish overall protection.
+- [x] Separately consented Windows Update offline-cache counts and update-related
+  reboot observations, protocol 3/agent 0.8.0, schema-10 default-denied migration,
+  typed reports, combined reviews and optional AI/task follow-up. See WINDOWS_UPDATES.md.
+- [ ] Live catalog/installed-patch coverage, full disk/other antivirus assessment
+  and macOS/Linux posture collectors. Cached counts do not establish patch coverage
+  or overall protection.
 - [x] Registered exact PyPI/npm dependency watches, opt-in schedules, durable
   in-app alerts and optional assigned remediation tasks. Revision-bound jobs,
   restart interruption, per-member reads and explicit partial coverage tested.

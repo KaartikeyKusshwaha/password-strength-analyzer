@@ -2,7 +2,7 @@
 
 A cybersecurity control center evolving from Kaartikey Kusshwaha’s password-strength-analyzer internship project. The first audience is small teams and agencies managing accounts across clients.
 
-**App development build 0.14.1 / browser companion 0.12.8.** This is not an audited password manager or a production security certification. Use disposable credentials until the release gates in [the product plan](docs/PRODUCT_PLAN.md) are met.
+**App development build 0.15.0 / browser companion 0.12.8.** This is not an audited password manager or a production security certification. Use disposable credentials until the release gates in [the product plan](docs/PRODUCT_PLAN.md) are met.
 
 ## Connected workflows
 
@@ -126,3 +126,5 @@ Choose a fresh pytest directory when rerunning on Windows. Tests use synthetic c
 The legacy command-line learning tool remains in `password_analyzer.py`. It is not the product’s password-management interface.
 
 Message triage decodes bounded RFC 822/MIME text, compares visible URL hosts and reply domains, and flags executable attachment names. It stores counts and sanitized observations, not sender addresses, links, attachment names or body text. Sender authentication and attachment contents remain unverified. See [message triage](docs/MESSAGE_TRIAGE.md).
+
+**Windows Update checks:** separately opt-in to offline-cache counts and update-related restart status with device agent 0.8.0. Results connect to reviews and AI task planning; no updates are installed or reboot performed. Cached zero does not prove patch coverage. See [scope and setup](docs/WINDOWS_UPDATES.md).

@@ -30,6 +30,7 @@ from .store import Store, canonical, now, uid
 from .sharing import TeamPayload
 from .vault_activity import record_connection_revocations, record_action_cancellations, invalidate_ownership
 from .posture import Report as PostureReport
+from .device_updates import Report as UpdateReport
 from . import companion_status
 from .browser_access import require_connection
 
@@ -141,7 +142,7 @@ class AgentRequest(Body):
 
 
 class OperationRequest(Body):
-    action: Literal["device", "posture", "website", "python", "dependencies", "email"]
+    action: Literal["device", "posture", "updates", "website", "python", "dependencies", "email"]
     target: str = Field(default="127.0.0.1", min_length=1, max_length=253)
     ports: list[int] = Field(default_factory=lambda: [21, 22, 23, 25, 53, 80, 110, 143, 443, 3306, 3389, 5000, 8000, 8080, 8443], min_length=1, max_length=64)
     content: SecretStr = SecretStr("")
@@ -164,6 +165,7 @@ class DeviceConnection(Reauth):
     label: str = Field(min_length=2, max_length=60)
     targets: list[str] = Field(default_factory=lambda: ["127.0.0.1", "::1"], min_length=1, max_length=16)
     allow_posture: bool = False
+    allow_updates: bool = False
 
 
 class DeviceObservation(Body):
@@ -177,11 +179,13 @@ class DeviceResult(Body):
     lease: SecretStr
     observations: list[DeviceObservation] = Field(min_length=0, max_length=64)
     posture: PostureReport | None = None
+    updates: UpdateReport | None = None
 
 
 class DevicePoll(Body):
-    version: Literal[1,2] = 1
+    version: Literal[1,2,3] = 1
     posture_enabled: bool = False
+    updates_enabled: bool = False
 
 
 class VaultEnvelope(Body):
@@ -332,7 +336,7 @@ def create_app(settings=None):
             app.state.watch_service.stop()
             executor.shutdown(wait=True, cancel_futures=True)
 
-    app = FastAPI(title="SentinelOps", version="0.14.1", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title="SentinelOps", version="0.15.0", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.store, app.state.settings = store, settings
     app.state.cipher, app.state.executor = cipher, executor
     app.state.agent_transport = None
@@ -633,9 +637,9 @@ def create_app(settings=None):
                 must(consume_factor(c, user, body.code, cipher), "Unused authenticator/recovery code required", 401)
             must(c.execute("SELECT count(*) FROM devices WHERE workspace=? AND expires>?", (session["workspace"], time.time())).fetchone()[0] < 20, "Device connection limit reached", 409)
             identifier, token = uid(), secrets.token_urlsafe(40)
-            c.execute("INSERT INTO devices(id,token,workspace,user,label,targets,expires,seen,allow_posture) VALUES(?,?,?,?,?,?,?,NULL,?)", (identifier, digest(token), session["workspace"], session["user"], body.label, canonical(targets), time.time()+30*86400,int(body.allow_posture)))
+            c.execute("INSERT INTO devices(id,token,workspace,user,label,targets,expires,seen,allow_posture,allow_updates) VALUES(?,?,?,?,?,?,?,NULL,?,?)", (identifier, digest(token), session["workspace"], session["user"], body.label, canonical(targets), time.time()+30*86400,int(body.allow_posture),int(body.allow_updates)))
             Store.event(c, session["workspace"], session["user"], "device.connected", identifier)
-        return {"id": identifier, "label":body.label, "server":settings.origin, "token":token, "allowed_targets":targets, "allow_posture":body.allow_posture, "expires_days":30}
+        return {"id": identifier, "label":body.label, "server":settings.origin, "token":token, "allowed_targets":targets, "allow_posture":body.allow_posture, "allow_updates":body.allow_updates, "expires_days":30}
 
     @app.post("/api/device-connections/{identifier}/revoke")
     def disconnect_device(identifier: str, session=Depends(auth)):
@@ -661,7 +665,7 @@ def create_app(settings=None):
     def device_poll(body: DevicePoll,request: Request):
         with store.connect(write=True) as c:
             device = device_auth(request, c)
-            c.execute("UPDATE devices SET seen=?,protocol_version=?,posture_enabled=? WHERE id=?", (time.time(),body.version,int(body.version==2 and body.posture_enabled), device["id"]))
+            c.execute("UPDATE devices SET seen=?,protocol_version=?,posture_enabled=?,updates_enabled=? WHERE id=?", (time.time(),body.version,int(body.version>=2 and body.posture_enabled),int(body.version>=3 and body.updates_enabled), device["id"]))
             operations = Store.all(c, device["workspace"], "operations")
             for operation in operations:
                 if operation.get("device_id") == device["id"] and operation["status"] == "running":
@@ -677,8 +681,12 @@ def create_app(settings=None):
                 operation.update(status='failed',error='The connected client did not enable host posture tools. Run agent 0.7+ with --allow-posture and an opted-in connection, then retry explicitly.',finished_at=now())
                 Store.put(c,device['workspace'],'operations',operation)
                 return {'operation':None,'notice':'Posture tool unavailable; nothing was collected.'}
+            if operation['action']=='updates' and (body.version<3 or not body.updates_enabled):
+                operation.update(status='failed',error='The client did not enable update status. Run agent 0.8+ with --allow-updates and a separately opted-in connection, then retry explicitly.',finished_at=now())
+                Store.put(c,device['workspace'],'operations',operation)
+                return {'operation':None,'notice':'Update tool unavailable; nothing was collected.'}
             member = c.execute("SELECT role FROM members WHERE workspace=? AND user=?", (device["workspace"], operation["created_by"])).fetchone()
-            if not member or member["role"] == "viewer" or operation["target"] not in json.loads(device["targets"]) or operation['action']=='posture' and not device['allow_posture']:
+            if not member or member["role"] == "viewer" or operation["target"] not in json.loads(device["targets"]) or operation['action']=='posture' and not device['allow_posture'] or operation['action']=='updates' and not device['allow_updates']:
                 operation.update(status="failed", error="Requested device scope is no longer authorized.")
                 Store.put(c, device["workspace"], "operations", operation)
                 return {"operation":None}
@@ -698,16 +706,21 @@ def create_app(settings=None):
             must(member and member["role"] != "viewer", "Requester permission was removed", 403)
             observations = [o.model_dump() for o in body.observations]
             must(len(observations) == len(operation["ports"]) and {(o["host"], o["port"]) for o in observations} == {(operation["target"], p) for p in operation["ports"]}, "Report must match the authorized target and ports exactly", 422)
-            if operation['action']=='posture':
+            if operation['action']=='updates':
+                from .device_updates import assessment
+                must(device['allow_updates'] and device['protocol_version']>=3 and device['updates_enabled'] and operation['target'] in {'127.0.0.1','::1'} and body.updates is not None and body.posture is None,'A separately consented operator-local update report is required',422)
+                result=assessment(body.updates,paired=True)
+            elif operation['action']=='posture':
+                must(body.updates is None,'Update status was not authorized for this posture job',422)
                 from .posture import assessment
                 must(device['allow_posture'] and device['protocol_version']>=2 and device['posture_enabled'] and operation['target'] in {'127.0.0.1','::1'} and body.posture is not None,'A consented operator-local posture report is required',422)
                 result=assessment(body.posture,paired=True)
             else:
-                must(body.posture is None,'Posture was not authorized for this TCP job',422)
+                must(body.posture is None and body.updates is None,'Host status was not authorized for this TCP job',422)
                 items = [scanner.finding("PORT001", evidence=f"Connected device reported a TCP listener on {o['host']}:{o['port']}. Service identity, exploitability and public exposure are unverified.", confidence="low", host=o["host"], port=o["port"]) for o in observations if o["status"] == "open"]
                 result = dict(findings=items, observations=observations, error="Some device ports could not be assessed." if any(o["status"] == "unassessed" for o in observations) else None, limits="Reported by a paired device, not independent attestation. One authorized IP and selected TCP ports. Open ports are not proven vulnerabilities. No commands or system changes.")
             asset = must(Store.get(c, device["workspace"], "assets", operation["asset_id"]))
-            scan = persist_scan(c, device["workspace"], operation["created_by"], asset, SimpleNamespace(kind='posture' if operation['action']=='posture' else 'device', label="Connected device " + device["id"]), result)
+            scan = persist_scan(c, device["workspace"], operation["created_by"], asset, SimpleNamespace(kind=operation['action'], label="Connected device " + device["id"]), result)
             operation.update(status=scan["status"], scan_id=scan["id"], finding_ids=scan["finding_ids"], finished_at=now(), limits=scan["limits"])
             operation.pop("lease", None)
             operation["steps"][1]["status"] = scan["status"]
@@ -918,7 +931,7 @@ def create_app(settings=None):
         with store.connect() as c:
             vault_count = c.execute("SELECT count(*) FROM vault_spaces WHERE user=? AND payload!='null'", (session["user"],)).fetchone()[0]
             result["connections"] = {"vault_created": bool(vault_count), "vault_count":vault_count, "browser_tokens": c.execute("SELECT count(*) FROM companions WHERE user=? AND expires>?", (session["user"], time.time())).fetchone()[0]}
-            result["devices"] = [{"id":r["id"], "label":r["label"], "targets":json.loads(r["targets"]), "seen":r["seen"], "expires":r["expires"], 'allow_posture':bool(r['allow_posture']),'protocol_version':r['protocol_version'],'posture_enabled':bool(r['posture_enabled'])} for r in c.execute("SELECT id,label,targets,seen,expires,allow_posture,protocol_version,posture_enabled FROM devices WHERE workspace=? AND expires>?", (workspace,time.time()))]
+            result["devices"] = [{"id":r["id"], "label":r["label"], "targets":json.loads(r["targets"]), "seen":r["seen"], "expires":r["expires"], 'allow_posture':bool(r['allow_posture']),'protocol_version':r['protocol_version'],'posture_enabled':bool(r['posture_enabled']),'allow_updates':bool(r['allow_updates']),'updates_enabled':bool(r['updates_enabled'])} for r in c.execute("SELECT id,label,targets,seen,expires,allow_posture,protocol_version,posture_enabled,allow_updates,updates_enabled FROM devices WHERE workspace=? AND expires>?", (workspace,time.time()))]
         for operation in result["operations"]:
             operation.pop("lease", None)
             operation.pop("lease_expires", None)
@@ -1005,6 +1018,10 @@ def create_app(settings=None):
                 from companion.device_agent import collect_posture
                 from .posture import assessment
                 result=assessment(collect_posture())
+            elif body.action == 'updates':
+                from companion.device_agent import collect_updates
+                from .device_updates import assessment
+                result=assessment(collect_updates())
             elif body.action == "website":
                 result = scanner.scan_web(body.target, settings.scan_hosts)
             elif body.action == "python":
@@ -1021,7 +1038,7 @@ def create_app(settings=None):
                 if not current_operation or current_operation["status"] != "running":
                     return
                 asset = Store.get(c, workspace, "assets", operation["asset_id"])
-                scan_body = SimpleNamespace(kind=body.action, label="Host posture operator" if body.action=="posture" else "Device operator" if body.action == "device" else "Website operator" if body.action == "website" else "Submitted " + body.action)
+                scan_body = SimpleNamespace(kind=body.action, label="Windows Update operator" if body.action=="updates" else "Host posture operator" if body.action=="posture" else "Device operator" if body.action == "device" else "Website operator" if body.action == "website" else "Submitted " + body.action)
                 scan = persist_scan(c, workspace, actor, asset, scan_body, result)
                 operation.update(status=scan["status"], scan_id=scan["id"], finding_ids=scan["finding_ids"], finished_at=now(), limits=scan["limits"])
                 operation["steps"][1]["status"] = scan["status"]
@@ -1054,10 +1071,10 @@ def create_app(settings=None):
         must(body.authorized, "Confirm authorization for the selected target", 422)
         must(not body.ai_triage or settings.groq_key, "Connect Groq before requesting AI triage", 503)
         try:
-            if body.action in {'device','posture'}:
+            if body.action in {'device','posture','updates'}:
                 must(body.device_id != "local" or (not settings.secure and settings.host in {"localhost", "127.0.0.1"}), "This installation has no local device operator. A hosted server cannot assess your computer without an installed device connection.", 409)
                 body.target = validate_target(body.target)
-                if body.action=='posture':
+                if body.action in {'posture','updates'}:
                     must(body.target in {'127.0.0.1','::1'},'Host posture checks assess only the selected agent computer; use a loopback target, not another LAN device',422)
                 must(all(1 <= p <= 65535 for p in body.ports), "Ports must be 1–65535", 422)
             elif body.action == "website":
@@ -1074,11 +1091,12 @@ def create_app(settings=None):
         must(member and member['role']!='viewer','Assessment permission removed',403)
         must(not any(r['status'] in {'queued','running'} and r['id']!=review_id for r in Store.all(c,session['workspace'],'security_reviews')),'A security review is already active',409)
         must(not any(o["status"] in {"queued", "running"} for o in Store.all(c, session["workspace"], "operations")), "An assessment is already active", 409)
-        if body.action in {'device','posture'} and body.device_id != "local":
-            device = must(c.execute("SELECT targets,allow_posture FROM devices WHERE id=? AND workspace=? AND expires>?", (body.device_id,session["workspace"],time.time())).fetchone(), "Device connection unavailable")
+        if body.action in {'device','posture','updates'} and body.device_id != "local":
+            device = must(c.execute("SELECT targets,allow_posture,allow_updates FROM devices WHERE id=? AND workspace=? AND expires>?", (body.device_id,session["workspace"],time.time())).fetchone(), "Device connection unavailable")
             must(body.target in json.loads(device["targets"]), "Target is outside this device connection's allowed scope", 422)
             must(body.action!='posture' or device['allow_posture'],'This device connection did not opt in to read-only posture collection. Create a consented connection and run the new agent with --allow-posture.',409)
-        kind = "device" if body.action in {'device','posture'} else "website" if body.action == "website" else "mailbox" if body.action == "email" else "application"
+            must(body.action!='updates' or device['allow_updates'],'This device connection did not separately opt in to update status. Create a consented connection and run agent 0.8+ with --allow-updates.',409)
+        kind = "device" if body.action in {'device','posture','updates'} else "website" if body.action == "website" else "mailbox" if body.action == "email" else "application"
         asset = next((a for a in Store.all(c, session["workspace"], "assets") if a.get("operator_target") == body.target and a["kind"] == kind and a.get("device_id", "local") == body.device_id), None)
         if not asset:
             asset = dict(id=uid(), name=body.target, kind=kind, owner=session["email"], environment="development" if kind == "device" else "production", criticality="medium", hostname=body.target if kind == "website" else "", authorized=True, operator_target=body.target, device_id=body.device_id, created_at=now())
@@ -1097,7 +1115,7 @@ def create_app(settings=None):
         validate_operation(body,session)
         with store.connect(write=True) as c:
             operation=queue_operation(c,body,session)
-        if body.action not in {'device','posture'} or body.device_id == "local":
+        if body.action not in {'device','posture','updates'} or body.device_id == "local":
             executor.submit(run_operation, session["workspace"], session["user"], operation["id"], body)
         return operation
 
@@ -1284,7 +1302,7 @@ def create_app(settings=None):
             workspace = dict(c.execute("SELECT * FROM workspaces WHERE id=?", (session["workspace"],)).fetchone())
             data = {kind: Store.all(c, session["workspace"], kind) for kind in ("assets", "scans", "findings", "tasks", "investigations", "security_reviews")}
             audit = Store.audit(c, session["workspace"])
-        value = dict(product="SentinelOps", version="0.14.1", generated_at=now(), workspace=workspace, **data, audit=audit, limitations="User-provided observations and reviewed decisions, not a security certification. Hash links reveal some edits relative to a retained external head; a database administrator can rewrite the whole chain. No independent signing authority.")
+        value = dict(product="SentinelOps", version="0.15.0", generated_at=now(), workspace=workspace, **data, audit=audit, limitations="User-provided observations and reviewed decisions, not a security certification. Hash links reveal some edits relative to a retained external head; a database administrator can rewrite the whole chain. No independent signing authority.")
         value["content_sha256"] = hashlib.sha256(canonical(value).encode()).hexdigest()
         return JSONResponse(value, headers={"Content-Disposition": 'attachment; filename="sentinelops-evidence.json"'})
 

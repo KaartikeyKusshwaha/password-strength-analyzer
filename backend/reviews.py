@@ -70,7 +70,7 @@ class Runner:
                         continue
                     review['checks'][index].update(status='running',operation_id=operation['id'])
                     Store.put(c,workspace,KIND,review)
-                remote=body.action in {'device','posture'} and body.device_id!='local'
+                remote=body.action in {'device','posture','updates'} and body.device_id!='local'
                 if not remote:self.execute(workspace,actor,operation['id'],body)
                 deadline=time.monotonic()+self.wait_seconds
                 while True:

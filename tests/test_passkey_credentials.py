@@ -224,7 +224,9 @@ def test_writes_require_explicit_transaction_and_schema_install_rolls_back(store
     with clean.connect(write=True) as c:
         c.execute('DROP TABLE passkey_ceremonies')
         c.execute('DROP TABLE passkey_credentials')
-        c.execute('DELETE FROM schema_migrations WHERE version=9')
+        c.execute('DELETE FROM schema_migrations WHERE version>=9')
+        c.execute('ALTER TABLE devices DROP COLUMN allow_updates')
+        c.execute('ALTER TABLE devices DROP COLUMN updates_enabled')
     with pytest.raises(RuntimeError):
         with clean.connect(write=True) as c:
             credentials.install_schema(c)

@@ -6,7 +6,7 @@ import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
 
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 
 
 def now():
@@ -87,6 +87,8 @@ class Store:
                 c.execute('INSERT OR IGNORE INTO schema_migrations VALUES(?,?)', (version,now()))
             from .passkey_migration import apply
             apply(c, now())
+            from .device_update_migration import apply as apply_device_updates
+            apply_device_updates(c, now())
 
     @contextmanager
     def connect(self, write=False):

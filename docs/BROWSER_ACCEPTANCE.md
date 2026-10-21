@@ -1,4 +1,15 @@
-# Browser acceptance — SentinelOps 0.14.1 / companion 0.12.8
+# Browser acceptance — SentinelOps 0.15.0 / companion 0.12.8
+
+Windows Update acceptance: actual Edge retained owner sign-in after the backed-up
+schema-10 upgrade. The driver chose the local read-only update scope and ran it.
+The completed operation rendered zero cached pending updates and no update-related
+restart, with cache freshness explicitly unverified and zero findings recorded.
+No AI work was fabricated for zero findings. The driver inspected the final
+coverage table and saved `data/browser-acceptance-0.15.0/windows-update-result.png`.
+This is one local run; paired update consent/leases have automated coverage but
+real remote-device acceptance remains open. No update installation or reboot was
+attempted.
+
 
 Message triage 0.14.1: actual Edge retained owner sign-in after the backed-up
 upgrade. Security reviews offered Suspicious email indicators and explicit RFC

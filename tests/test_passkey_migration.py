@@ -11,7 +11,7 @@ from backend import passkey_credentials as credentials, passkey_migration
 from backend.backups import BackupError, create_backup, init_key, restore_backup, validate_database, MAGIC
 from backend.passkey_ceremonies import Ceremonies, Scope
 from backend.passkey_protocol import PasskeyError
-from backend.store import Store, now
+from backend.store import Store, now, SCHEMA_VERSION
 from test_passkey_protocol import authenticator
 
 USER='a'*24
@@ -24,7 +24,9 @@ def legacy_store(tmp_path):
     with store.connect(write=True) as c:
         c.execute('DROP TABLE passkey_ceremonies')
         c.execute('DROP TABLE passkey_credentials')
-        c.execute('DELETE FROM schema_migrations WHERE version=9')
+        c.execute('DELETE FROM schema_migrations WHERE version>=9')
+        c.execute('ALTER TABLE devices DROP COLUMN allow_updates')
+        c.execute('ALTER TABLE devices DROP COLUMN updates_enabled')
         c.execute('INSERT INTO users(id,email,password) VALUES(?,?,?)',(USER,'fixture@example.test','unchanged-password-hash'))
         c.execute('INSERT INTO vault_spaces VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
                   ('v'*24,USER,'Test','personal','moss',180,1,1,1,'[]',0,1,7,'encrypted-fixture-payload',now(),now()))
@@ -38,7 +40,7 @@ def test_version_nine_upgrade_preserves_ciphertext_and_is_idempotent(tmp_path):
     for _ in range(2):
         reopened=Store(directory/'sentinelops.db')
         with reopened.connect() as c:
-            assert [row[0] for row in c.execute('SELECT version FROM schema_migrations ORDER BY version')]==list(range(1,10))
+            assert [row[0] for row in c.execute('SELECT version FROM schema_migrations ORDER BY version')]==list(range(1,SCHEMA_VERSION+1))
             for table,rows in before.items(): assert [tuple(row) for row in c.execute('SELECT * FROM '+table)]==rows
             passkey_migration.validate_layout(c)
 
@@ -93,7 +95,7 @@ def test_schema_eight_backup_restores_and_migrates_only_new_destination(tmp_path
     assert create_backup(source,key,archive)['schema']==8
     destination=tmp_path/'restored'
     result=restore_backup(archive,key,destination)
-    assert result['source_schema']==8 and result['schema']==9 and result['authorization_reset']
+    assert result['source_schema']==8 and result['schema']==SCHEMA_VERSION and result['authorization_reset']
     restored=Store(destination/'sentinelops.db')
     with restored.connect() as c:
         assert c.execute('SELECT payload,revision FROM vault_spaces').fetchone()[:]==('encrypted-fixture-payload',7)
@@ -114,9 +116,9 @@ def test_restore_revokes_saved_passkeys_and_pending_ceremonies_without_changing_
     service=Ceremonies(store)
     pending=service.begin(secrets.token_urlsafe(32),Scope('authentication',party,USER))
     key=tmp_path/'backup.key';init_key(key);archive=tmp_path/'new.sentinelbackup'
-    assert create_backup(source,key,archive)['schema']==9
+    assert create_backup(source,key,archive)['schema']==SCHEMA_VERSION
     destination=tmp_path/'restored'
-    assert restore_backup(archive,key,destination)['source_schema']==9
+    assert restore_backup(archive,key,destination)['source_schema']==SCHEMA_VERSION
     recovered=Store(destination/'sentinelops.db')
     with recovered.connect() as c:
         assert c.execute('SELECT COUNT(*) FROM passkey_ceremonies').fetchone()[0]==0

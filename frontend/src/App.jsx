@@ -45,6 +45,7 @@ import {
 } from "lucide-react";
 import { api } from "./api";
 import DevicePosture from "./DevicePosture";
+import DeviceUpdates from "./DeviceUpdates";
 import MailCoverage from "./MailCoverage";
 import PortCoverage from "./PortCoverage";
 import AdvisorySeverity from './AdvisorySeverity';
@@ -1200,6 +1201,7 @@ export default function App() {
                     <p>{s.limits}</p>
                     <MailCoverage coverage={s.mail_coverage}/>
                     <DevicePosture report={s.posture}/>
+                    <DeviceUpdates report={s.updates}/>
                     <PortCoverage observations={s.observations}/>
                     <AdvisoryCoverage coverage={s.advisory_details}/>
                     {s.error && <p className="notice error">{s.error}</p>}

@@ -53,3 +53,22 @@ it('routes an addressed ownership request directly to shared vault review withou
   expect(go).toHaveBeenCalledWith('shared-vaults');
   expect(screen.getByText(/Ownership has not changed yet/)).toBeInTheDocument();
 });
+
+it('requires a separately granted device for hosted update checks and submits the selected scope',async()=>{
+  const fetcher=vi.fn(async()=>({ok:true,json:async()=>({status:'queued'})}));vi.stubGlobal('fetch',fetcher);
+  render(<ControlCenter data={{operations:[],devices:[{id:'posture-only',label:'Protection PC',allow_posture:true},{id:'update-fixture',label:'Update PC',allow_updates:true}],integrations:{local_device_agent:false}}} refresh={vi.fn()} go={vi.fn()} canWrite/>);
+  fireEvent.change(screen.getByLabelText('Device assessment'),{target:{value:'updates'}});
+  expect(screen.queryByRole('option',{name:/Protection PC/})).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Run on this device connection'),{target:{value:'update-fixture'}});
+  fireEvent.click(screen.getByLabelText(/I own this target/));
+  fireEvent.click(screen.getByRole('button',{name:'Run security operator'}));
+  await screen.findByText(/Operator started/);
+  const body=JSON.parse(fetcher.mock.calls.find(([url])=>url==='/api/operations')[1].body);
+  expect(body).toMatchObject({action:'updates',target:'127.0.0.1',device_id:'update-fixture',authorized:true});
+});
+
+it('labels recorded finding counts separately from update observations',()=>{
+  render(<ControlCenter data={{integrations:{local_device_agent:true},operations:[{id:'updates-finished',action:'updates',target:'127.0.0.1',status:'complete',created_at:'2026-10-21T00:00:00Z',steps:[],scan_id:'scan',finding_ids:[]}],scans:[{id:'scan',updates:{platform:'windows',generated_at:'2026-10-21T00:00:00Z',cache:{state:'observed',pending:0,security:0},reboot:{state:'observed',required:false}}}]}} refresh={vi.fn()} go={vi.fn()} canWrite/>);
+  expect(screen.getByText('0 findings recorded.')).toBeInTheDocument();
+  expect(screen.getByRole('heading',{name:'Windows Update observations'})).toBeInTheDocument();
+});

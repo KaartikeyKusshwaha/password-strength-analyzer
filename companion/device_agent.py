@@ -6,6 +6,8 @@ Paired mode polls explicitly scoped private TCP jobs and uploads observations.
 Optional --allow-posture also allows fixed read-only Windows status commands on
 this computer when the connection opted in. No arbitrary commands, elevation,
 system changes, process inventory, recovery keys or background telemetry.
+Separate --allow-updates reads Windows Update offline-cache counts and update
+reboot status only; it does not refresh online, install or restart.
 """
 import argparse
 import json
@@ -24,7 +26,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 PORTS = (21, 22, 23, 25, 53, 80, 110, 143, 443, 3306, 3389, 5000, 8000, 8080, 8443)
-VERSION='0.7.0'
+VERSION='0.8.0'
 HOSTS = ("127.0.0.1", "::1")
 POSTURE_CHECKS=('firewall_domain','firewall_private','firewall_public','defender','system_disk')
 # Fixed read-only tools. No target, job text or user input is interpolated.
@@ -38,12 +40,16 @@ POSTURE_SCRIPTS={
 def posture_command(tool):
     if tool not in POSTURE_SCRIPTS:
         raise ValueError('Unsupported posture tool.')
+    return fixed_command(POSTURE_SCRIPTS[tool],15)
+
+
+def fixed_command(source,timeout):
     executable=Path(os.environ.get('SystemRoot',r'C:\Windows'))/'System32/WindowsPowerShell/v1.0/powershell.exe'
     if not executable.is_absolute() or not executable.is_file():
         return {'error':'command_unavailable'}
-    script="$ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue';[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false);try{"+POSTURE_SCRIPTS[tool]+"}catch{if($_.CategoryInfo.Category -in @('PermissionDenied','SecurityError')){'{\"error\":\"permission_denied\"}'}elseif($_.Exception -is [System.Management.Automation.CommandNotFoundException]){'{\"error\":\"command_unavailable\"}'}else{'{\"error\":\"provider_error\"}'}}"
+    script="$ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue';[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false);try{"+source+"}catch{if($_.CategoryInfo.Category -in @('PermissionDenied','SecurityError')){'{\"error\":\"permission_denied\"}'}elseif($_.Exception -is [System.Management.Automation.CommandNotFoundException]){'{\"error\":\"command_unavailable\"}'}else{'{\"error\":\"provider_error\"}'}}"
     try:
-        result=subprocess.run([str(executable),'-NoLogo','-NoProfile','-NonInteractive','-Command',script],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=15,shell=False,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
+        result=subprocess.run([str(executable),'-NoLogo','-NoProfile','-NonInteractive','-Command',script],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=timeout,shell=False,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
         if result.returncode or len(result.stdout)>12000:
             return {'error':'provider_error'}
         return json.loads(result.stdout.decode('utf-8-sig'))
@@ -51,6 +57,37 @@ def posture_command(tool):
         return {'error':'timeout'}
     except (OSError,ValueError,UnicodeError):
         return {'error':'invalid_response'}
+
+
+UPDATE_SCRIPTS={
+    'cache':"$session=New-Object -ComObject Microsoft.Update.Session;$searcher=$session.CreateUpdateSearcher();$searcher.Online=$false;$result=$searcher.Search(\"IsInstalled=0 and IsHidden=0 and Type='Software'\");if([int]$result.ResultCode -ne 2){'{\"error\":\"provider_error\"}'}else{$count=[int]$result.Updates.Count;if($count -gt 10000){'{\"error\":\"invalid_response\"}'}else{$security=0;foreach($update in $result.Updates){$matched=$false;foreach($category in $update.Categories){if($category.CategoryID -in @('0fa1201d-4330-4fa8-8ae9-b877473b6441','e6cf1350-c01b-414d-a61f-263d14d133b4')){$matched=$true}};if($matched){$security++}};@{pending=$count;security=$security} | ConvertTo-Json -Compress}}",
+    'reboot':"$information=New-Object -ComObject Microsoft.Update.SystemInfo;@{required=[bool]$information.RebootRequired} | ConvertTo-Json -Compress",
+}
+
+
+def update_command(tool):
+    if tool not in UPDATE_SCRIPTS:raise ValueError('Unsupported update tool.')
+    return fixed_command(UPDATE_SCRIPTS[tool],35)
+
+
+def collect_updates(runner=update_command,system=None):
+    system=system or platform.system()
+    report={'version':1,'platform':{'Windows':'windows','Linux':'linux','Darwin':'macos'}.get(system,'other'),'generated_at':datetime.now(timezone.utc).isoformat(),'source':'windows-update-offline-cache'}
+    if system!='Windows':
+        report.update(cache={'state':'unsupported','reason':'unsupported_platform'},reboot={'state':'unsupported','reason':'unsupported_platform'})
+        return report
+    def unknown(value):
+        reason=value.get('error') if isinstance(value,dict) else None
+        return {'state':'unassessed','reason':reason if reason in {'permission_denied','command_unavailable','timeout','provider_error','invalid_response','unknown_status'} else 'invalid_response'}
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        values=dict(zip(UPDATE_SCRIPTS,pool.map(runner,UPDATE_SCRIPTS)))
+    cache=values['cache']
+    if isinstance(cache,dict) and type(cache.get('pending')) is int and type(cache.get('security')) is int and 0<=cache['security']<=cache['pending']<=10000:
+        report['cache']={'state':'observed','reason':'','pending':cache['pending'],'security':cache['security']}
+    else:report['cache']=unknown(cache)
+    reboot=values['reboot']
+    report['reboot']={'state':'observed','reason':'','required':reboot['required']} if isinstance(reboot,dict) and type(reboot.get('required')) is bool else unknown(reboot)
+    return report
 
 
 def collect_posture(runner=posture_command,system=None):
@@ -123,6 +160,8 @@ def connection_file(path):
     if not re.fullmatch(r'[A-Za-z0-9_-]{40,100}', value.get('token','')):
         raise ValueError("Invalid device token.")
     targets = value.get('allowed_targets', [])
+    if 'allow_updates' in value and type(value['allow_updates']) is not bool:
+        raise ValueError('Invalid update-status permission.')
     if 'allow_posture' in value and type(value['allow_posture']) is not bool:
         raise ValueError('Invalid posture permission.')
     if not 1 <= len(targets) <= 16:
@@ -146,22 +185,26 @@ def api_request(config, path, body):
         return json.loads(raw)
 
 
-def poll_once(config, requester=api_request,allow_posture=False):
-    job = requester(config, '/api/device-agent/poll', {'version':2,'posture_enabled':bool(allow_posture and config.get('allow_posture'))}).get('operation')
+def poll_once(config, requester=api_request,allow_posture=False,allow_updates=False):
+    job = requester(config, '/api/device-agent/poll', {'version':3,'posture_enabled':bool(allow_posture and config.get('allow_posture')),'updates_enabled':bool(allow_updates and config.get('allow_updates'))}).get('operation')
     if not job:
         return False
     action=job.get('action','device')
-    if action not in {'device','posture'}:
+    if action not in {'device','posture','updates'}:
         raise ValueError('This client does not support the requested tool.')
     if action=='posture':
         if not allow_posture or not config.get('allow_posture') or job.get('target') not in {'127.0.0.1','::1'} or job.get('target') not in config['allowed_targets'] or job.get('ports')!=[]:
             raise ValueError('Host posture collection requires explicit local and connection consent; nothing was collected.')
+    if action=='updates' and (not allow_updates or not config.get('allow_updates') or job.get('target') not in {'127.0.0.1','::1'} or job.get('target') not in config['allowed_targets'] or job.get('ports')!=[]):
+        raise ValueError('Update status requires separate local and connection consent; nothing was collected.')
     target, ports = job.get('target'), job.get('ports')
     if action=='device' and (target not in config['allowed_targets'] or not isinstance(ports,list) or not 1 <= len(ports) <= 64 or len(set(ports)) != len(ports) or any(type(port) is not int or not 1 <= port <= 65535 for port in ports)):
         raise ValueError("Job is outside this device's authorized scope; nothing was assessed.")
     if not isinstance(job.get('id'),str) or len(job['id']) > 60 or not re.fullmatch(r'[A-Za-z0-9_-]{30,100}', job.get('lease','')):
         raise ValueError("Invalid job lease.")
-    if action=='posture':
+    if action=='updates':
+        result={'observations':[],'updates':collect_updates()}
+    elif action=='posture':
         result={'observations':[],'posture':collect_posture()}
     else:
         with ThreadPoolExecutor(max_workers=8) as pool:
@@ -170,12 +213,12 @@ def poll_once(config, requester=api_request,allow_posture=False):
     return True
 
 
-def serve(path, once=False,allow_posture=False):
+def serve(path, once=False,allow_posture=False,allow_updates=False):
     config = connection_file(path)
-    print('Device connected. Only approved private TCP targets and opted-in fixed read-only host posture tools are supported. No arbitrary commands, elevation or system changes. Stop with Ctrl+C.')
+    print('Device connected. Only approved private TCP targets and separately opted-in fixed host protection / offline update-status tools are supported. No arbitrary commands, elevation or system changes. Stop with Ctrl+C.')
     while True:
         try:
-            completed = poll_once(config,allow_posture=allow_posture)
+            completed = poll_once(config,allow_posture=allow_posture,allow_updates=allow_updates)
             if completed:
                 print('Assessment results synchronized with your dashboard.')
         except urllib.error.HTTPError as error:
@@ -201,12 +244,13 @@ def main():
     parser.add_argument("--connect", help="Private connection JSON downloaded from SentinelOps; polls authorized jobs and uploads results")
     parser.add_argument("--once", action="store_true", help="Poll at most one job, then exit")
     parser.add_argument('--allow-posture',action='store_true',help='Allow fixed read-only Windows firewall, Defender and system-drive BitLocker status commands for this agent computer')
+    parser.add_argument('--allow-updates',action='store_true',help='Allow read-only Windows Update offline cache and update reboot status; no online refresh or installation')
     args = parser.parse_args()
     if not args.consent:
         parser.error("Read the scope above, then add --consent if you are authorized.")
     if args.connect:
         try:
-            serve(args.connect,args.once,args.allow_posture)
+            serve(args.connect,args.once,args.allow_posture,args.allow_updates)
         except KeyboardInterrupt:
             print('Device disconnected.')
         except (ValueError, OSError, KeyError):
