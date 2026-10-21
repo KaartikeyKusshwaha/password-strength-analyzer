@@ -76,3 +76,22 @@ The website remains app version 0.22.0; the companion is 0.22.1. The registered
 Edge extension still needs one user reload and practice-page refresh before
 native acceptance of this patch. Diagnostics are not a claim that programmatic
 Edge popup launch has been repaired. No credentials or permissions were added.
+
+### Cloud download and vault initialization acceptance
+
+The signed-in Edge control room downloaded companion 0.22.1 through the public
+application download link. The downloaded ZIP passed integrity checks, its
+manifest version was 0.22.1 and its SHA-256 matched the release exactly:
+48242862fc70edf4dd9ffbb64fb1913996eb539df8ba23caebdd22834a27798b.
+The connection panel also rendered Downloadable companion: 0.22.1.
+
+After the user initialized the disposable Personal cloud vault, its supplied
+public test passphrase successfully unlocked it through the UI. The page showed
+Personal vault unlocked with zero entries. Evidence screenshot:
+data/oracle-deployment/cloud-personal-unlocked.png. No real credentials were
+saved. Extension-to-cloud scoped connection is still pending the native popup
+sign-in action. This does not establish cloud autofill or multi-vault acceptance.
+
+The helper endpoint returned HTTP 200 and 12,629,618 bytes from the server.
+Edge did not report a completed native download during the observed timeout.
+No browser warning was bypassed and no helper executable was run or installed.
