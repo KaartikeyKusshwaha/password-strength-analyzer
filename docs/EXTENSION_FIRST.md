@@ -127,3 +127,13 @@ only. It does not grant scanner/workspace access, connect all vaults silently,
 unlock a vault, replace shared-vault trust verification, or install a device
 helper. Shared-vault/local pairing remains in Advanced. Real browser approval
 and popup acceptance remain pending; this is not a claim of independent audit.
+
+Verification: all 274 frontend tests passed, React/companion production builds
+passed, and 48 backend connection/platform/shared-companion/backup tests passed.
+The hash-verified 0.15.0 runtime update was deployed after an encrypted backup.
+Account, workspace, membership, vault, connection/device rows and the server key
+were unchanged across the update. Public HTTPS checks returned start=200,
+pending poll, unsigned approval=401, cancel=200, post-cancel poll=410 and healthy
+owner setup state. This probe created no real vault grant. The post-update
+encrypted backup completed successfully. Installed native/browser acceptance
+and the separate shared-vault/device-helper onboarding remain open.
