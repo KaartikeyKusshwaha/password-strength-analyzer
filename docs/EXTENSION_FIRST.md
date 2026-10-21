@@ -78,3 +78,27 @@ Chrome 127+ is required because this is the first version with general
 automatic credential filling, a post-login-success detector or TOTP autofill.
 The focused invitation/autofill regression run passed 31 tests; the companion
 production build passed. Installed native popup acceptance remains pending.
+
+## Explicit authenticator filling, companion 0.14.2
+
+The unlocked popup can bind an authenticator entry to an exact HTTPS origin,
+replace that link with explicit confirmation, or remove it. This optional
+`autofill_origin` is inside the encrypted entry and is validated on vault unlock
+and write. Origin changes receive encrypted details-history events. Existing
+authenticator entries have no inferred link; issuer/title strings are not used.
+
+An explicit Fill verification code action preflights the current top-frame
+receiver and its version, refreshes vault policy/revocation state, generates the
+code locally, checks the active tab/origin again, and sends only the code to one
+visible, editable `autocomplete=one-time-code` field. Ambiguous/split fields,
+cross-origin forms, changed tabs and near-expiring codes fail without a retry.
+Forms are not submitted. The user can disable filling without deleting the TOTP
+secret. Secret keys never leave the extension or encrypted vault.
+
+Focusing an explicit code field offers an invitation to open the companion.
+No code is generated or filled by that invitation. Unattended TOTP filling,
+post-login save detection and in-extension TOTP enrollment remain pending.
+
+Regression testing caught a real transition bug: a login invitation could stop
+the generation assistant from replacing it when a dynamic form became signup.
+The panel reuse condition was corrected and the transition tests passed.

@@ -43,3 +43,16 @@ export async function fillSavedLogin(browser,session,entryId,active,version,prog
   if(!['login','password'].includes(result.filled))throw new Error('The website companion did not confirm the filled fields. Refresh the website and try again. Nothing was submitted.');
   return result.filled;
 }
+
+export async function fillSavedCode(browser,session,entryId,active,version){
+  const generation=session.generation;
+  const check=await messageWithDeadline(browser,active.id,{type:'inspect-otp',origin:active.origin});
+  if(!check?.ok||check.version!==version)throw new Error('No current, single supported verification-code field was found. Refresh the site if the companion was updated.');
+  session.active(generation);
+  const code=await session.codeFor(entryId,active.origin);session.active(generation);
+  const tabs=await browser.tabs.query({active:true,currentWindow:true});
+  if(tabs[0]?.id!==active.id||new URL(tabs[0].url).origin!==active.origin)throw new Error('Website changed. No code was sent.');
+  const result=await messageWithDeadline(browser,active.id,{type:'fill-otp',origin:active.origin,code});
+  if(!result?.ok)throw new Error('The website did not confirm code filling. Review the field before trying again. Nothing was submitted.');
+  return true;
+}

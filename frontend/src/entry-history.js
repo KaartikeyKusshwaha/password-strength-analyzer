@@ -26,7 +26,7 @@ export function trackChanges(previous,next,at=new Date().toISOString()){
     else if(old.type===entry.type && (old.password!==entry.password || old.secret!==entry.secret || old.algorithm!==entry.algorithm || old.digits!==entry.digits || old.period!==entry.period))kind='credential_saved';
     else if(!old.pending_change && entry.pending_change)kind='proposal_staged';
     else if(old.pending_change && !entry.pending_change)kind='proposal_discarded';
-    else if(old.title!==entry.title || old.origin!==entry.origin || old.username!==entry.username)kind='details_saved';
+    else if(old.title!==entry.title || old.origin!==entry.origin || old.username!==entry.username || old.autofill_origin!==entry.autofill_origin)kind='details_saved';
     return kind?recordHistory(entry,kind,at):entry;
   });
 }

@@ -81,6 +81,24 @@ export class SaveSession {
     const entry=this.entries.find(e=>e.id===identifier && e.type==='totp' && !isArchived(e));if(!entry)throw new Error('Authenticator entry unavailable or archived.');
     const value=await generateTotp(entry);this.active(generation);return value;
   }
+  async bindCode(identifier,origin){
+    if(validOrigin(origin)!==origin)throw new Error('Choose an exact HTTPS website.');
+    const generation=this.generation;await this.refresh();this.active(generation);this.permitted('save',origin);
+    const entry=this.entries.find(e=>e.id===identifier&&e.type==='totp'&&!isArchived(e));
+    if(!entry)throw new Error('Authenticator entry unavailable.');
+    await this.persist(this.entries.map(e=>e.id===identifier?{...e,autofill_origin:origin}:e),generation);
+  }
+  async codeFor(identifier,origin){
+    const generation=this.generation;await this.refresh();this.active(generation);this.permitted('fill',origin);
+    const entry=this.entries.find(e=>e.id===identifier&&e.type==='totp'&&!isArchived(e)&&e.autofill_origin===origin);
+    if(!entry||validOrigin(origin)!==origin)throw new Error('Link this authenticator to the exact website first.');
+    if(entry.period-(Math.floor(Date.now()/1000)%entry.period)<5)throw new Error('This code expires shortly. Wait for the next code before filling.');
+    const code=await generateTotp(entry);this.active(generation);return code;
+  }
+  async unlinkCode(identifier){
+    const generation=this.generation;await this.refresh();this.active(generation);this.permitted('save');
+    await this.persist(this.entries.map(entry=>{if(entry.id!==identifier||entry.type!=='totp')return entry;const {autofill_origin,...rest}=entry;return rest;}),generation);
+  }
   async save(capture, confirmedUpdate = false) {
     if (!this.material || !this.entries) throw new Error('Unlock your private vault first.');
     if (!capture || !Number.isFinite(capture.expires) || capture.expires < Date.now()) throw new Error('This save request expired. Open the password assistant again.');

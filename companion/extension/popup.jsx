@@ -1,5 +1,6 @@
 import SecurityHub from './security-hub';
 import SiteCheck from './SiteCheck';
+import CodeFill from './CodeFill';
 import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { validOrigin } from "../../frontend/src/vault-crypto";
@@ -390,12 +391,13 @@ export function Popup() {
                 {code?.id === entry.id && code.expires > Date.now() && (
                   <p className="code">{code.value}</p>
                 )}
+                <CodeFill entry={entry} active={active} session={session.current} onUpdated={()=>{setEntries([...session.current.entries]);setRevision(session.current.revision);}}/>
               </section>
             ))}
           <p className="fine">
-            Codes are revealed on request for up to ten seconds and are never
-            filled automatically. Use the dashboard to enroll or remove
-            accounts.
+            Codes are revealed on request for up to ten seconds. Filling requires
+            an explicit website link and a supported single verification-code field.
+            Nothing is submitted automatically.
           </p>
         </>
       )}

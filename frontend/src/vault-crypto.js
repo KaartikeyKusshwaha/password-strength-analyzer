@@ -68,6 +68,7 @@ export function validateEntries(entries) {
       }
     } else {
       decodeBase32(item.secret);
+      if(item.autofill_origin!==undefined && (typeof item.autofill_origin!=='string' || validOrigin(item.autofill_origin)!==item.autofill_origin))throw new Error('Use an exact HTTPS origin for authenticator filling.');
       if (
         ![6, 8].includes(item.digits) ||
         ![30, 60].includes(item.period) ||

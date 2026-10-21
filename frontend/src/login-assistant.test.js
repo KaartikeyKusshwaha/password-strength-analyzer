@@ -22,6 +22,12 @@ it('does not offer login assistance for frames, cross-origin forms or signup fie
   document.querySelector('form').action='https://accounts.example.test/session';field.autocomplete='new-password';field.name='new_password';
   expect(offerLogin(document,'https://accounts.example.test/signup',field,{})).toBeNull();
 });
+it('offers an authenticator invitation for an explicit code field without generating a code',()=>{
+  const field=document.querySelector('[type=password]');field.type='text';field.autocomplete='one-time-code';
+  const browser={runtime:{sendMessage:vi.fn()}};
+  expect(offerLogin(document,'https://accounts.example.test/verify',field,browser,{kind:'otp'})).not.toBeNull();
+  expect(browser.runtime.sendMessage).not.toHaveBeenCalled();
+});
 function worker(tab){
   let listener;
   const chrome={runtime:{id:'fixture',getURL:path=>'chrome-extension://fixture/'+path,onMessage:{addListener:fn=>listener=fn}},windows:{onRemoved:{addListener:vi.fn()}},tabs:{get:vi.fn(async()=>tab)},action:{openPopup:vi.fn(async()=>{})}};

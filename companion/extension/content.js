@@ -8,6 +8,7 @@ import {watchPrivateFrame} from './frame-status';
 import {fillLoginForm,inspectLoginForm} from './login-form';
 import manifest from './public/manifest.json';
 import {offerLogin} from './login-assistant';
+import {inspectOtp,fillOtp} from './otp-form';
 
 const estimator = new ZxcvbnFactory({ translations: en.translations, graphs: common.adjacencyGraphs, dictionary: {...common.dictionary, ...en.dictionary} });
 const labels = ['Very guessable','Guessable','Somewhat guessable','Less guessable','Harder to guess'];
@@ -16,7 +17,7 @@ const attached = new WeakSet();
 const style = `:host{all:initial}*{box-sizing:border-box}section{font:14px/1.6 system-ui;color:#25392d;background:#f6f8f1;border:1px solid #c8d9be;border-radius:14px;box-shadow:0 15px 55px #10291c40;padding:22px;width:365px;max-width:calc(100vw - 24px)}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}h2{font-size:20px;line-height:1.3;margin:8px 0}p{margin:10px 0}small{display:block;font-size:11px;color:#5b6c58}button{font:13px system-ui;cursor:pointer;border:1px solid #b9ceb6;border-radius:6px;padding:9px 12px;background:#fff;color:#23543c;margin:4px 6px 4px 0}button.primary{background:#28684c;color:white}button:disabled{opacity:.5;cursor:wait}meter{width:100%;height:9px}iframe{display:block;border:0;width:100%;height:470px;background:#f6f8f1;border-radius:8px}a{color:#28684c}`;
 function close() { stopFrameWatch?.();stopFrameWatch=null;panel?.remove(); panel=null; current=null; renderEstimate=null; }
 function assistant(field) {
-  if (current === field && panel?.isConnected) return;
+  if (current === field && panel?.isConnected && renderEstimate) return;
   close(); current=field;
   const host=document.createElement('div');
   host.style.cssText='position:fixed;right:18px;bottom:18px;z-index:2147483647;max-height:calc(100vh - 36px);overflow:auto';
@@ -59,17 +60,22 @@ function attach(field) {
   attached.add(field);
   field.addEventListener('focus',event=>{
     if(!event.isTrusted || window.top!==window || !field.getClientRects().length || !formOriginAllowed(location.href,field.form?.action))return;
-    if(isNewPassword(field))assistant(field);
+    if(field.autocomplete==='one-time-code'){close();current=field;panel=offerLogin(document,location.href,field,chrome,{kind:'otp'});}
+    else if(isNewPassword(field))assistant(field);
     else {close();current=field;panel=offerLogin(document,location.href,field,chrome);}
   });
   let timer;
   field.addEventListener('input',()=>{if(current!==field || !renderEstimate)return;clearTimeout(timer);timer=setTimeout(()=>renderEstimate?.(),150);});
 }
-function inspect(){document.querySelectorAll('input[type="password"]').forEach(attach);if(current && (!current.isConnected || !formOriginAllowed(location.href,current.form?.action) || (renderEstimate && !isNewPassword(current))))close();}
+function inspect(){document.querySelectorAll('input[type="password"],input[autocomplete="one-time-code"]').forEach(attach);if(current && (!current.isConnected || !formOriginAllowed(location.href,current.form?.action) || (renderEstimate && !isNewPassword(current))))close();}
 inspect();let scanTimer;
 new MutationObserver(()=>{clearTimeout(scanTimer);scanTimer=setTimeout(inspect,250);}).observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['type','name','id','autocomplete','disabled','readonly','hidden','action']});
 document.addEventListener('keydown',event=>{if(event.isTrusted && event.key==='Escape')close();});
 chrome.runtime.onMessage.addListener((message,sender,reply)=>{
+  if(sender.id===chrome.runtime.id && ['inspect-otp','fill-otp'].includes(message?.type)){
+    if(window.top!==window){reply({ok:false,reason:'frame'});return;}
+    reply({... (message.type==='inspect-otp'?inspectOtp(document,location.href,message.origin):fillOtp(document,location.href,message)),version:manifest.version});return;
+  }
   if(sender.id===chrome.runtime.id && message?.type==='inspect-login'){
     reply({...((window.top===window)?inspectLoginForm(document,location.href,message.origin):{ok:false,reason:'frame'}),version:manifest.version});return;
   }
