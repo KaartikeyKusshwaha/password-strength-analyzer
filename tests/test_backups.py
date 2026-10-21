@@ -45,6 +45,7 @@ def test_live_wal_restore_preserves_envelopes_and_mfa_but_revokes_work(system, t
         Store.put(c, workspace, 'watches', dict(id='watch', enabled=True, revision=3, active_run='run', next_due=1))
         for kind in ('operations', 'jobs', 'watch_runs'):
             Store.put(c, workspace, kind, dict(id=kind, status='queued', lease='old-lease', lease_expires=9999999999))
+        Store.put(c,workspace,'security_reviews',dict(id='review',status='running',checks=[{'status':'pending'},{'status':'running'}]))
         Store.event(c, workspace, user, 'fixture.created', 'restore-fixture')
         Store.put(c,workspace,'ownership_transfers',{'id':'pending-handoff','status':'pending','document':{'vault_id':'shared-fixture'}})
     try:
@@ -72,6 +73,8 @@ def test_live_wal_restore_preserves_envelopes_and_mfa_but_revokes_work(system, t
             job = Store.all(c, workspace, kind)[0]
             assert job['status'] == 'interrupted' and 'lease' not in job
         watch = Store.all(c, workspace, 'watches')[0]
+        review=Store.get(c,workspace,'security_reviews','review')
+        assert review['status']=='interrupted' and all(step['status']=='interrupted' for step in review['checks'])
         assert not watch['enabled'] and watch['active_run'] is None and watch['next_due'] is None
         assert watch['revision'] == 4
         audit = Store.audit(c, workspace)

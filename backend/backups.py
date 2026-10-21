@@ -139,7 +139,7 @@ def suspend_authorizations(connection):
     connection.execute("UPDATE credential_actions SET status='cancelled',lease_hash=NULL,lease_connection=NULL,lease_expires=NULL WHERE status NOT IN ('complete','cancelled','expired')")
     for row in cancelled:
         Store.event(connection,row['workspace'] if row['kind']=='shared' else 'personal:'+row['user'],'system:restore','credential_action.cancelled',row['id'])
-    for row in connection.execute("SELECT id,workspace,kind,data FROM entities WHERE kind IN ('jobs','operations','watch_runs','watches','ownership_transfers')").fetchall():
+    for row in connection.execute("SELECT id,workspace,kind,data FROM entities WHERE kind IN ('jobs','operations','security_reviews','watch_runs','watches','ownership_transfers')").fetchall():
         value = json.loads(row['data'])
         if row['kind'] == 'ownership_transfers' and value.get('status')=='pending':
             value.update(status='cancelled',reason='backup_restored',finished_at=now())
@@ -149,6 +149,9 @@ def suspend_authorizations(connection):
                          revision=value['revision'] + 1, last_status='paused')
         elif value.get('status') in ('queued', 'running'):
             value.update(status='interrupted', error='Backup restored; start a new check explicitly.', finished_at=now())
+            if row['kind']=='security_reviews':
+                for step in value['checks']:
+                    if step['status'] in {'pending','running'}:step['status']='interrupted'
             value.pop('lease', None)
             value.pop('lease_expires', None)
         connection.execute('UPDATE entities SET data=? WHERE id=?', (canonical(value), row['id']))

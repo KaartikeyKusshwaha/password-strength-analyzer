@@ -59,10 +59,12 @@ const ControlCenter = lazy(() => import("./ControlCenter"));
 const Vault = lazy(() => import("./VaultCollection"));
 const Companions = lazy(() => import("./Companions"));
 const Watches = lazy(() => import("./Watches"));
+const SecurityReviews = lazy(() => import('./SecurityReviews'));
 const navigation = [
   ["overview", "Control center", LayoutDashboard],
   ["assets", "Asset inventory", Network],
   ["scans", "Security checks", ScanLine],
+  ['reviews','Security reviews',ClipboardCheck],
   ["findings", "Findings", Radar],
   ["tasks", "Remediation", ClipboardCheck],
   ["investigations", "Investigations", Search],
@@ -74,6 +76,7 @@ const navigation = [
   ["settings", "Team & security", Settings2],
 ];
 const titles = {
+  reviews:['One scope. Connected checks.','Approved assessments, combined findings and tracked follow-up work.'],
   watches: ["Keep watch as your software changes.", "Approved dependency checks, durable alerts and assigned follow-up work."],
   vault: [
     "Your accounts, under your control.",
@@ -494,7 +497,7 @@ export default function App() {
     const timer = setTimeout(() => setToast(""), 6000);
     return () => clearTimeout(timer);
   }, [toast]);
-  const running = data?.jobs.some((job) => ["queued", "running"].includes(job.status)) || data?.operations?.some(operation => ["queued", "running"].includes(operation.status));
+  const running = data?.jobs.some((job) => ["queued", "running"].includes(job.status)) || data?.operations?.some(operation => ["queued", "running"].includes(operation.status)) || data?.security_reviews?.some(review=>['queued','running'].includes(review.status));
   useEffect(() => {
     if (!running) return;
     const timer = setInterval(
@@ -818,6 +821,7 @@ export default function App() {
           )}
 
           {page === "watches" && <Suspense fallback={<p>Opening dependency watches…</p>}><Watches canWrite={write} go={go}/></Suspense>}
+          {page === 'reviews' && <Suspense fallback={<p>Opening security reviews…</p>}><SecurityReviews key={me.workspace} data={data} me={me} canWrite={write} refresh={refresh} go={go}/></Suspense>}
           {page === "overview" && (
             <>
               <Suspense fallback={<p>Opening your control center…</p>}><ControlCenter data={data} refresh={refresh} go={go} canWrite={write} /></Suspense>

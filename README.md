@@ -2,9 +2,11 @@
 
 A cybersecurity control center evolving from Kaartikey Kusshwaha’s password-strength-analyzer internship project. The first audience is small teams and agencies managing accounts across clients.
 
-**App development build 0.13.3 / browser companion 0.12.8.** This is not an audited password manager or a production security certification. Use disposable credentials until the release gates in [the product plan](docs/PRODUCT_PLAN.md) are met.
+**App development build 0.14.0 / browser companion 0.12.8.** This is not an audited password manager or a production security certification. Use disposable credentials until the release gates in [the product plan](docs/PRODUCT_PLAN.md) are met.
 
 ## Connected workflows
+
+- **Combined security reviews:** preview and approve up to six scoped checks in one run, collect their findings and optionally create AI-guided remediation tasks. Individual coverage and cancellation remain visible. Execution does not prove remediation. See [review scope and evidence](docs/SECURITY_REVIEWS.md).
 
 - **Control center:** give a target to an operator. It registers the asset, runs the scoped check, records findings, and can dispatch AI-guided remediation tasks when explicitly authorized.
 - **Browser assistant:** recognized signup and password-change forms receive a local strength dialog, generation, and private encrypted saving. Exact-origin login filling requires a selected entry and never submits a form.

@@ -150,6 +150,14 @@ class OperationRequest(Body):
     device_id: str = Field(default="local", min_length=1, max_length=60)
 
 
+class ReviewRequest(Body):
+    workspace_id: str = Field(pattern=r'^[a-f0-9]{24}$')
+    name: str = Field(min_length=2,max_length=80)
+    checks: list[OperationRequest] = Field(min_length=1,max_length=6)
+    authorized: bool
+    ai_triage: bool = False
+
+
 class DeviceConnection(Reauth):
     label: str = Field(min_length=2, max_length=60)
     targets: list[str] = Field(default_factory=lambda: ["127.0.0.1", "::1"], min_length=1, max_length=16)
@@ -307,10 +315,13 @@ def create_app(settings=None):
             # Older installations offered fictional spaces. Hide those and move
             # existing sessions back to a real membership without deleting vaults.
             c.execute("UPDATE sessions SET workspace=(SELECT m.workspace FROM members m JOIN workspaces w ON m.workspace=w.id WHERE m.user=sessions.user AND w.demo=0 ORDER BY m.rowid LIMIT 1) WHERE workspace IN (SELECT id FROM workspaces WHERE demo=1) AND EXISTS(SELECT 1 FROM members m JOIN workspaces w ON m.workspace=w.id WHERE m.user=sessions.user AND w.demo=0)")
-            for row in c.execute("SELECT workspace,kind,data FROM entities WHERE kind IN ('jobs','operations')").fetchall():
+            for row in c.execute("SELECT workspace,kind,data FROM entities WHERE kind IN ('jobs','operations','security_reviews')").fetchall():
                 job = json.loads(row["data"])
-                if job["status"] in {"queued", "running"} and not (row["kind"] == "operations" and job.get("device_id", "local") != "local" and job["status"] == "queued"):
+                if job["status"] in {"queued", "running"} and not (row["kind"] == "operations" and job.get("device_id", "local") != "local" and job["status"] == "queued" and not job.get('review_id')):
                     job.update(status="interrupted", error="Server restarted. Run again explicitly; no automatic replay.")
+                    if row['kind']=='security_reviews':
+                        for step in job['checks']:
+                            if step['status'] in {'pending','running'}:step['status']='interrupted'
                     Store.put(c, row["workspace"], row["kind"], job)
         app.state.watch_service.start()
         try:
@@ -319,7 +330,7 @@ def create_app(settings=None):
             app.state.watch_service.stop()
             executor.shutdown(wait=True, cancel_futures=True)
 
-    app = FastAPI(title="SentinelOps", version="0.13.3", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title="SentinelOps", version="0.14.0", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.store, app.state.settings = store, settings
     app.state.cipher, app.state.executor = cipher, executor
     app.state.agent_transport = None
@@ -866,9 +877,12 @@ def create_app(settings=None):
                 Store.event(c,session['workspace'],session['user'],'team_vault.access_revoked',vault+':'+identifier)
             devices=[r['id'] for r in c.execute('SELECT id FROM devices WHERE workspace=? AND user=?',(session['workspace'],identifier))]
             c.execute('DELETE FROM devices WHERE workspace=? AND user=?',(session['workspace'],identifier))
-            for kind in ('operations','jobs'):
+            for kind in ('operations','jobs','security_reviews'):
                 for job in Store.all(c,session['workspace'],kind):
                     if job['status'] in {'queued','running'} and (job['created_by']==identifier or job.get('device_id') in devices):
+                        if kind=='security_reviews':
+                            reviews.stop(c,session['workspace'],job,session['user'])
+                            continue
                         job.update(status='cancelled',finished_at=now(),error='Workspace access removed.')
                         Store.put(c,session['workspace'],kind,job)
             c.execute('DELETE FROM sessions WHERE workspace=? AND user=?',(session['workspace'],identifier))
@@ -892,7 +906,7 @@ def create_app(settings=None):
     def workspace_data(session=Depends(auth)):
         workspace = session["workspace"]
         with store.connect() as c:
-            result = {kind: Store.all(c, workspace, kind) for kind in ("assets", "scans", "findings", "tasks", "investigations", "jobs", "operations")}
+            result = {kind: Store.all(c, workspace, kind) for kind in ("assets", "scans", "findings", "tasks", "investigations", "jobs", "operations", "security_reviews")}
             result["members"] = [dict(r) for r in c.execute("SELECT u.id,u.email,m.role FROM members m JOIN users u ON m.user=u.id WHERE m.workspace=?", (workspace,))]
             result["audit"] = Store.audit(c, workspace)
             from .ownership import incoming as incoming_ownership
@@ -1030,12 +1044,10 @@ def create_app(settings=None):
 
     app.state.run_operation = run_operation
 
-    @app.post("/api/operations")
-    def create_operation(body: OperationRequest, session=Depends(auth)):
+    def validate_operation(body,session):
         from .device_checks import validate_target
         writable(session)
         must(body.authorized, "Confirm authorization for the selected target", 422)
-        throttle("operation:" + session["workspace"], 30)
         must(not body.ai_triage or settings.groq_key, "Connect Groq before requesting AI triage", 503)
         try:
             if body.action in {'device','posture'}:
@@ -1053,24 +1065,40 @@ def create_app(settings=None):
                 body.target = "Submitted " + body.action
         except ValueError as error:
             raise HTTPException(422, str(error))
+    def queue_operation(c,body,session,review_id=None):
+        member=c.execute('SELECT role FROM members WHERE workspace=? AND user=?',(session['workspace'],session['user'])).fetchone()
+        must(member and member['role']!='viewer','Assessment permission removed',403)
+        must(not any(r['status'] in {'queued','running'} and r['id']!=review_id for r in Store.all(c,session['workspace'],'security_reviews')),'A security review is already active',409)
+        must(not any(o["status"] in {"queued", "running"} for o in Store.all(c, session["workspace"], "operations")), "An assessment is already active", 409)
+        if body.action in {'device','posture'} and body.device_id != "local":
+            device = must(c.execute("SELECT targets,allow_posture FROM devices WHERE id=? AND workspace=? AND expires>?", (body.device_id,session["workspace"],time.time())).fetchone(), "Device connection unavailable")
+            must(body.target in json.loads(device["targets"]), "Target is outside this device connection's allowed scope", 422)
+            must(body.action!='posture' or device['allow_posture'],'This device connection did not opt in to read-only posture collection. Create a consented connection and run the new agent with --allow-posture.',409)
+        kind = "device" if body.action in {'device','posture'} else "website" if body.action == "website" else "mailbox" if body.action == "email" else "application"
+        asset = next((a for a in Store.all(c, session["workspace"], "assets") if a.get("operator_target") == body.target and a["kind"] == kind and a.get("device_id", "local") == body.device_id), None)
+        if not asset:
+            asset = dict(id=uid(), name=body.target, kind=kind, owner=session["email"], environment="development" if kind == "device" else "production", criticality="medium", hostname=body.target if kind == "website" else "", authorized=True, operator_target=body.target, device_id=body.device_id, created_at=now())
+            Store.put(c, session["workspace"], "assets", asset)
+            Store.event(c, session["workspace"], session["user"], "asset.connected", asset["id"])
+        operation = dict(id=uid(), action=body.action, target=body.target, asset_id=asset["id"], status="queued", created_by=session["user"], created_at=now(), steps=[], device_id=body.device_id, ports=sorted(set(body.ports)) if body.action == "device" else [], ai_triage=body.ai_triage)
+        if review_id:operation['review_id']=review_id
+        Store.put(c, session["workspace"], "operations", operation)
+        Store.event(c, session["workspace"], session["user"], "operation.queued", operation["id"])
+        return operation
+
+    @app.post("/api/operations")
+    def create_operation(body: OperationRequest, session=Depends(auth)):
+        writable(session)
+        throttle("operation:" + session["workspace"],30)
+        validate_operation(body,session)
         with store.connect(write=True) as c:
-            must(not any(o["status"] in {"queued", "running"} for o in Store.all(c, session["workspace"], "operations")), "An assessment is already active", 409)
-            if body.action in {'device','posture'} and body.device_id != "local":
-                device = must(c.execute("SELECT targets,allow_posture FROM devices WHERE id=? AND workspace=? AND expires>?", (body.device_id,session["workspace"],time.time())).fetchone(), "Device connection unavailable")
-                must(body.target in json.loads(device["targets"]), "Target is outside this device connection's allowed scope", 422)
-                must(body.action!='posture' or device['allow_posture'],'This device connection did not opt in to read-only posture collection. Create a consented connection and run the new agent with --allow-posture.',409)
-            kind = "device" if body.action in {'device','posture'} else "website" if body.action == "website" else "mailbox" if body.action == "email" else "application"
-            asset = next((a for a in Store.all(c, session["workspace"], "assets") if a.get("operator_target") == body.target and a["kind"] == kind and a.get("device_id", "local") == body.device_id), None)
-            if not asset:
-                asset = dict(id=uid(), name=body.target, kind=kind, owner=session["email"], environment="development" if kind == "device" else "production", criticality="medium", hostname=body.target if kind == "website" else "", authorized=True, operator_target=body.target, device_id=body.device_id, created_at=now())
-                Store.put(c, session["workspace"], "assets", asset)
-                Store.event(c, session["workspace"], session["user"], "asset.connected", asset["id"])
-            operation = dict(id=uid(), action=body.action, target=body.target, asset_id=asset["id"], status="queued", created_by=session["user"], created_at=now(), steps=[], device_id=body.device_id, ports=sorted(set(body.ports)) if body.action == "device" else [], ai_triage=body.ai_triage)
-            Store.put(c, session["workspace"], "operations", operation)
-            Store.event(c, session["workspace"], session["user"], "operation.queued", operation["id"])
+            operation=queue_operation(c,body,session)
         if body.action not in {'device','posture'} or body.device_id == "local":
             executor.submit(run_operation, session["workspace"], session["user"], operation["id"], body)
         return operation
+
+    from . import reviews
+    reviews.register(app,store,auth,writable,throttle,settings,executor,validate_operation,queue_operation,run_operation,ReviewRequest)
 
     @app.post("/api/operations/{identifier}/cancel")
     def cancel_operation(identifier: str, session=Depends(auth)):
@@ -1225,6 +1253,7 @@ def create_app(settings=None):
         must(settings.groq_key, "Configure GROQ_API_KEY in .env before running agents", 503)
         throttle("agent:" + session["workspace"], 10)
         with store.connect(write=True) as c:
+            must(not any(r['status'] in {'queued','running'} for r in Store.all(c,session['workspace'],'security_reviews')),'A security review is already active',409)
             must(not any(j["status"] in {"queued", "running"} for j in Store.all(c, session["workspace"], "jobs")), "An agent run is already active", 409)
             for identifier in body.finding_ids:
                 finding = must(Store.get(c, session["workspace"], "findings", identifier))
@@ -1249,9 +1278,9 @@ def create_app(settings=None):
     def report(session=Depends(auth)):
         with store.connect() as c:
             workspace = dict(c.execute("SELECT * FROM workspaces WHERE id=?", (session["workspace"],)).fetchone())
-            data = {kind: Store.all(c, session["workspace"], kind) for kind in ("assets", "scans", "findings", "tasks", "investigations")}
+            data = {kind: Store.all(c, session["workspace"], kind) for kind in ("assets", "scans", "findings", "tasks", "investigations", "security_reviews")}
             audit = Store.audit(c, session["workspace"])
-        value = dict(product="SentinelOps", version="0.12.0", generated_at=now(), workspace=workspace, **data, audit=audit, limitations="User-provided observations and reviewed decisions, not a security certification. Hash links reveal some edits relative to a retained external head; a database administrator can rewrite the whole chain. No independent signing authority.")
+        value = dict(product="SentinelOps", version="0.14.0", generated_at=now(), workspace=workspace, **data, audit=audit, limitations="User-provided observations and reviewed decisions, not a security certification. Hash links reveal some edits relative to a retained external head; a database administrator can rewrite the whole chain. No independent signing authority.")
         value["content_sha256"] = hashlib.sha256(canonical(value).encode()).hexdigest()
         return JSONResponse(value, headers={"Content-Disposition": 'attachment; filename="sentinelops-evidence.json"'})
 

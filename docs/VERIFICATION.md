@@ -1,4 +1,27 @@
-# Development verification — 0.13.3
+# Development verification — 0.14.0
+
+
+## Combined reviews — 21 October 2026
+
+The full backend suite passed 360 tests; the final frontend suite passed 208
+across 45 files and the production build passed. A focused 58-test backend run
+also passed after report/version changes. Vite retains its existing large
+strength-library chunk warning.
+
+A fresh encrypted backup preceded the main 0.14.0 upgrade. Schema 9 integrity,
+owner setup, ten compared record groups and the server encryption key were
+preserved before the subsequent authorized browser workflow.
+
+An isolated live Groq review completed two checks, three findings, one AI job
+and three tasks. In actual Edge, the owner signed in normally and approved a
+real localhost:8110 port check plus fixed Windows posture and AI follow-up.
+Both coverage tables rendered: one open port, firewall/Defender enabled and
+BitLocker permission denied. The review stayed partial; Groq planned its one
+finding and created one open task. Agent-worker completion and task dispatch
+were visibly verified. No setting was changed or repair claimed.
+
+Ignored screenshot: data/browser-acceptance-0.14.0/combined-review.png.
+See SECURITY_REVIEWS.md for scope, cancellation and remaining limitations.
 
 ## Live Groq activation — 21 October 2026
 
@@ -15,7 +38,7 @@ After a fresh encrypted backup and inactive-job check, the main app was
 restarted with the configuration. All ten compared record groups and its
 server encryption key matched; integrity and owner setup passed. Ignored
 evidence is recorded in REPOSITORY_INTEGRATION.md. Actual main-owner browser
-AI-run acceptance remains pending sign-in. The full cross-module autonomous
+AI-run acceptance subsequently passed in the combined review below. The full cross-module autonomous
 loop and assign-3 classifier integration remain unfinished.
 
 ## Actual Edge autofill observation — 21 October 2026

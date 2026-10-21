@@ -42,10 +42,12 @@ Password saving/autofill alone is feature overlap with established managers.
 No claim of superior cryptographic safety or browser reliability is supported by
 the present development evidence.
 
-A cross-module operation must still connect an approved target inventory to
-scoped checks, correlate findings into one review, create prioritized approved
-actions, execute only supported adapters and recheck outcomes. Current individual
-assessment/triage/task plumbing is a foundation, not that entire autonomous loop.
+A cross-module review coordinator is now implemented in 0.14.0. It previews and
+approves up to six scoped checks, aggregates their finding IDs and runs one
+optional AI/task pass. A live synthetic API case passed with two modules, three
+findings and three tasks. Actual Edge acceptance also verified a localhost port/posture review, explicit partial coverage and one live AI-created task. This is
+aggregation and scoped execution, not independent risk correlation or the entire
+autonomous remediation loop.
 Per-site password-change adapters, safe device remediation, explicit account/mail
 connectors and recovery need separate implementation and real acceptance.
 

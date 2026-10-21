@@ -1,4 +1,14 @@
-# Browser acceptance — SentinelOps 0.13.3 / companion 0.12.8
+# Browser acceptance — SentinelOps 0.14.0 / companion 0.12.8
+
+Combined review acceptance on 21 October: the existing owner app signed in
+normally through Edge. An approved localhost port/posture review displayed
+one open TCP port, enabled firewall/Defender observations and unassessed
+BitLocker (permission denied), so its status remained partial. The linked
+live Groq workflow completed and created one open remediation task. The final
+review UI showed the underlying coverage inline. Screenshot:
+`data/browser-acceptance-0.14.0/combined-review.png`. This verifies one real
+review case, not every assessment, every site or automatic repair.
+
 
 Latest 21 October result: after reload, the user reported the popup's Username
 and password filled acknowledgement. Actual Edge inspection found both fields
