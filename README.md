@@ -71,6 +71,8 @@ SQLite remains the **local development** store. [Encrypted operator backups and 
 
 Build/package as above. In Edge or Chrome’s extension-management page, enable developer mode and load **`companion/extension/dist`**, the folder containing `manifest.json`. Do not load the nested `assets` folder. After rebuilding, reload the installed extension.
 
+The packager validates permitted files, writes a deterministic ZIP and prints SHA-256 checksums. See [release verification and its limits](docs/EXTENSION_RELEASES.md). Packaging does not confirm installation or browser acceptance.
+
 In **Browser & devices**, select the intended vault and create its scoped connection using your app sign-in password and MFA if enabled. Pair it in the extension. Multiple vault connections can be remembered; switching locks the previous vault.
 
 Choose a personal or shared connection. A shared token can retrieve only its

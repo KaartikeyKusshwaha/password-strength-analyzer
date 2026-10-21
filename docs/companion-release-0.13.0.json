@@ -1,0 +1,25 @@
+{
+  "version": "0.13.0",
+  "sha256": "e445d3e9ba40e0b84374a054191c53ecb64123133ac9d06a983c626da74c3c18",
+  "files": {
+    "assets/index.esm-CgNExnv6.js": "a0129a0cfd01edad4bc94bc0654b5c6e5596117d71cefe02b45cb26217d1dccf",
+    "assets/popup-B0ZHCQeZ.js": "5b2cd260dd87fdfc41115ef064ec191813060e6bc835534063ec33ae79fd8a46",
+    "assets/popup-BOS8m2iD.css": "27d2ed702cb14d7840d0b9343292b8ab80f0b4535e4579b480b1e5303d5a4da7",
+    "assets/popup-C2zikXkW.js": "f60c0e96b62f92dc1e97ce03694ae8c57799f10cbf8463af57ecabfbe9f3c329",
+    "assets/sharing-crypto-CuD8kxJu.js": "9df488c6210203a202334e21ca4c72abae9998f25c5b58d89678b19c38298e4e",
+    "assets/vault-frame-adMZAjwN.js": "4b255763e304e1ccb706b431376350d1995bcdb10aa7df468ab410c84c1c725a",
+    "assets/vault-v2-DHNL37gZ.js": "815559a3e67e968cb2e1bacc0ecf4ca34e7883684630dd8f92bf709e53fba4b5",
+    "background.js": "1d22504d0d1540b7de0d777806bab544d2685fbed9c5d0a4d97dff7d8f1499a8",
+    "content.js": "5db7f68771723f91a15932a53d5227997c0b5c637c12221b9b7e94ed2a8a2bcd",
+    "manifest.json": "121897c8e026ee7215a6161a102c297bbc25073c5538f3e84aa3ced16475f6f4",
+    "popup.html": "1a922a10d4266f6722a0cd3aa714de2ee8be35e1ecb973a64cff5a098b33445e",
+    "vault-frame.html": "824bbc3d9c022338040712db78f49a9a8363c45d9fd350eb0e445c0d62846279"
+  },
+  "uncompressed_bytes": 1991697,
+  "date": "2026-10-21",
+  "python": "3.12.10",
+  "same_toolchain_two_clean_builds_identical": true,
+  "independently_audited": false,
+  "signed": false,
+  "installed_browser_reload_verified": false
+}

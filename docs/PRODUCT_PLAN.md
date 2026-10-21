@@ -74,6 +74,9 @@ provider MFA settings or device settings without the corresponding user workflow
   not yet recurring breach monitoring or verified-email account monitoring.
 - [ ] Chrome/Edge/Firefox store releases with reproducible packages and
   browser end-to-end tests; mobile Android/iOS autofill apps and integrations.
+  The local Chromium packager now validates files and produces deterministic ZIPs
+  with checksums; two clean 0.13.0 builds matched. Store publication, independent
+  review and installed acceptance remain separate gates. See EXTENSION_RELEASES.md.
 - [ ] Passkey account sign-in and a separately designed vault-unlock mechanism.
   Ordinary WebAuthn authentication does not automatically provide a vault key.
   A pinned-library protocol, isolated single-use ceremony store and transactional
