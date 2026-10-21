@@ -88,3 +88,6 @@ chrome.runtime.onMessage.addListener((message,sender,reply)=>{
   fillLoginForm(document,location.href,message.entry).then(reply,()=>reply({ok:false,reason:'value_rejected'}));
   return true;
 });
+
+// The worker ignores this visit unless the exact origin was explicitly opted in.
+if(window.top===window)chrome.runtime.sendMessage?.({type:'site-monitor-visit'})?.catch(()=>{});

@@ -1,14 +1,15 @@
 // Plaintext captures are tab-bound, in worker memory, and expire after 3 minutes.
 // They are never written to extension storage or returned to a website.
 const captures = new Map();
-function sweep() { for(const [id,value] of captures) if(value.expires<=Date.now()) captures.delete(id); }
+function releaseCapture(id){const value=captures.get(id);captures.delete(id);if(value)globalThis.sentinelMonitor?.setCapture(value.tab,false);}
+function sweep() { for(const [id,value] of captures) if(value.expires<=Date.now()) releaseCapture(id); }
 async function privateReceiver(value,sender) {
   if(!value?.windowReady || sender.frameId!==0)return false;
   const window=await value.windowReady;
   return sender.tab?.id===window.tabs?.[0]?.id && sender.tab?.windowId===window.id;
 }
 chrome.windows.onRemoved.addListener(windowId=>{
-  for(const [id,value] of captures)if(value.windowId===windowId)captures.delete(id);
+  for(const [id,value] of captures)if(value.windowId===windowId)releaseCapture(id);
   if(!captures.size)chrome.action.setBadgeText({text:''});
 });
 chrome.runtime.onMessage.addListener((message,sender,reply)=>{
@@ -38,10 +39,11 @@ chrome.runtime.onMessage.addListener((message,sender,reply)=>{
     try {
       const origin=new URL(sender.url).origin, entry=message.entry;
       if(!origin.startsWith('https://') || origin!==entry?.origin || typeof entry.password!=='string' || !entry.password.length || entry.password.length>256 || typeof entry.username!=='string' || entry.username.length>254)throw new Error();
-      for(const [id,value] of captures)if(value.tab===sender.tab.id)captures.delete(id);
-      if(captures.size>=10)captures.delete(captures.keys().next().value);
+      for(const [id,value] of captures)if(value.tab===sender.tab.id)releaseCapture(id);
+      if(captures.size>=10)releaseCapture(captures.keys().next().value);
       const id=crypto.randomUUID();
       captures.set(id,{origin,username:entry.username,password:entry.password,tab:sender.tab.id,expires:Date.now()+180000});
+      globalThis.sentinelMonitor?.setCapture(sender.tab.id,true);
       chrome.action.setBadgeText({text:'1'});chrome.action.setBadgeBackgroundColor({color:'#28684c'});
       setTimeout(()=>{sweep();if(!captures.size)chrome.action.setBadgeText({text:''});},180000);
       reply({ok:true,id});
@@ -55,7 +57,7 @@ chrome.runtime.onMessage.addListener((message,sender,reply)=>{
       if(!Number.isInteger(window?.id) || !Number.isInteger(window.tabs?.[0]?.id))throw new Error('Private save window unavailable.');
       return window;
     });
-    value.windowReady.then(window=>{value.windowId=window.id;reply({ok:true});}).catch(()=>{captures.delete(message.id);reply({ok:false});});
+    value.windowReady.then(window=>{value.windowId=window.id;reply({ok:true});}).catch(()=>{releaseCapture(message.id);reply({ok:false});});
     return true;
   }
   const frame=sender.tab && sender.url?.split('#')[0]===chrome.runtime.getURL('vault-frame.html');
@@ -72,7 +74,7 @@ chrome.runtime.onMessage.addListener((message,sender,reply)=>{
     const value=captures.get(message.id);
     privateReceiver(value,sender).then(allowed=>{
       if(!allowed){reply({ok:false});return;}
-      captures.delete(message.id);if(!captures.size)chrome.action.setBadgeText({text:''});reply({ok:true});
+      releaseCapture(message.id);if(!captures.size)chrome.action.setBadgeText({text:''});reply({ok:true});
     }).catch(()=>reply({ok:false}));
     return true;
   }

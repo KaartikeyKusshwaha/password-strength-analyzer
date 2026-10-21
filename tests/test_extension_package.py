@@ -33,6 +33,14 @@ def test_same_payload_has_identical_archive_despite_file_timestamps(tmp_path):
         assert archive.testzip() is None
         assert all(info.date_time == (1980, 1, 1, 0, 0, 0) for info in archive.infolist())
 
+def test_monitoring_requires_the_built_worker_not_the_public_source_copy(tmp_path):
+    dist,output,source=build(tmp_path)
+    manifest=json.loads(source.read_text(encoding='utf-8'));manifest['permissions'].append('alarms')
+    source.write_text(json.dumps(manifest),encoding='utf-8');(dist/'manifest.json').write_text(json.dumps(manifest),encoding='utf-8')
+    with pytest.raises(ValueError,match='monitoring background bundle'):package_extension(dist,output,source)
+    (dist/'background.js').write_text("globalThis.sentinelMonitorProtocol='sentinel-site-monitor/v1';",encoding='utf-8')
+    assert package_extension(dist,output,source)['version']=='0.13.0'
+
 
 @pytest.mark.parametrize('extra', ['.env', 'token.json', 'assets/source.js.map', 'assets/keys.json', 'assets/.private.js'])
 def test_unexpected_files_fail_without_overwriting_previous_package(tmp_path, extra):

@@ -7,7 +7,7 @@
     "dev": "vite --host 127.0.0.1 --port 5174",
     "build": "vite build",
     "test": "vitest run",
-    "build:companion": "vite build --config ../companion/extension/vite.content.config.js && vite build --config ../companion/extension/vite.popup.config.js"
+    "build:companion": "vite build --config ../companion/extension/vite.content.config.js && vite build --config ../companion/extension/vite.popup.config.js && vite build --config ../companion/extension/vite.background.config.js"
   },
   "dependencies": {
     "@zxcvbn-ts/core": "4.2.0",

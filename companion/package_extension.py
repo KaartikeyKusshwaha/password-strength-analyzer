@@ -53,6 +53,8 @@ def package_extension(dist=ROOT / 'dist', output=ROOT / 'sentinelops-companion.z
         raise ValueError('Extension manifests must be JSON objects.')
     if manifest != source:
         raise ValueError('Built manifest differs from source; rebuild before packaging.')
+    if 'alarms' in manifest.get('permissions',[]) and b'sentinel-site-monitor/v1' not in payload['background.js']:
+        raise ValueError('Build the monitoring background bundle before packaging.')
     if manifest.get('manifest_version') != 3 or not re.fullmatch(r'\d+\.\d+\.\d+(?:\.\d+)?', str(manifest.get('version', ''))):
         raise ValueError('A versioned Manifest V3 build is required.')
     # Fixed order, timestamps, permissions and compression omit machine metadata.

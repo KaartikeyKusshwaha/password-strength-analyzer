@@ -271,3 +271,29 @@ pending request against the cloud. Unsigned extension approval returned 401;
 post-cancellation polling returned 410. This created no real device grant and
 did not install the helper. GUI installation and actual extension pairing/
 scanning/uninstall acceptance remain pending.
+
+
+## Quiet site checks, companion 0.18.0
+
+The popup can opt the current exact HTTPS origin into quiet browser-local
+header checks. No cloud/AI access or unlocked vault is required. The worker
+stores only chosen origins and their latest header-check result/time, not
+page paths, queries, credentials or browsing logs. It never requests an
+unopted origin. Explicit host permission is checked before and after requests;
+removal prunes the entry. Disabling during a request cannot re-enable it.
+
+Visits reuse a twelve-hour check; browser alarms recheck due origins in batches
+of five, with a fifty-origin bound. Failed checks remain unassessed and retry
+on later wakes. A per-tab !/? badge surfaces observations/failures, while pending
+secure-save badges take priority. Manual rechecks update the same result/badge.
+The popup shows plain header guidance and opt-out controls. Browser sleep and
+lifecycle constraints can delay scheduled work; no exact SLA is promised.
+
+Verification: the full frontend run passed 292 tests. Eight focused tests passed
+after the final bounded-concurrency change. Twenty-one package/status tests
+passed with one Windows symlink fixture skipped. Content, popup and background
+production builds passed. The actual bundled worker also booted against isolated
+API fixtures and verified exact-origin cookie-free requests and opt-out cleanup.
+Packaging refuses an unbundled monitoring worker. Installed browser acceptance
+remains pending; this does not implement breach monitoring or post-login save
+offers, nor replace independent security review. See QUIET_SITE_CHECKS.md.
