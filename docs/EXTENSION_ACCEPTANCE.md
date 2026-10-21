@@ -140,3 +140,14 @@ email forms, explicit signup fields, cross-origin forms and frames, and reads no
 credential values to construct the invitation. Twenty login invitation/form
 regressions passed. This is source-only; installed companion 0.22.1 remains
 unchanged while cloud native autofill acceptance proceeds.
+
+### Cloud autofill mismatch investigation
+
+After the user reported clicking fill, read-only DOM comparisons showed both
+practice form fields nonempty but neither matching the approved public demo
+entry. The page remained /login and no submission was performed. No field values
+were copied into the test report. The selected vault/entry or possible browser
+password-manager contribution needs clarification; this is not a successful
+cloud exact-entry autofill acceptance. The current source's full frontend suite,
+including the queued username-focus invitation, passed 338 tests in 73 files.
+The installed 0.22.1 build remains unchanged.
