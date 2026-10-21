@@ -165,3 +165,19 @@ companion production builds passed. These are automated results, not installed
 extension acceptance. One-click helper installation/pairing, in-popup file
 checks, post-login save detection, background monitoring, shared-vault sign-in
 onboarding and independent security review remain outstanding.
+
+
+Deployment verification: companion 0.16.0 and its backend/control-room changes
+were deployed to the free Oracle pilot from revision
+55123cc35d5b773d120ff52371dd6cc64b325269. The release archive SHA-256 was
+ba72bb4f21d5e1617964293ed32dbb6dc5c410f08983b0357edcc3dca684c5b0;
+archive inventory and every payload hash were validated before installation.
+Encrypted backups completed before and after the update. Accounts, membership,
+workspaces, personal vault rows, existing companions/devices and the encryption
+key matched their pre-update snapshots. HTTPS status returned 200 with owner
+setup complete. Unauthorized security access and unsigned approval returned
+401; a disposable pending security handoff could be started and cancelled,
+after which polling returned 410. No real user grant was created by the probe.
+SentinelOps and Caddy remained active. Browser inventory still returned
+"Local browser use is disabled in Work settings"; no native acceptance is
+claimed for this version.
