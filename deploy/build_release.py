@@ -26,7 +26,12 @@ def build_release(root=ROOT, output=None):
     for file in files:
         if not file.is_file() or file.is_symlink() or not file.resolve().is_relative_to(root):
             raise ValueError('Required deployment file is missing or linked outside the project.')
-        payload[file.relative_to(root).as_posix()] = file.read_bytes()
+        name = file.relative_to(root).as_posix()
+        content = file.read_bytes()
+        # Windows checkout settings must not make shell/configuration files fail on Linux.
+        if name.startswith('deploy/oracle/'):
+            content = content.replace(b'\r\n', b'\n')
+        payload[name] = content
     if not any(name.startswith('frontend/dist/assets/') for name in payload):
         raise ValueError('No frontend assets found.')
     try:

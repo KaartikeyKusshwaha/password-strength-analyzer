@@ -57,3 +57,18 @@ def test_linked_required_file_is_rejected(tmp_path,monkeypatch):
     monkeypatch.setattr(Path,'is_symlink',lambda path:path==root/'requirements.txt' or original(path))
     with pytest.raises(ValueError,match='linked'):
         build_release(root,root/'release.tar.gz')
+
+
+def test_windows_checkout_exports_linux_shell_and_service_line_endings(tmp_path,monkeypatch):
+    root=fixture_release(tmp_path,monkeypatch)
+    script=b'#!/usr/bin/env bash\r\nset -euo pipefail\r\n'
+    service=b'[Service]\r\nUser=sentinelops\r\n'
+    (root/'deploy/oracle/install.sh').write_bytes(script)
+    (root/'deploy/oracle/sentinelops.service').write_bytes(service)
+    output=root/'release.tar.gz'
+    build_release(root,output)
+    with tarfile.open(output,'r:gz') as archive:
+        for name,original in [('install.sh',script),('sentinelops.service',service)]:
+            assert archive.extractfile('deploy/oracle/'+name).read()==original.replace(b'\r\n',b'\n')
+        manifest=json.load(archive.extractfile('release-manifest.json'))
+        assert manifest['files']['deploy/oracle/install.sh']==hashlib.sha256(script.replace(b'\r\n',b'\n')).hexdigest()

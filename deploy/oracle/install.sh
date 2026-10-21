@@ -50,7 +50,10 @@ PY
 python3 -m venv /opt/sentinelops/current/.venv
 /opt/sentinelops/current/.venv/bin/python -m pip install -r /opt/sentinelops/current/requirements.txt
 chown -R root:root /opt/sentinelops/current
-chmod -R go-w /opt/sentinelops/current
+# Extraction under umask 077 creates private intermediate directories. The
+# unprivileged service needs traversal/read access to code, never write access.
+# This directory contains only the validated release and its virtualenv, no data.
+chmod -R a+rX,go-w /opt/sentinelops/current
 printf 'APP_ORIGIN=https://%s\nDATA_DIR=/var/lib/sentinelops\nSCAN_HOSTS=\nGROQ_API_KEY=\nGROQ_MODEL=openai/gpt-oss-120b\n' "$domain" > /etc/sentinelops/app.env
 chown root:sentinelops /etc/sentinelops/app.env
 chmod 0640 /etc/sentinelops/app.env
