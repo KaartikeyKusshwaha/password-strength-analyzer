@@ -34,3 +34,11 @@ existing task linked. Fourteen ports timed out and BitLocker access was denied;
 coverage correctly stayed partial. Cached update status was observed, with cache
 freshness still unverified. This is evidence of workflow execution, not proof of
 device safety or fixes. See `unified-browser-acceptance-2026-10-21.json`.
+
+The frontend dependency watch was also refreshed through Edge using the current
+0.18.0 package-lock.json. The prior 205-version snapshot did not include the new
+QR dependencies. The replacement inventory contains 233 exact versions, all
+233 were assessed by OSV, with no unsupported/excluded records and no advisory
+matches returned. Scheduling and automatic task creation remain off. This is a
+snapshot check; future source changes require reimport, and no matches does not
+establish application safety.

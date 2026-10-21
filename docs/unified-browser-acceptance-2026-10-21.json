@@ -38,7 +38,21 @@
     "finding_count": 2,
     "ai_planning": "complete",
     "two_factor_shortcut_reaches_locked_vault": true,
-    "companion_reload_confirmation": "pending"
+    "companion_reload_confirmation": "pending",
+    "current_frontend_watch": {
+      "source_sha256": "d07ff590920748f366b4f80bb17c5ee316ac1b78a0c49b159c5d0b1f9f3569b6",
+      "imported_through_edge_file_chooser": true,
+      "previous_pins": 205,
+      "current_pins": 233,
+      "assessed_pins": 233,
+      "excluded_pins": 0,
+      "unsupported_records": 0,
+      "status": "complete",
+      "new_matches": 0,
+      "requested_at_local": "2026-10-21 18:14:37 Asia/Calcutta",
+      "schedule_enabled": false,
+      "automatic_tasks_enabled": false
+    }
   },
   "boundaries": [
     "14 selected TCP probes timed out; kept unassessed.",
@@ -50,6 +64,7 @@
   "screenshots": [
     "data/browser-acceptance-0.18.0/three-tools-home.png",
     "data/browser-acceptance-0.18.0/automatic-review.png",
-    "data/browser-acceptance-0.18.0/agent-follow-up.png"
+    "data/browser-acceptance-0.18.0/agent-follow-up.png",
+    "data/browser-acceptance-0.18.0/current-lockfile-watch.png"
   ]
 }
