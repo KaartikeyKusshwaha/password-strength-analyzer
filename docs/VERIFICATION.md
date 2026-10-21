@@ -1,5 +1,23 @@
 # Development verification — 0.13.3
 
+## Live Groq activation — 21 October 2026
+
+The supplied key authenticated at Groq's model-list endpoint. The existing
+llama-3.3-70b-versatile configuration was unavailable to this account; the
+operator explicitly set available openai/gpt-oss-120b in ignored `.env`.
+No automatic substitute-model behavior was added. A synthetic plan passed
+the production request/schema/citation validation code. An isolated synthetic
+API operation then passed actual assessment, live Groq planning, task creation
+and progress: one finding, one task, five completed workers, valid audit and
+awaiting_recheck. No owner source, email or vault data was used in the probe.
+
+After a fresh encrypted backup and inactive-job check, the main app was
+restarted with the configuration. All ten compared record groups and its
+server encryption key matched; integrity and owner setup passed. Ignored
+evidence is recorded in REPOSITORY_INTEGRATION.md. Actual main-owner browser
+AI-run acceptance remains pending sign-in. The full cross-module autonomous
+loop and assign-3 classifier integration remain unfinished.
+
 ## Actual Edge autofill observation — 21 October 2026
 
 The user reported Username and password filled after the requested 0.12.8

@@ -20,9 +20,18 @@ evidence freshness and per-run write permissions. Current tasks and investigatio
 records are tracked; a task is not execution of a device repair. Credentials,
 vault contents, raw email and source submissions are excluded from provider input.
 
-The local Settings check currently reports Groq unconfigured. Deterministic
-device/check/watch/account operators remain usable, but no live AI-provider
-acceptance is claimed. Mock-provider tests do not establish live model behavior.
+The new user-supplied Groq credential is stored only in ignored local `.env`.
+The configured Llama model was unavailable to this account; a model-list request
+authenticated successfully. The configuration was explicitly changed to the
+available `openai/gpt-oss-120b`, without a runtime fallback. A live plan passed
+schema/citation validation. A separate isolated synthetic API operation then ran
+the actual Python check -> Groq planner -> task dispatcher -> progress flow:
+one finding, one task, all five worker steps complete, audit valid and progress
+awaiting_recheck. Raw source was not retained. The main app was backed up and
+restarted with protected-record comparisons passing. This establishes the
+tested workflow, not arbitrary repair execution or real-owner browser acceptance.
+Ignored evidence: data/groq-live-acceptance-20261021.json,
+data/groq-workflow-live-20261021.json and data/groq-config-result-20261021.json.
 
 ## Product differentiation to finish
 
