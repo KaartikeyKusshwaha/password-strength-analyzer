@@ -25,3 +25,19 @@ it('keeps pending proof when approval is not yet granted and rejects expiry',asy
   expect(b.saved.cloudConnect).toBeDefined();b.saved.cloudConnect.expires=0;
   await expect(finishCloudConnection(b,transport())).rejects.toThrow('expired');
 });
+it('does not turn a vault approval into a workspace security grant',async()=>{
+  const b=browser();b.saved.cloudConnect={origin:CLOUD_ORIGIN,id:'a'.repeat(24),proof:'x'.repeat(43),expires:Date.now()/1000+300,scope:'vault'};
+  const changed=async()=>({ok:true,json:async()=>({status:'approved',scope:'security',origin:CLOUD_ORIGIN,token:'x'.repeat(54)})});
+  await expect(finishCloudConnection(b,changed)).rejects.toThrow('scope changed');expect(b.saved.securityConnection).toBeUndefined();
+});
+
+it('stores security access separately after verifying it and retains existing vaults',async()=>{
+  const b=browser();
+  const fetcher=vi.fn(async url=>({ok:true,json:async()=>url.endsWith('/start')?{id:'a'.repeat(24),code:'123456',expires:Date.now()/1000+300,approval_url:CLOUD_ORIGIN+'/#connect='+'a'.repeat(24)}:url.endsWith('/poll')?{status:'approved',scope:'security',origin:CLOUD_ORIGIN,token:'x'.repeat(54)}:{ok:true}}));
+  await startCloudConnection(b,CLOUD_ORIGIN,fetcher,'security');
+  const connection=await finishCloudConnection(b,fetcher);
+  expect(connection.kind).toBe('security');expect(b.saved.securityConnection).toEqual(connection);
+  expect(b.saved.connections).toHaveLength(1);expect(b.saved.cloudConnect).toBeUndefined();
+  expect(fetcher.mock.calls.some(([url])=>url.endsWith('/security/context'))).toBe(true);
+  expect(fetcher.mock.calls.some(([url])=>url.endsWith('/vault'))).toBe(false);
+});

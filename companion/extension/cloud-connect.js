@@ -1,19 +1,22 @@
 import {serviceOrigin} from './policy';
 import {prepareConnection} from './connection';
 export const CLOUD_ORIGIN='https://sentinelops.129-225-76-232.sslip.io';
-async function request(origin,path,proof,fetcher){
-  const response=await fetcher(origin+'/api/companion/connect/'+path,{method:'POST',credentials:'omit',redirect:'error',headers:{'Content-Type':'application/json'},body:JSON.stringify({proof}),signal:AbortSignal.timeout(10000)});
+async function request(origin,path,proof,fetcher,extra={}){
+  const response=await fetcher(origin+'/api/companion/connect/'+path,{method:'POST',credentials:'omit',redirect:'error',headers:{'Content-Type':'application/json'},body:JSON.stringify({proof,...extra}),signal:AbortSignal.timeout(10000)});
   if(!response.ok)throw new Error('The connection request failed or expired. Start again from the extension.');
   return response.json();
 }
-export async function startCloudConnection(browser,origin=CLOUD_ORIGIN,fetcher=(...args)=>globalThis.fetch(...args)){
+export async function startCloudConnection(browser,origin=CLOUD_ORIGIN,fetcher=(...args)=>globalThis.fetch(...args),scope='vault'){
   origin=serviceOrigin(origin);
   const granted=await browser.permissions.request({origins:[origin+'/*']});
   if(!granted)throw new Error('App access was declined. Nothing was connected.');
+  const previous=await browser.storage.local.get('cloudConnect');
+  if(previous.cloudConnect&&previous.cloudConnect.expires*1000>Date.now())throw new Error('Finish or cancel the existing connection request before starting another.');
   const proof=btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-  const result=await request(origin,'start',proof,fetcher);
+  if(!['vault','security'].includes(scope))throw new Error('Unsupported connection scope.');
+  const result=await request(origin,'start',proof,fetcher,{scope});
   if(!/^[a-f0-9]{24}$/.test(result.id)||!/^\d{6}$/.test(result.code)||!Number.isFinite(result.expires)||result.approval_url!==origin+'/#connect='+result.id)throw new Error('Unexpected connection response. Nothing was connected.');
-  const pending={origin,id:result.id,proof,code:result.code,expires:result.expires};
+  const pending={origin,id:result.id,proof,code:result.code,expires:result.expires,scope};
   await browser.storage.local.set({cloudConnect:pending});
   await browser.tabs.create({url:result.approval_url});
   return pending;
@@ -26,6 +29,16 @@ export async function finishCloudConnection(browser,fetcher=(...args)=>globalThi
   const result=await request(origin,pending.id+'/poll',pending.proof,fetcher);
   if(result.status==='pending')return null;
   if(result.status!=='approved'||result.origin!==origin)throw new Error('Unexpected connection response.');
+  if((pending.scope||'vault')!==(result.scope||'vault'))throw new Error('Connection scope changed. Start again.');
+  if(pending.scope==='security'){
+    if(!/^[A-Za-z0-9_-]{40,100}$/.test(result.token))throw new Error('Invalid security connection.');
+    const connection={origin,token:result.token,kind:'security'};
+    const check=await fetcher(origin+'/api/companion/security/context',{credentials:'omit',redirect:'error',headers:{Authorization:'Bearer '+result.token},signal:AbortSignal.timeout(10000)});
+    if(!check.ok)throw new Error('Security access could not be verified.');
+    await browser.storage.local.set({securityConnection:connection});await browser.storage.local.remove('cloudConnect');
+    try{await request(origin,pending.id+'/ack',pending.proof,fetcher);}catch{}
+    return connection;
+  }
   const connection=await prepareConnection(browser,origin,result.token,fetcher);
   if(!connection.connection)throw new Error('App access is missing. Allow access and retry.');
   await browser.storage.local.remove('cloudConnect');

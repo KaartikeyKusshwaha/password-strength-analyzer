@@ -1,5 +1,5 @@
 import SecurityHub from './security-hub';
-import SiteCheck from './SiteCheck';
+import SecurityAssistant from './SecurityAssistant';
 import CodeFill from './CodeFill';
 import CloudConnect from './CloudConnect';
 import React, { useEffect, useRef, useState } from "react";
@@ -125,7 +125,7 @@ export function Popup() {
           <small>YOUR SECURITY COMPANION · {manifest.version}</small>
         </div>
       </header>
-      <SiteCheck/>
+      <SecurityAssistant/>
       <details><summary>Control room · vaults and settings</summary><SecurityHub origin={config?.origin||pendingConnection?.origin||'https://sentinelops.129-225-76-232.sslip.io'}/></details>
       {connections.length > 0 && <label>Connected vault<select value={config ? connections.findIndex(item=>item.token===config.token) : ''} disabled={busy} onChange={async event=>{const next=connections[Number(event.target.value)];if(!next)return;lockVault();setVaultPolicy(null);await chrome.storage.local.set({connection:next});await chrome.storage.local.remove('pendingConnection');setPendingConnection(null);setConfig(next);setReconnectRequired(false);setError('');}}><option value="" disabled>Choose a connected vault</option>{connections.map((item,index)=><option key={index} value={index}>{item.vaultName || 'Vault name not verified'}{item.vaultKind==='shared'?' · shared':''} · {new URL(item.origin).host}</option>)}</select></label>}
       {error && (

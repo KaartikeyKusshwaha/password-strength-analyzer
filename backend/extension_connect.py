@@ -1,8 +1,9 @@
-"""Short-lived browser authorization; grants one encrypted personal vault only."""
+"""Short-lived authorization for one encrypted vault or separate security operators."""
 import hmac
 import re
 import secrets
 import time
+from typing import Literal
 
 from fastapi import Depends, HTTPException, Request
 from pydantic import BaseModel, Field, SecretStr, ConfigDict
@@ -11,14 +12,18 @@ from .store import Store, uid
 
 SCOPE='system:extension-connect'
 KIND='extension_connect'
+SECURITY_SCOPE='system:extension-security'
+SECURITY_KIND='security_connection'
 
 class Proof(BaseModel):
     model_config=ConfigDict(extra='forbid')
     proof: SecretStr = Field(min_length=43,max_length=100)
+    scope: Literal['vault','security'] = 'vault'
 
 class Approval(BaseModel):
     model_config=ConfigDict(extra='forbid')
-    vault_id: str = Field(pattern=r'^[a-f0-9]{24}$')
+    vault_id: str | None = Field(default=None,pattern=r'^[a-f0-9]{24}$')
+    workspace_id: str | None = Field(default=None,pattern=r'^[a-f0-9]{24}$')
     confirmed_code: str = Field(pattern=r'^\d{6}$')
 
 def register(app,store,auth,throttle,cipher,settings):
@@ -45,14 +50,17 @@ def register(app,store,auth,throttle,cipher,settings):
             for old in Store.all(c,SCOPE,KIND):
                 if old['expires']<=time.time():c.execute('DELETE FROM entities WHERE id=? AND workspace=? AND kind=?',(old['id'],SCOPE,KIND))
             reject(len(Store.all(c,SCOPE,KIND))<200,'Too many pending connections',429)
-            record=dict(id=uid(),origin=origin,proof_hash=digest(body.proof.get_secret_value()),code=f'{secrets.randbelow(1000000):06d}',expires=time.time()+300,status='pending')
+            record=dict(id=uid(),origin=origin,scope=body.scope,proof_hash=digest(body.proof.get_secret_value()),code=f'{secrets.randbelow(1000000):06d}',expires=time.time()+300,status='pending')
             Store.put(c,SCOPE,KIND,record)
         return {'id':record['id'],'code':record['code'],'expires':record['expires'],'approval_url':settings.origin+'/#connect='+record['id']}
 
     @app.get('/api/extension-connect/{identifier}')
     def details(identifier:str,session=Depends(auth)):
         with store.connect() as c:record=lookup(c,identifier)
-        return {key:record[key] for key in ('id','origin','code','expires','status')}
+        result={key:record[key] for key in ('id','origin','code','expires','status')}
+        result.update(scope=record.get('scope','vault'),workspace_id=session['workspace'])
+        with store.connect() as c:result['workspace_name']=c.execute('SELECT name FROM workspaces WHERE id=?',(session['workspace'],)).fetchone()[0]
+        return result
 
     @app.post('/api/extension-connect/{identifier}/approve')
     def approve(identifier:str,body:Approval,session=Depends(auth)):
@@ -61,6 +69,16 @@ def register(app,store,auth,throttle,cipher,settings):
             record=lookup(c,identifier)
             reject(record['status']=='pending','This request was already decided',409)
             reject(hmac.compare_digest(body.confirmed_code,record['code']),'Connection code does not match')
+            if record.get('scope')=='security':
+                reject(body.vault_id is None and body.workspace_id==session['workspace'],'Workspace approval does not match',409)
+                reject(session['role'] in {'owner','analyst','reviewer'},'Assessment permission required')
+                token=secrets.token_urlsafe(40)
+                grant=dict(id=digest(token),user=session['user'],workspace=session['workspace'],origin=record['origin'],expires=time.time()+30*86400)
+                Store.put(c,SECURITY_SCOPE,SECURITY_KIND,grant)
+                record.update(status='approved',grant=cipher.encrypt(token.encode()).decode(),user=session['user'],workspace=session['workspace'])
+                Store.put(c,SCOPE,KIND,record)
+                Store.event(c,session['workspace'],session['user'],'extension.security_connected','scoped-operator-access')
+                return {'approved':True,'scope':'Run explicitly approved assessments and read their results in this workspace. No vault access.'}
             vault=c.execute('SELECT * FROM vault_spaces WHERE id=? AND user=?',(body.vault_id,session['user'])).fetchone()
             reject(vault and not vault['archived'] and vault['browser_enabled'] and vault['payload']!='null','Choose your initialized browser-enabled vault',409)
             token=secrets.token_urlsafe(40)
@@ -79,8 +97,11 @@ def register(app,store,auth,throttle,cipher,settings):
             record=verified(c,identifier,body,request)
             if record['status']=='pending':return {'status':'pending'}
             token=cipher.decrypt(record['grant'].encode()).decode()
-            reject(c.execute('SELECT 1 FROM companions WHERE token=? AND expires>?',(digest(token),time.time())).fetchone(),'Connection revoked. Start again.',410)
-        return {'status':'approved','token':token,'origin':settings.origin}
+            if record.get('scope')=='security':
+                grant=Store.get(c,SECURITY_SCOPE,SECURITY_KIND,digest(token))
+                reject(grant and grant['expires']>time.time(),'Connection revoked. Start again.',410)
+            else:reject(c.execute('SELECT 1 FROM companions WHERE token=? AND expires>?',(digest(token),time.time())).fetchone(),'Connection revoked. Start again.',410)
+        return {'status':'approved','token':token,'origin':settings.origin,'scope':record.get('scope','vault')}
 
     @app.post('/api/companion/connect/{identifier}/ack')
     def acknowledge(identifier:str,body:Proof,request:Request):
@@ -96,7 +117,11 @@ def register(app,store,auth,throttle,cipher,settings):
             record=verified(c,identifier,body,request)
             if record['status']=='approved':
                 token=cipher.decrypt(record['grant'].encode()).decode()
-                c.execute('DELETE FROM companions WHERE token=?',(digest(token),))
-                Store.event(c,'personal:'+record['user'],record['user'],'companion.authorization_cancelled',record['vault_id'])
+                if record.get('scope')=='security':
+                    c.execute('DELETE FROM entities WHERE id=? AND workspace=? AND kind=?',(digest(token),SECURITY_SCOPE,SECURITY_KIND))
+                    Store.event(c,record['workspace'],record['user'],'extension.security_revoked','cancelled-handoff')
+                else:
+                    c.execute('DELETE FROM companions WHERE token=?',(digest(token),))
+                    Store.event(c,'personal:'+record['user'],record['user'],'companion.authorization_cancelled',record['vault_id'])
             c.execute('DELETE FROM entities WHERE id=? AND workspace=? AND kind=?',(identifier,SCOPE,KIND))
         return {'ok':True}

@@ -21,7 +21,7 @@ def test_flow_grants_one_vault_without_exposing_tokens_to_approval_page(system):
     assert client.post(path+'/poll',json=PROOF,headers={'Origin':ORIGIN}).json()=={'status':'pending'}
     assert client.get('/api/extension-connect/'+pending['id']).status_code==401
     detail=owner.get('/api/extension-connect/'+pending['id']).json()
-    assert set(detail)=={'id','origin','code','expires','status'}
+    assert set(detail)=={'id','origin','code','expires','status','scope','workspace_id','workspace_name'}
     response=post(owner,'/extension-connect/'+pending['id']+'/approve',{'vault_id':vault['id'],'confirmed_code':pending['code']})
     assert response.status_code==200 and 'token' not in response.json()
     grant=client.post(path+'/poll',json=PROOF,headers={'Origin':ORIGIN}).json()

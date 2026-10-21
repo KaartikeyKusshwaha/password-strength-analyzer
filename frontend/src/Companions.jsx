@@ -3,6 +3,7 @@ import { Chrome, Download, Link2, Monitor, ShieldCheck } from "lucide-react";
 import { api } from "./api";
 import companionManifest from '../../companion/extension/public/manifest.json';
 import BrowserConnections from './BrowserConnections';
+import SecurityConnections from './SecurityConnections';
 export default function Companions({ assets, refresh, canWrite, go, devices = [] }) {
   const [error, setError] = useState(""),
     [pair, setPair] = useState(null),
@@ -30,6 +31,7 @@ export default function Companions({ assets, refresh, canWrite, go, devices = []
           {notice}
         </div>
       )}
+      <SecurityConnections/>
       <div className="two-col">
         <section className="panel">
           <span className="tool-icon blue">

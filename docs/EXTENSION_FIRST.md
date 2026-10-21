@@ -137,3 +137,31 @@ pending poll, unsigned approval=401, cancel=200, post-cancel poll=410 and health
 owner setup state. This probe created no real vault grant. The post-update
 encrypted backup completed successfully. Installed native/browser acceptance
 and the separate shared-vault/device-helper onboarding remain open.
+
+
+## Unified security controls, companion 0.16.0
+
+The popup now wraps the existing assessment and AI-planning pipeline in one
+security-assistant surface. It starts approved cloud website checks or checks
+through an already paired device helper, shows short progress, limited
+observations and up to five action drafts, and can cancel a pending run. It
+never substitutes the cloud host for the user's computer. Device ports,
+Windows posture and cached update checks clearly require the device helper.
+The existing browser-only site check stays available without cloud access.
+
+Security-agent access uses a separate, explicit sign-in approval for one
+workspace, not a vault token. A thirty-day grant can request approved
+assessments and read the requester's own operation results. Current membership,
+role, expiry and extension origin are checked on each request. The grant cannot
+unlock vaults, call general workspace APIs or approve repairs. Offboarding and
+backup restore remove these grants. The control-room Connections page and the
+extension both support revocation. Website allowlists and helper scope/policy
+checks remain enforced by the existing deterministic operators.
+
+Verification: 278 frontend tests passed, followed by six focused tests including
+an additional separate-grant storage test. Forty-five backend tests covering
+connections, operations, shared companions and backups passed. React and both
+companion production builds passed. These are automated results, not installed
+extension acceptance. One-click helper installation/pairing, in-popup file
+checks, post-login save detection, background monitoring, shared-vault sign-in
+onboarding and independent security review remain outstanding.

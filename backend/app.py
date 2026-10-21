@@ -358,7 +358,7 @@ def create_app(settings=None):
 
     @app.middleware("http")
     async def boundary(request, call_next):
-        companion = bool(re.fullmatch(r'/api/companion/(vault|actions(?:/[a-f0-9]{24}/(?:claim|result))?|connect/(?:start|[a-f0-9]{24}/(?:poll|ack|cancel)))',request.url.path))
+        companion = bool(re.fullmatch(r'/api/companion/(vault|actions(?:/[a-f0-9]{24}/(?:claim|result))?|connect/(?:start|[a-f0-9]{24}/(?:poll|ack|cancel))|security/(?:context|revoke|operations(?:/[a-f0-9]{24}(?:/cancel)?)?))',request.url.path))
         extension_origin = request.headers.get("origin", "")
         extension_origin_valid = bool(re.fullmatch(r"chrome-extension://[a-p]{32}", extension_origin))
         if companion and request.method == "OPTIONS":
@@ -918,6 +918,7 @@ def create_app(settings=None):
                 Store.event(c,session['workspace'],session['user'],'team_vault.access_revoked',vault+':'+identifier)
             devices=[r['id'] for r in c.execute('SELECT id FROM devices WHERE workspace=? AND user=?',(session['workspace'],identifier))]
             c.execute('DELETE FROM devices WHERE workspace=? AND user=?',(session['workspace'],identifier))
+            c.execute("DELETE FROM entities WHERE workspace='system:extension-security' AND kind='security_connection' AND json_extract(data,'$.user')=? AND json_extract(data,'$.workspace')=?",(identifier,session['workspace']))
             for kind in ('operations','jobs','security_reviews'):
                 for job in Store.all(c,session['workspace'],kind):
                     if job['status'] in {'queued','running'} and (job['created_by']==identifier or job.get('device_id') in devices):
@@ -1163,6 +1164,8 @@ def create_app(settings=None):
             executor.submit(run_operation, session["workspace"], session["user"], operation["id"], body)
         return operation
 
+    from . import extension_security
+    extension_security.register(app,store,settings,throttle,executor,validate_operation,queue_operation,run_operation,OperationRequest,auth)
     from . import reviews
     reviews.register(app,store,auth,writable,throttle,settings,executor,validate_operation,queue_operation,run_operation,ReviewRequest)
 
