@@ -181,3 +181,31 @@ after which polling returned 410. No real user grant was created by the probe.
 SentinelOps and Caddy remained active. Browser inventory still returned
 "Local browser use is disabled in Work settings"; no native acceptance is
 claimed for this version.
+
+
+## Popup file checks, companion 0.16.1
+
+Advanced in the security assistant accepts a pasted or dropped UTF-8 text file
+up to 64 KiB. Python AST checks and exact dependency checks run through the
+existing assessment pipeline, with results and optional AI action drafts in
+the same popup. No website visit is needed for these normal checks after
+security access has been approved. Source is not written to extension storage
+or retained in operation records and is never executed. Sending source to the
+connected service requires explicit disclosure consent.
+
+Dependency manifests support requirements.txt, package.json, package-lock v2/v3,
+uv.lock and exact inventories. Preview uses the service parser without OSV
+requests, then the user selects public package/version pairs and separately
+consents to their OSV disclosure. Changing source, format or selection resets
+the applicable approvals. Private package names can be excluded. Unsupported
+and excluded record counts are visible, alongside scanner coverage limits.
+Results include line numbers, package/advisory identities and fixed guidance
+links, without exposing arbitrary workspace notes or submitted source.
+
+All 283 frontend tests and 38 focused backend tests passed. Both companion
+production builds passed. Tests cover explicit consent, stale selections,
+file drop, size bounds, no preview-time OSV transmission, operation source
+non-retention and separately scoped authorization. Actual installed extension
+acceptance remains pending browser-control access. This does not complete
+helper onboarding, background monitoring, post-login save offers, shared-vault
+onboarding or independent security review.

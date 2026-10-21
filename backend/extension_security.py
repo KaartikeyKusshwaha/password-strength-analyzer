@@ -6,6 +6,13 @@ from .security import digest
 from .store import Store,now
 from .extension_connect import SECURITY_SCOPE,SECURITY_KIND
 from .scanner import RULES
+from .dependency_inventory import DependencyFormat, preview
+from pydantic import BaseModel, SecretStr, ConfigDict, Field
+
+class FilePreview(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    content: SecretStr = Field(min_length=1,max_length=65536)
+    format: DependencyFormat
 
 def register(app,store,settings,throttle,executor,validate_operation,queue_operation,run_operation,OperationRequest,auth):
     def require(condition,message,status=403):
@@ -31,6 +38,14 @@ def register(app,store,settings,throttle,executor,validate_operation,queue_opera
             name=c.execute('SELECT name FROM workspaces WHERE id=?',(session['workspace'],)).fetchone()[0]
         return {'workspace':name,'scan_hosts':sorted(settings.scan_hosts),'devices':devices,'ai_available':bool(settings.groq_key),'local_device':not settings.secure and settings.host in {'localhost','127.0.0.1'}}
 
+    @app.post('/api/companion/security/inventory-preview')
+    def file_preview(body:FilePreview,session=Depends(security_auth)):
+        throttle('extension-inventory:'+session['workspace'],60)
+        content=body.content.get_secret_value()
+        require(len(content.encode('utf-8'))<=65536,'Use a file up to 64 KiB',422)
+        try:return preview(content,body.format)
+        except ValueError as error:raise HTTPException(422,str(error)) from None
+
     @app.post('/api/companion/security/operations')
     def run(body:OperationRequest,session=Depends(security_auth)):
         throttle('operation:'+session['workspace'],30)
@@ -54,7 +69,17 @@ def register(app,store,settings,throttle,executor,validate_operation,queue_opera
             if job and job['status']=='failed':output['ai_error']='The AI plan failed. No plan was accepted.'
             output['finding_count']=len(scan.get('finding_ids',[])) if scan else None
             ids=set(scan.get('finding_ids',[])) if scan else set()
-            output['observations']=[{'title':finding['title'],'severity':finding['severity'],'guidance':RULES[finding['rule']][3]} for finding in Store.all(c,session['workspace'],'findings') if finding['id'] in ids and finding['rule'] in RULES][:5]
+            output['observations']=[]
+            for finding in Store.all(c,session['workspace'],'findings'):
+                if finding['id'] not in ids or finding['rule'] not in RULES:continue
+                item={'title':finding['title'],'severity':finding['severity'],'guidance':RULES[finding['rule']][3],'line':finding.get('line',0),'reference':RULES[finding['rule']][4]}
+                if finding['rule']=='DEP001':
+                    item['package']={key:finding.get('package',{}).get(key,'') for key in ('ecosystem','name','version')}
+                    advisory=finding.get('advisory','')
+                    if re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,99}',advisory):item.update(advisory=advisory,reference='https://osv.dev/vulnerability/'+advisory)
+                output['observations'].append(item)
+                if len(output['observations'])==5:break
+            output['dependency_coverage']=scan.get('dependency_inventory') if scan else None
         return output
 
     @app.post('/api/companion/security/operations/{identifier}/cancel')

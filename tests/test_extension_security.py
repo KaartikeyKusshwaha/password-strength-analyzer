@@ -62,3 +62,28 @@ def test_offboarding_deletes_security_grants(system):
     assert response.status_code==200,response.text
     assert client.get('/api/companion/security/context',headers=headers).status_code in {401,403}
     with app.state.store.connect() as c:assert not any(grant['user']==member['id'] for grant in Store.all(c,'system:extension-security','security_connection'))
+
+def test_file_preview_is_scoped_and_does_not_retain_source_or_contact_osv(system):
+    app,owner,_=system;client,headers=connected(app,owner)
+    body={'content':'requests==2.0.0\nnot-an-exact-pin>=1','format':'requirements'}
+    with patch.object(scanner,'scan_watch',side_effect=AssertionError('No external disclosure at preview')):
+        response=client.post('/api/companion/security/inventory-preview',json=body,headers=headers)
+    assert response.status_code==200,response.text
+    assert len(response.json()['packages'])==1 and response.json()['coverage']['skipped_records']==1
+    assert client.post('/api/companion/security/inventory-preview',json=body,headers={'Origin':ORIGIN}).status_code==401
+    assert client.post('/api/companion/security/inventory-preview',json={**body,'content':'x'*65537},headers=headers).status_code==422
+    with app.state.store.connect() as c:
+        assert all(body['content'] not in row[0] for row in c.execute('SELECT data FROM entities'))
+
+def test_file_operation_requires_reviewed_selection_and_records_only_assessment(system,monkeypatch):
+    app,owner,_=system;client,headers=connected(app,owner);monkeypatch.setattr(app.state.executor,'submit',lambda *args:None)
+    content='requests==2.0.0'
+    preview=client.post('/api/companion/security/inventory-preview',json={'content':content,'format':'requirements'},headers=headers).json()
+    body={'action':'dependencies','content':content,'format':'requirements','authorized':True,'dependency_selection':[preview['packages'][0]['id']]}
+    assert client.post('/api/companion/security/operations',json=body,headers=headers).status_code==422
+    response=client.post('/api/companion/security/operations',json={**body,'dependency_consent':True},headers=headers)
+    assert response.status_code==200,response.text
+    me=owner.get('/api/me').json()
+    with app.state.store.connect() as c:
+        operation=Store.get(c,me['workspace'],'operations',response.json()['id'])
+        assert 'content' not in operation and content not in str(operation)
