@@ -36,7 +36,7 @@ def test_multi_check_review_records_real_children_and_one_approved_ai_job_withou
     assert value['audit']['valid'] and 'fixture-private-source' not in json.dumps(value)
     assert all('content' not in step for step in review['checks'])
     report=client.get('/api/report').json()
-    assert report['version']=='0.14.0' and report['security_reviews'][0]['id']==review['id']
+    assert report['version']==app.version and report['security_reviews'][0]['id']==review['id']
     run(arguments)
     assert len(data(client)['operations'])==2 and len(data(client)['jobs'])==1
 

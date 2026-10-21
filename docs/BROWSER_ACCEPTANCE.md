@@ -1,4 +1,12 @@
-# Browser acceptance — SentinelOps 0.14.0 / companion 0.12.8
+# Browser acceptance — SentinelOps 0.14.1 / companion 0.12.8
+
+Message triage 0.14.1: actual Edge retained owner sign-in after the backed-up
+upgrade. Security reviews offered Suspicious email indicators and explicit RFC
+822 .eml format. The selector was operated and visibly selected. Runtime MIME,
+redaction, per-message identity and approved agent dispatch were tested in
+isolated stores; no fabricated message was added to the owner workspace.
+Screenshot: `data/browser-acceptance-0.14.1/message-format.png`.
+
 
 Combined review acceptance on 21 October: the existing owner app signed in
 normally through Edge. An approved localhost port/posture review displayed

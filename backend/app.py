@@ -107,6 +107,7 @@ class Scan(Body):
     label: str = Field(min_length=2, max_length=100)
     content: SecretStr = SecretStr("")
     format: Literal["requirements", "package-json"] = "requirements"
+    email_format: Literal["text", "eml"] = "text"
     authorized: bool
 
 
@@ -145,6 +146,7 @@ class OperationRequest(Body):
     ports: list[int] = Field(default_factory=lambda: [21, 22, 23, 25, 53, 80, 110, 143, 443, 3306, 3389, 5000, 8000, 8080, 8443], min_length=1, max_length=64)
     content: SecretStr = SecretStr("")
     format: Literal["requirements", "package-json"] = "requirements"
+    email_format: Literal["text", "eml"] = "text"
     authorized: bool
     ai_triage: bool = False
     device_id: str = Field(default="local", min_length=1, max_length=60)
@@ -330,7 +332,7 @@ def create_app(settings=None):
             app.state.watch_service.stop()
             executor.shutdown(wait=True, cancel_futures=True)
 
-    app = FastAPI(title="SentinelOps", version="0.14.0", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title="SentinelOps", version="0.14.1", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.store, app.state.settings = store, settings
     app.state.cipher, app.state.executor = cipher, executor
     app.state.agent_transport = None
@@ -944,6 +946,8 @@ def create_app(settings=None):
         fingerprints = {v["fingerprint"]: v for v in existing}
         ids = []
         scope = dict(asset_id=asset["id"], kind=body.kind, label=body.label)
+        if body.kind == "email" and result.get("message_digest"):
+            scope["message_digest"] = result.pop("message_digest")
         for previous in existing:
             if all(previous.get(k) == v for k, v in scope.items()):
                 previous["observed_in_latest"] = False
@@ -1008,7 +1012,7 @@ def create_app(settings=None):
             elif body.action == "dependencies":
                 result = scanner.scan_dependencies(body.content.get_secret_value(), body.format)
             else:
-                result = scanner.scan_email(body.content.get_secret_value())
+                result = scanner.scan_email(body.content.get_secret_value(), body.email_format)
             with store.connect(write=True) as c:
                 member = c.execute("SELECT role FROM members WHERE workspace=? AND user=?", (workspace, actor)).fetchone()
                 if not member or member["role"] == "viewer":
@@ -1129,7 +1133,7 @@ def create_app(settings=None):
                 result = scanner.scan_dependencies(content, body.format)
             elif body.kind == "email":
                 must(len(content) <= 15000, "Email must be at most 15,000 characters", 422)
-                result = scanner.scan_email(content)
+                result = scanner.scan_email(content, body.email_format)
             else:
                 result = scanner.scan_web(asset["hostname"], settings.scan_hosts)
         except ValueError as e:
@@ -1280,7 +1284,7 @@ def create_app(settings=None):
             workspace = dict(c.execute("SELECT * FROM workspaces WHERE id=?", (session["workspace"],)).fetchone())
             data = {kind: Store.all(c, session["workspace"], kind) for kind in ("assets", "scans", "findings", "tasks", "investigations", "security_reviews")}
             audit = Store.audit(c, session["workspace"])
-        value = dict(product="SentinelOps", version="0.14.0", generated_at=now(), workspace=workspace, **data, audit=audit, limitations="User-provided observations and reviewed decisions, not a security certification. Hash links reveal some edits relative to a retained external head; a database administrator can rewrite the whole chain. No independent signing authority.")
+        value = dict(product="SentinelOps", version="0.14.1", generated_at=now(), workspace=workspace, **data, audit=audit, limitations="User-provided observations and reviewed decisions, not a security certification. Hash links reveal some edits relative to a retained external head; a database administrator can rewrite the whole chain. No independent signing authority.")
         value["content_sha256"] = hashlib.sha256(canonical(value).encode()).hexdigest()
         return JSONResponse(value, headers={"Content-Disposition": 'attachment; filename="sentinelops-evidence.json"'})
 

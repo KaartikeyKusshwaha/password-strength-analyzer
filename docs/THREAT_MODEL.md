@@ -453,3 +453,19 @@ Postgres migrations and restore drills; CSV/breach-check browser interoperabilit
 passkeys; per-site account-change adapters; signed clients and extension
 store publication; mobile autofill; external penetration/crypto review; bug
 bounty intake and remediation process. None is implied by green unit tests.
+
+
+## Uploaded message triage (0.14.1)
+
+RFC 822 parsing is local and bounded by input size, MIME part/depth and link
+counts. Content is never rendered, followed or executed. Attachment filenames
+are inspected for fixed executable suffixes; content is excluded. Decode or
+structure problems produce explicit partial coverage, never a safe inference.
+Uploaded Authentication-Results is untrusted and never proves SPF/DKIM/DMARC.
+Reply-domain/link-host differences can be legitimate and require verification.
+The model provider receives only allowlisted rule summaries. Raw message bodies,
+headers, addresses, filenames and destinations are not retained or sent to AI.
+A SHA-256 message scope prevents unrelated messages replacing findings or being
+counted as rechecks; it leaks equality and permits guesses of known content.
+There is no trained classifier, inbox connector, antivirus attachment engine,
+quarantine or deletion action. See MESSAGE_TRIAGE.md for the exact boundaries.

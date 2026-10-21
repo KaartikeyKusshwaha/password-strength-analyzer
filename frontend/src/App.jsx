@@ -45,6 +45,7 @@ import {
 } from "lucide-react";
 import { api } from "./api";
 import DevicePosture from "./DevicePosture";
+import MailCoverage from "./MailCoverage";
 import PortCoverage from "./PortCoverage";
 import AdvisorySeverity from './AdvisorySeverity';
 import AdvisoryCoverage from './AdvisoryCoverage';
@@ -1197,6 +1198,7 @@ export default function App() {
                       <span className="muted">{time(s.at)}</span>
                     </summary>
                     <p>{s.limits}</p>
+                    <MailCoverage coverage={s.mail_coverage}/>
                     <DevicePosture report={s.posture}/>
                     <PortCoverage observations={s.observations}/>
                     <AdvisoryCoverage coverage={s.advisory_details}/>

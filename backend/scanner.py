@@ -33,6 +33,9 @@ RULES = {
     "MAIL001": ("medium", "Urgency and credential request", "CWE-451", "Verify the request with the sender through a previously trusted channel. Do not use the message link.", "https://www.cisa.gov/secure-our-world/recognize-and-report-phishing"),
     "MAIL002": ("medium", "Link obscures destination", "CWE-451", "Inspect the destination independently. Shortened links and IP URLs are indicators, not proof of phishing.", "https://www.cisa.gov/secure-our-world/recognize-and-report-phishing"),
     "MAIL003": ("high", "Sensitive data request", "CWE-359", "Do not reply with credentials or financial information; verify through an established channel.", "https://www.cisa.gov/secure-our-world/recognize-and-report-phishing"),
+    "MAIL004": ("low", "Reply address domain differs", "CWE-451", "Verify reply routing through an established channel. Different domains can be legitimate; this is not proof of impersonation.", "https://www.cisa.gov/secure-our-world/recognize-and-report-phishing"),
+    "MAIL005": ("medium", "Displayed link host differs from target", "CWE-451", "Open the known service independently instead of using the message link. A host mismatch needs review but does not establish maliciousness.", "https://www.cisa.gov/secure-our-world/recognize-and-report-phishing"),
+    "MAIL006": ("unknown", "Executable attachment requires review", "CWE-434", "Do not execute unexpected attachments. Verify with the sender and use your endpoint security tools; no attachment content scan was performed.", "https://www.cisa.gov/secure-our-world/recognize-and-report-phishing"),
     "PORT001": ("unknown", "Local TCP listener requires review", "CWE-16", "Identify the owning application locally. Verify necessity, authentication, binding interface and firewall rules before changing anything. Open does not mean vulnerable or publicly reachable.", "https://www.cisa.gov/resources-tools/resources/securing-network-infrastructure-devices"),
 }
 PY_LIMITS = "Eight Python AST rules, one submitted file; no data flow, runtime, reachability, JavaScript or infrastructure coverage. No findings does not establish security."
@@ -99,12 +102,19 @@ def scan_python(source):
     return dict(findings=list({(x["rule"], x["line"]): x for x in items}.values()), source_digest=hashlib.sha256(source.encode()).hexdigest(), rules_checked=list(RULES)[:8], limits=PY_LIMITS)
 
 
-def scan_email(text):
+def scan_email(text, format='text'):
+    from .mail_analysis import extract, LIMITS
+    message_digest = hashlib.sha256(text.encode('utf-8', errors='surrogatepass')).hexdigest()
+    text, html_links, coverage = extract(text, format)
     lowered = text.lower()
     urgent = bool(re.search(r"\b(urgent|immediately|suspended|final notice|action required)\b", lowered))
     credential = bool(re.search(r"\b(verify|password|credentials|login|sign in|reset)\b", lowered))
     sensitive = bool(re.search(r"\b(send|reply|provide|share)\b.{0,90}\b(password|otp|bank details|card number|passport|ssn)\b", lowered))
-    urls = re.findall(r"https?://[^\s<>\"']+", text)[:30]
+    text_links = re.findall(r"https?://[^\s<>\"']+", text)
+    coverage['text_links_assessed'] = min(30, len(text_links))
+    if len(text_links) > 30:
+        coverage['unassessed'].append('Only the first 30 text links were assessed.')
+    urls = text_links[:30] + html_links
     obscured = False
     for url in urls:
         try:
@@ -119,7 +129,16 @@ def scan_email(text):
         items.append(finding("MAIL002", evidence="A shortened, numeric-host or userinfo-bearing URL was found. URL redacted."))
     if sensitive:
         items.append(finding("MAIL003", evidence="A request to share credentials or sensitive identifiers was found."))
-    return dict(findings=items, signals={"urgency": urgent, "credential_context": credential, "obscured_link": obscured, "sensitive_request": sensitive, "links_count": len(urls)}, outcome="Review recommended" if items else "No listed indicators found", limits="Three transparent text rules, not an inbox filter or validated phishing classifier. Sender identity, SPF/DKIM/DMARC, attachments and link destinations were not checked. No links are opened. No listed indicators does not mean safe.")
+    if coverage['reply_domain_mismatch']:
+        items.append(finding('MAIL004', evidence='The single From and Reply-To address domains differ. Addresses redacted; legitimate reply routing can differ.', confidence='low'))
+    if coverage['displayed_link_mismatches']:
+        items.append(finding('MAIL005', evidence='A visible HTTP(S) URL names a different host from its HTML link target. Destinations redacted; legitimate redirects may differ.'))
+    if coverage['executable_attachments']:
+        items.append(finding('MAIL006', evidence='An attachment filename has an executable or script extension. Filename and contents omitted; contents were not scanned.', confidence='low'))
+    result = dict(findings=items, signals={"urgency": urgent, "credential_context": credential, "obscured_link": obscured, "sensitive_request": sensitive, "links_count": len(urls)}, outcome="Review recommended" if items else "No listed indicators found", message_digest=message_digest, mail_coverage=coverage, limits=LIMITS)
+    if coverage['unassessed']:
+        result['error'] = 'Message coverage is incomplete; inspect unassessed content.'
+    return result
 
 
 def parse_dependencies(text, format):

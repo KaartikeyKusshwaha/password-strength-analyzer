@@ -25,7 +25,7 @@ workflow. Developer checks are available as connected secondary workflows.
 | Private account-change queue | Explicit encrypted approval for up to 20 logins, browser-specific leases, staged recoverable passwords, exact-origin form preparation and separate user-confirmed outcomes. No submit or external success verification. |
 | Encrypted TOTP | Local code generation; actual provider enrollment still required. |
 | Agent workflow | One AI planner + deterministic evidence/reference/dispatch/progress workers. Per-run write scope and independent review required. |
-| Source/dependency/email/website checks | Bounded checks with explicit partial/failure states. OSV uses exact pins only. |
+| Source/dependency/email/website checks | Bounded checks with explicit partial/failure states. OSV uses exact pins only. Message text and explicit RFC 822/MIME triage include sanitized reply-domain, visible-link and executable-name observations, per-message finding scope and unassessed content. Sender authentication, attachment contents and the assign-3 trained classifier remain unverified/unimplemented. |
 | App authentication and team roles | Session/CSRF controls, scrypt, TOTP replay controls, workspace isolation, independent task reviewer. |
 | Audit and envelope migration | Linked audit records and legacy single-vault migration preserving ciphertext/revisions, backed up before updating the local owner store. Not independent signing or production Postgres. |
 

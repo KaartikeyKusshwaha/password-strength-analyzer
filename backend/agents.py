@@ -52,7 +52,7 @@ def request_plan(evidence, key, model, mode, transport=None):
 
 
 def snapshot(findings):
-    return {f["id"]: {k: f.get(k) for k in ("scan_id", "fingerprint", "asset_id", "kind", "label")} for f in findings}
+    return {f["id"]: {**{k: f.get(k) for k in ("scan_id", "fingerprint", "asset_id", "kind", "label")}, **({"message_digest": f["message_digest"]} if f.get("message_digest") else {})} for f in findings}
 
 
 def dispatch_work(c, workspace, job, findings, plan):
@@ -94,7 +94,7 @@ def check_progress(c, workspace, job):
         original = job.get("snapshot", {}).get(identifier)
         state, scan_id = "unavailable", None
         if finding and original:
-            latest = next((s for s in scans if all(s.get(k) == original.get(k) for k in ("asset_id", "kind", "label"))), None)
+            latest = next((s for s in scans if all(s.get(k) == original.get(k) for k in ("asset_id", "kind", "label", "message_digest"))), None)
             scan_id = latest["id"] if latest else None
             if finding["status"] == "resolved":
                 state = "resolved_by_review"

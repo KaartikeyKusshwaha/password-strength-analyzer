@@ -66,3 +66,16 @@ it('shows the actual child scan coverage inside a partial review',()=>{
   expect(screen.getByText('permission denied')).toBeInTheDocument();
   expect(screen.getByText('unassessed')).toBeInTheDocument();
 });
+
+it('sends the selected eml format with the approved email step',async()=>{
+  render(<SecurityReviews data={data} me={me} canWrite refresh={vi.fn()} go={vi.fn()}/>);
+  fireEvent.change(screen.getByLabelText('Check type'),{target:{value:'email'}});
+  fireEvent.change(screen.getByLabelText('Email format'),{target:{value:'eml'}});
+  fireEvent.change(screen.getByLabelText('Message text'),{target:{value:'From: fixture@example.test\n\nMessage'}});
+  fireEvent.click(screen.getByRole('button',{name:'Add check to review'}));
+  fireEvent.change(screen.getByLabelText('Review name'),{target:{value:'Email scope'}});
+  fireEvent.click(screen.getByLabelText(/I own or am authorized/));
+  fireEvent.click(screen.getByRole('button',{name:'Approve and run review'}));
+  await waitFor(()=>expect(api).toHaveBeenCalledTimes(1));
+  expect(api.mock.calls[0][1].checks[0].email_format).toBe('eml');
+});

@@ -1,4 +1,15 @@
-# Development verification — 0.14.0
+# Development verification — 0.14.1
+
+
+## Message triage — 0.14.1
+
+Bounded explicit RFC 822/MIME parsing, sanitized evidence, message-specific
+finding/recheck scope and UI controls are implemented. The full Python run
+passed 394 tests before the final agent scope change; 48 targeted platform/agent
+and message regression tests passed after that adjustment. Frontend: 211 tests across
+46 files and production build passed. See MESSAGE_TRIAGE.md for exact scope,
+privacy boundaries, test coverage, upgrade checks and the actual Edge format
+selection screenshot. No trained classifier or live inbox integration is claimed.
 
 
 ## Combined reviews — 21 October 2026
