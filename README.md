@@ -2,7 +2,7 @@
 
 An access control tower for agencies: know who can touch each client, remove access in one approved run, and report the outcome to the client. This is the product direction; the client access map and durable offboarding workflow are not yet shipped. Existing encrypted vaults and extension workflows form the foundation.
 
-**Hosted app 0.22.0 / companion source 0.23.0.** Use disposable credentials until the security and acceptance gates in [the agency master plan](docs/AGENCY_MASTER_PLAN.md) pass. See [actual release and browser evidence](docs/EXTENSION_ACCEPTANCE.md); implementation is not a claim of production readiness.
+**Hosted app 0.22.0 / [companion 0.23.0 prerelease](https://github.com/KaartikeyKusshwaha/password-strength-analyzer/releases/tag/companion-v0.23.0).** The last verified Oracle companion download is 0.22.1; its update is pending SSH reachability. Use disposable credentials until the security and acceptance gates in [the agency master plan](docs/AGENCY_MASTER_PLAN.md) pass. See [actual release and browser evidence](docs/EXTENSION_ACCEPTANCE.md); implementation is not a claim of production readiness.
 
 ## Extension-first access workflows
 

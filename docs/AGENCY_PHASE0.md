@@ -70,3 +70,20 @@ The prior deployed companion 0.22.1 remains the last verified cloud download
 until an authenticated download/manifest check proves a newer deployment.
 Local reloads and a downloadable GitHub release artifact must not be described
 as a successful Oracle deployment. SSH reachability needs resolution.
+
+## Publication evidence
+
+- Branch `codex/credential-security-lab` was pushed to the user's repository.
+- [Draft PR #1](https://github.com/KaartikeyKusshwaha/password-strength-analyzer/pull/1)
+  is open against main. It covers the accumulated platform foundation and states
+  the incomplete agency product and browser gates. It has not been merged.
+- [Companion 0.23.0 prerelease](https://github.com/KaartikeyKusshwaha/password-strength-analyzer/releases/tag/companion-v0.23.0)
+  contains sentinelops-companion.zip. A fresh public download's SHA-256 matched
+  `013ee78c9fa3b428d94f982c326eb5a752591d73bb42b6d2462ecc5cf42f3cac`.
+- GitHub's asset metadata reports the same digest and uploaded state. Publication
+  proves artifact availability, not installation or acceptance in Edge.
+- A limited pattern review of 760 reachable new blobs found no checked Groq,
+  GitHub token, private-key or AWS-ID patterns and no sensitive tracked paths.
+  The final follow-up documentation changes contain no credential material.
+- The user has no agency-owner contacts yet. The interview kit in
+  AGENCY_VALIDATION.md is ready; no outreach, partner or pain-report evidence exists.
