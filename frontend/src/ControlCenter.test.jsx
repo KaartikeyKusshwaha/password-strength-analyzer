@@ -55,6 +55,28 @@ it('blocks device execution on a hosted server without a local connection', () =
   expect(screen.getByRole('button',{name:'Run security operator'})).toBeDisabled();
   expect(screen.getByText(/will not scan the hosting server/)).toBeInTheDocument();
 });
+
+it('explains missing website scope and never queues a scan when no website is approved',()=>{
+  const fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);
+  render(<ControlCenter data={{integrations:{scan_hosts:[]}}} refresh={vi.fn()} go={vi.fn()} canWrite/>);
+  fireEvent.click(screen.getByRole('button',{name:/Check a website/}));
+  expect(screen.getByText(/No websites are approved for this installation/)).toBeVisible();
+  expect(screen.getByRole('button',{name:'Run security operator'})).toBeDisabled();
+  expect(fetcher).not.toHaveBeenCalled();
+});
+
+it('submits only the chosen approved hostname and records requested AI follow-up',async()=>{
+  const fetcher=vi.fn(async()=>({ok:true,json:async()=>({status:'queued'})}));vi.stubGlobal('fetch',fetcher);
+  render(<ControlCenter data={{integrations:{scan_hosts:['portal.example.test','accounts.example.test'],groq_configured:true}}} refresh={vi.fn()} go={vi.fn()} canWrite/>);
+  fireEvent.click(screen.getByRole('button',{name:/Check a website/}));
+  expect(fetcher).not.toHaveBeenCalled();
+  fireEvent.change(screen.getByLabelText('Website hostname'),{target:{value:'accounts.example.test'}});
+  fireEvent.click(screen.getByLabelText(/I own this target/));fireEvent.click(screen.getByLabelText(/After assessment, use AI/));
+  fireEvent.click(screen.getByRole('button',{name:'Run security operator'}));
+  await screen.findByText(/Operator started/);
+  expect(fetcher).toHaveBeenCalledOnce();
+  expect(JSON.parse(fetcher.mock.calls[0][1].body)).toMatchObject({action:'website',target:'accounts.example.test',authorized:true,ai_triage:true});
+});
 it('routes account protection to the encrypted vault rather than a separate password test panel', () => {
   const go=vi.fn();
   render(<ControlCenter data={{operations:[],integrations:{local_device_agent:true}}} refresh={()=>{}} go={go} canWrite/>);

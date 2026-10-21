@@ -30,6 +30,15 @@ Actual Edge checks verified both destinations and all three companion URL
 destinations. This tests the dashboard routing; the installed extension popup
 still needs its 0.13.0 reload and separate acceptance.
 
+The website operator selects from the installation's exact approved hostnames,
+matching combined reviews and the backend allowlist. An empty scope explains the
+setup requirement and disables execution. The current local installation has no
+configured website hostnames, verified in Edge; no live website assessment is
+claimed. The owner must supply an authorized hostname and configure SCAN_HOSTS
+before restarting the service. Unit/integration fixtures verify rejected targets
+create no operation, successful header checks attach evidence to the right
+asset, and a duplicate worker invocation does not repeat the request.
+
 Automatic device approval is bound to the workspace, selected connection,
 available checks, allowed targets and AI option. Changing this scope clears
 approval, including when returning to an earlier selection. Revoked or expired

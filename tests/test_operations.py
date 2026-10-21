@@ -47,6 +47,30 @@ def test_real_device_operation_creates_asset_scan_and_findings_without_import(sy
     assert again['asset_id'] == operation['asset_id']
 
 
+def test_website_operator_requires_configured_scope_and_records_header_evidence(system, monkeypatch):
+    from backend import scanner
+    app, client, _ = system
+    app.state.settings.scan_hosts = {'portal.example.test'}
+    with patch.object(scanner, 'scan_web') as scan:
+        rejected = post(client, '/operations', dict(action='website', target='outside.example.test', authorized=True))
+        assert rejected.status_code == 422
+        assert not data(client)['operations']
+        scan.assert_not_called()
+    operation, body = queue(app, client, monkeypatch, action='website', target='portal.example.test')
+    observed = scanner.inspect_headers({'Strict-Transport-Security':'max-age=31536000'}, 200)
+    with patch.object(scanner, 'scan_web', return_value=observed) as scan:
+        result = execute(app, client, operation, body)
+        scan.assert_called_once_with('portal.example.test', {'portal.example.test'})
+        execute(app, client, operation, body)
+        assert scan.call_count == 1
+    current = data(client)
+    assert result['status'] == 'complete' and result['finding_ids']
+    assert current['assets'][0]['hostname'] == 'portal.example.test'
+    assert current['scans'][0]['http_status'] == 200
+    assert all(finding['asset_id'] == operation['asset_id'] for finding in current['findings'])
+    assert not current['jobs']
+
+
 @pytest.mark.parametrize('target', ['8.8.8.8', '169.254.169.254', '0.0.0.0', '224.0.0.1', 'example.com', '127.0.0.0/8', '::ffff:169.254.169.254', 'fe80::1', '192.168.1.255'])
 def test_device_operator_rejects_unapproved_target_types(system, target):
     _, client, _ = system
