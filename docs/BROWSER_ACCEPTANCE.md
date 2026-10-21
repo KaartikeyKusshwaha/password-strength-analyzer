@@ -1,5 +1,16 @@
 # Browser acceptance — SentinelOps 0.13.3 / companion 0.12.8
 
+Latest 21 October result: after reload, the user reported the popup's Username
+and password filled acknowledgement. Actual Edge inspection found both fields
+populated; the screenshot visibly shows username practice and a masked password.
+The test driver did not type either credential. Direct DOM equality results are
+not authoritative because the browser tools redact field values. A subsequent
+public-demo login submission reached /authenticate but timed out at the network
+level; provider acceptance was not verified and the POST was not retried.
+Before/after screenshots and the precise result are retained under ignored
+data/browser-acceptance-0.13.3/. This is one installed happy-path fill result,
+not certification of other sites, shared vaults or all negative cases.
+
 Edge access returned on 21 October. The stopped local app was started again;
 the actual signed-out app rendered. Four blank/duplicate/unused tabs were
 closed at the user's request, keeping one app, Extensions and the practice
@@ -14,7 +25,7 @@ master and the public practice login. This does not prove installed filling.
 The user reported that clicking Fill did nothing. The extension toolbar popup
 is not exposed to browser control, so its actual message was not observed.
 Companion 0.12.8 adds per-entry progress/errors and bounded page-message waits;
-installed acceptance remains pending reload and another user click. Never
+At that point installed acceptance was pending reload and another user click. Never
 replace that click with direct credential filling by the test driver.
 
 App 0.13.3 adds sourced CVSS severity for dependency findings and separate

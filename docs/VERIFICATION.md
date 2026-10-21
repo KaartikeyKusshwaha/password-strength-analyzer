@@ -1,5 +1,17 @@
 # Development verification — 0.13.3
 
+## Actual Edge autofill observation — 21 October 2026
+
+The user reported Username and password filled after the requested 0.12.8
+reload. The driver observed both practice fields populated and screenshot
+username practice; it did not write either field. Browser-tool redaction means
+the initial DOM equality checks cannot establish their exact plaintext values.
+The evidence JSON explicitly records this limitation. A subsequent public-demo
+Login submission timed out at /authenticate; server acceptance is unverified,
+and no POST retry was made. See the before/after screenshots and result under
+data/browser-acceptance-0.13.3/. Other sites, shared fills and installed negative
+cases remain outside this single successful population observation.
+
 ## Edge fill feedback — companion 0.12.8 — 21 October 2026
 
 Actual Edge website control returned. The stopped local app was started again;
