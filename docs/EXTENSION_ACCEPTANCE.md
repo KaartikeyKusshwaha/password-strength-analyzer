@@ -151,3 +151,17 @@ password-manager contribution needs clarification; this is not a successful
 cloud exact-entry autofill acceptance. The current source's full frontend suite,
 including the queued username-focus invitation, passed 338 tests in 73 files.
 The installed 0.22.1 build remains unchanged.
+
+### Correction: redacted comparisons do not establish mismatched credentials
+
+Direct visual inspection after the user's cloud entry selection shows the
+practice username field contains practice and the password field is populated.
+Both fields were independently observed empty before the user's fill action.
+The user confirmed selecting cloud Personal / Practice cloud acceptance.
+The prior DOM comparison returned false even for the visibly matching username;
+credential redaction makes that comparison unsuitable as exact-value evidence.
+The previous mismatch inference is withdrawn. Visual evidence verifies both
+fields populated with the expected visible username; the masked password's
+exact value and successful website authentication remain unverified. No Login
+submission was made. Screenshot: data/oracle-deployment/cloud-autofill-visible.png.
+Do not read or expose the masked password to work around tool redaction.
