@@ -40,7 +40,7 @@ An inventory permits 1 MiB UTF-8 input, 10,000 source records and 500 unique exa
 package/version pairs. Approved dependency-capable API routes permit a 3 MiB
 JSON request envelope only after session/CSRF verification. Other routes keep
 their existing 160 KB body limit. Reviews permit 1 MiB aggregate source input;
-Python and email retain their smaller individual limits.
+Python retains its smaller individual limit. Retired email checks are rejected.
 
 OSV batch queries send at most 50 selected versions per request, with a 60-second
 batch budget, an eight-second request timeout, 1 MB response per batch and 4 MB

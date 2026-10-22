@@ -19,8 +19,8 @@ reload restore the corresponding route.
 This is a presentation flag, not an authorization boundary. Existing API role,
 scope, approval and origin checks still apply. The flag does not disable scanning
 engines or extension operations. Legacy components and their tests remain in the
-repository. This change does not archive historical phishing records or complete
-the separate removal of phishing paths.
+repository. Retired email history has a separate offline archive workflow;
+see [mail retirement](MAIL_RETIREMENT.md). The navigation flag does not mutate data.
 
 Verification: 371 frontend tests passed across 81 files; 22 platform API tests
 passed, including flag defaults, disabled/enabled route behavior and a real scan

@@ -81,7 +81,9 @@ Owner confirmations are not independent external verification.
 Remaining implementation includes expired/orphaned proposal recovery UX, external connector leases/reconciliation/retries, departure triggers,
 freelancer expiry, weekly reviews, full handoffs and the final Proof Pack.
 Mandatory owner/admin MFA is currently enforced only for workflow access and
-approval. Advanced-UI flag conversion and archived phishing cleanup remain.
+approval. The Advanced-UI flag conversion and staged administrator MFA gate are
+implemented. Retired mail-history archival now has a backed-up offline tool;
+hosted data verification and rollout remain separate gates.
 
 Browser acceptance, agency interviews/design partners, an independent security
 review, store/helper signing and recurring off-server backups remain genuine

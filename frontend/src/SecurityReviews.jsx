@@ -4,7 +4,6 @@ import DevicePosture from './DevicePosture';
 import DeviceUpdates from './DeviceUpdates';
 import PortCoverage from './PortCoverage';
 import AdvisoryCoverage from './AdvisoryCoverage';
-import MailCoverage from './MailCoverage';
 import DependencyScope,{emptyDependency,dependencyReady,DependencyCoverage} from './DependencyScope';
 
 const labels={device:'Device ports',posture:'Windows protection status',updates:'Windows Update cache & restart',website:'Website headers',python:'Python security patterns',dependencies:'Dependency advisories'};
@@ -15,7 +14,7 @@ function ReviewStep({step,scans=[]}) {
   return <li>{labels[step.action]} · {step.target} · {step.status}
     {step.error&&<p className="fine">{step.error}</p>}
     {scan?.error&&scan.error!==step.error&&<p className="fine">{scan.error}</p>}
-    <DependencyCoverage coverage={scan?.dependency_inventory}/><MailCoverage coverage={scan?.mail_coverage}/><DeviceUpdates report={scan?.updates}/><DevicePosture report={scan?.posture}/><PortCoverage observations={scan?.observations}/><AdvisoryCoverage coverage={scan?.advisory_details}/>
+    <DependencyCoverage coverage={scan?.dependency_inventory}/><DeviceUpdates report={scan?.updates}/><DevicePosture report={scan?.posture}/><PortCoverage observations={scan?.observations}/><AdvisoryCoverage coverage={scan?.advisory_details}/>
   </li>;
 }
 

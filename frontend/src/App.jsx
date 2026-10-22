@@ -30,7 +30,6 @@ import {
   LoaderCircle,
   LockKeyhole,
   LogOut,
-  MailWarning,
   Menu,
   Monitor,
   Network,
@@ -51,7 +50,6 @@ import {PRIMARY_PAGES,readRoute,pageRoute} from './navigation';
 import AdminMfaEnrollment from './AdminMfaEnrollment';
 import DevicePosture from "./DevicePosture";
 import DeviceUpdates from "./DeviceUpdates";
-import MailCoverage from "./MailCoverage";
 import PortCoverage from "./PortCoverage";
 import AdvisorySeverity from './AdvisorySeverity';
 import AdvisoryCoverage from './AdvisoryCoverage';
@@ -1207,9 +1205,7 @@ export default function App() {
                     data.scans.slice(0, 6).map((s) => (
                       <div className="scan-recent" key={s.id}>
                         <span className="scan-kind">
-                          {s.kind === "email" ? (
-                            <MailWarning size={18} />
-                          ) : s.kind === "website" ? (
+                          {s.kind === "website" ? (
                             <Globe size={18} />
                           ) : (
                             <FileCode2 size={18} />
@@ -1240,7 +1236,6 @@ export default function App() {
                       <span className="muted">{time(s.at)}</span>
                     </summary>
                     <p>{s.limits}</p>
-                    <MailCoverage coverage={s.mail_coverage}/>
                     <DevicePosture report={s.posture}/>
                     <DeviceUpdates report={s.updates}/>
                     <PortCoverage observations={s.observations}/>
@@ -1799,7 +1794,7 @@ export default function App() {
                     checksum and hash-linked activity.
                   </p>
                   <p className="fine">
-                    No raw source or email bodies. Notes may contain information
+                    Raw submissions are excluded. Notes may contain information
                     your team entered. Review before sharing.
                   </p>
                 </div>

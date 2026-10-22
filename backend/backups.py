@@ -1,5 +1,7 @@
 """Offline operator backups. Never exposes a database-download web endpoint."""
 import argparse
+from contextlib import contextmanager
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -195,13 +197,22 @@ def suspend_authorizations(connection):
         Store.event(connection, row['workspace'], 'system:restore', 'team_vault.recovery_restored', row['id'])
 
 
-def restore_backup(archive, key_file, destination):
-    destination = Path(destination).absolute()
-    if destination.exists() or destination.is_symlink():
-        raise BackupError('Restore requires a new, nonexistent directory; live data is never overwritten.')
-    parent = destination.parent.resolve(strict=True)
-    # Resolve the parent once; staging and final directory share a filesystem.
-    destination = parent / destination.name
+@contextmanager
+def memory_snapshot(database_bytes):
+    # SQLite deserialize cannot open WAL-mode headers. Change only the in-memory
+    # copy, as documented at https://www.sqlite.org/c3ref/deserialize.html . The
+    # authenticated archive and bytes used for disk restoration remain unchanged.
+    readable=database_bytes[:18]+b'\x01\x01'+database_bytes[20:] if database_bytes[18:20]==b'\x02\x02' else database_bytes
+    snapshot=sqlite3.connect(':memory:')
+    try:
+        snapshot.deserialize(readable)
+        snapshot.execute('PRAGMA query_only=ON')
+        yield snapshot
+    finally:snapshot.close()
+
+
+def read_backup(archive, key_file):
+    """Authenticate and validate a snapshot in memory; never prints its contents."""
     encrypted = read_bounded(archive, MAX_BYTES + 36)
     if encrypted[:8] != MAGIC or len(encrypted) < 36:
         raise BackupError('Unsupported or truncated backup file.')
@@ -223,6 +234,20 @@ def restore_backup(archive, key_file, destination):
             raise ValueError()
     except (ValueError, TypeError, KeyError, struct.error):
         raise BackupError('Invalid backup contents.') from None
+    with memory_snapshot(database_bytes) as snapshot:
+        if validate_database(snapshot,server_key)!=manifest['schema']:
+            raise BackupError('Backup manifest and database schema differ.')
+    return manifest,server_key,database_bytes,hashlib.sha256(encrypted).hexdigest()
+
+
+def restore_backup(archive, key_file, destination):
+    destination = Path(destination).absolute()
+    if destination.exists() or destination.is_symlink():
+        raise BackupError('Restore requires a new, nonexistent directory; live data is never overwritten.')
+    parent = destination.parent.resolve(strict=True)
+    # Resolve the parent once; staging and final directory share a filesystem.
+    destination = parent / destination.name
+    manifest,server_key,database_bytes,_=read_backup(archive,key_file)
     # Fixed filenames, no archive extraction. Never touch a live destination.
     with tempfile.TemporaryDirectory(prefix='.sentinel-restore-', dir=parent) as temporary:
         stage = Path(temporary) / 'data'
