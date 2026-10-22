@@ -19,7 +19,7 @@ from backend.passkey_migration import validate_layout
 MAGIC = b'SNTLBK01'
 MAX_BYTES = 128 * 1024 * 1024
 SCHEMA = SCHEMA_VERSION
-SUPPORTED_SCHEMAS = (8, 9, 10, 11, SCHEMA)
+SUPPORTED_SCHEMAS = (8, 9, 10, 11, 12, SCHEMA)
 
 
 class BackupError(ValueError):
@@ -83,6 +83,10 @@ def validate_database(connection, server_key):
         from .workflow_migration import validate_layout as validate_access_workflows
         try: validate_access_workflows(connection)
         except ValueError: raise BackupError('Access workflow schema validation failed.') from None
+    if schema >= 13:
+        from .access_records_migration import validate_layout as validate_access_records
+        try: validate_access_records(connection)
+        except ValueError: raise BackupError('Reported access schema validation failed.') from None
     cipher = Fernet(server_key)
     # Detect a missing/mismatched server key before declaring recovery possible.
     for row in connection.execute('SELECT mfa,mfa_draft FROM users'):
@@ -150,6 +154,8 @@ def suspend_authorizations(connection):
     connection.execute("DELETE FROM entities WHERE workspace='system:extension-connect' AND kind='extension_connect'")
     connection.execute("DELETE FROM entities WHERE workspace='system:extension-security' AND kind='security_connection'")
     connection.execute("DELETE FROM entities WHERE workspace='system:extension-access' AND kind='access_connection'")
+    connection.execute("DELETE FROM entities WHERE workspace='system:extension-discovery' AND kind='discovery_connection'")
+    connection.execute("DELETE FROM entities WHERE kind='discovery_consents'")
     connection.execute("UPDATE entities SET data=json_set(data,'$.status','cancelled') WHERE kind='access_rechecks' AND json_extract(data,'$.status')='scheduled'")
     connection.execute("DELETE FROM entities WHERE workspace='system:device-pairing' AND kind='device_pairing'")
     connection.execute('DELETE FROM passkey_ceremonies')

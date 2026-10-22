@@ -8,8 +8,9 @@ An access control tower for agencies: know who can touch each client, remove acc
 
 Normal save/fill/authenticator and supported assessment actions run in the
 extension. The website manages vaults, results, connections and settings.
-Client access mapping, approved offboarding, rotation queues and client proof
-packs are the next planned workflows. Existing scanner and investigation engines
+Unreleased source now adds client access mapping, approved local vault
+offboarding, extension-side shared-key rotation and opt-in account discovery.
+The complete rotation/debt queue and client proof packs remain planned. Existing scanner and investigation engines
 are supporting capabilities; they are not the product's primary proposition.
 Agents do not receive passwords, vault keys or authenticator secrets. CSV import
 from existing password managers remains the adoption path.
@@ -17,6 +18,16 @@ from existing password managers remains the adoption path.
 Email/phishing detection was removed from the current product at the user's
 request. New email scan, operation and combined-review submissions are rejected.
 Existing historical evidence is preserved.
+
+## Unreleased agency implementation
+
+The client map combines live vault membership with clearly labelled manual
+reports and opt-in domain/account-nickname observations. Discovery does not read
+passwords or claim that a login succeeded. A separate extension capability
+handles approval-bound vault offboarding, local key rotation, progress and
+read-only rechecks. This source has not been deployed to the hosted pilot.
+See [implementation scope](docs/AGENCY_PHASE1.md), [workflow guarantees](docs/ACCESS_WORKFLOWS.md)
+and [discovery privacy/control](docs/ACCESS_DISCOVERY.md).
 
 ## Connected workflows
 

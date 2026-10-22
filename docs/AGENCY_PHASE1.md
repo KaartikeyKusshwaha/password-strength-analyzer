@@ -1,113 +1,91 @@
-# Phase 1 implementation ledger
+# Client access and durable offboarding implementation
 
-This is unreleased source work. The Oracle app has not received schema 11 or
-the new frontend. The two-account browser gate and agency-validation gate remain
-open. Browser tests are deferred until implementation is finished, at the user's
-latest instruction. Automated tests continue during implementation.
+This branch contains unreleased implementation. Oracle remains on the previously
+verified hosted app 0.22.0 and companion download 0.22.1. GitHub companion 0.23.0
+is the prior prerelease, not these new source changes. No production migrations
+or browser tests were performed for this work. The user explicitly deferred
+browser testing until implementation is finished.
 
-## Client access map: first source
+## Access map
 
-- Explicit client records and links to existing shared vaults, in schema 11.
-  No client data is fabricated from vault names or imported credential plaintext.
-- Workspace-owner-only API: create clients, bind/unbind metadata, read the map.
-  Existing accepted vault roles and pending invitations are read live from their
-  original tables, not duplicated into a stale materialized grant list.
-- Revoking a member removes that membership from the next map read immediately.
-  The affected vault still displays rotation_required. This distinguishes access
-  removal from completing encryption and website-password rotation.
-- Owner-only Clients & Access control-room page supports client/person filters,
-  current role/provenance, pending invites, rotation notices and link management.
-- Metadata unlink is explicitly not credential revocation; the original vault,
-  grants, tokens and ciphertext remain untouched.
-- Data is labelled shared_vault provenance. A vault is not evidence of actual
-  non-Google platform membership, active sessions, staff MFA or device compliance.
-  Platform systems, manual/external people/grants, connectors and extension
-  discovery remain to be implemented, rather than inferred from this one source.
-- New writes share their transaction with the existing linked audit events.
-  Duplicate link requests are idempotent and do not duplicate audit events.
+Schema 11 adds client records and explicit shared-vault links. The owner-only
+Clients & Access page reads original accepted/pending membership tables live,
+filters by client/person and displays key-rotation requirements. Unlinking only
+changes metadata; it does not revoke access. Credential payloads are never read
+by the map.
 
-## Migration and recovery
+Schema 13 adds `access_grants` for explicit manual reports and opt-in extension
+discovery. These are not materialized copies of vault memberships. Manual
+reports identify existing workspace members and retain owner-reported roles.
+Extension observations identify the signed-in person and a chosen account
+nickname, with domain-only site metadata. A login attempt is not proof of
+successful sign-in. The map labels each source; retiring a report does not claim
+external revocation. Users without a connector are not represented as verified
+platform grants. External people and real SaaS connector sources remain pending.
 
-Schema 11 creates clients/client_vaults without changing vault keys or payloads.
-Unmarked or incomplete layouts fail closed. Old version-9/10 migration fixtures
-now explicitly omit later client tables when simulating historic stores.
-Backup validation checks the new layout; schema-10 archives remain supported.
-Restore tests verify client links survive encrypted recovery and historic account
-records survive schema-10-to-11 upgrade. No production migration has been run.
+## Extension offboarding
 
-## Verification
+Schema 12 persists immutable approval-bound plans and local workflow steps. The
+existing review Runner, executor and watch scheduler execute and resume them;
+there is no second runner. A real or dry-run plan selects 1–20 explicitly linked
+vault memberships. Fresh creator password/MFA approval binds a plan digest, and
+all removals commit before waiting for key rotation. Actor/MFA loss, expiry,
+stale scope, reappearing access or invalid step manifests stop execution.
 
-- Full frontend suite: 340 tests passed across 74 files; production build passed.
-- Full backend snapshot: 451 passed, one skipped, before the final additional
-  backup-layout guard and old-schema backup regression were added.
-- Final focused access/backup suite: 16 passed; migration/device/passkey suite:
-  31 passed. A new browser run has not been attempted.
-- A previous frontend navigation regression expected four destinations. It was
-  changed to verify the additional owner-only Clients & Access destination;
-  Advanced remains collapsed and the old checks were not duplicated here.
+Each effect, scoped token/action cancellation, audit event and step completion
+shares one SQLite transaction. Crash-before-commit rolls back; crash-after-commit
+resumes at the next pending step. This is local atomicity, not exactly-once
+external API execution. Cancelled plans retain completed removals. Backup restore
+cancels pending workflow approvals.
 
-## Runner reuse review
+An eight-hour owner/MFA extension capability supports plan creation, fresh
+approval, cancellation, progress and evidence. Existing vault/scanner tokens do
+not gain workflow authority. Shared-key rotation requires BOTH this capability
+and a separately connected, unlocked owner companion for the exact vault. The
+existing browser crypto generates the next payload and remaining-member key
+distribution; the original server rotation validator commits it. Repeated or
+changed-scope rotations are rejected, then the old local vault session locks.
 
-`backend/reviews.py::Runner` already coordinates operation IDs, progress, current
-membership checks and cancellation using the application's single executor.
-`backend/agents.py` validates provider plans and dispatches tasks transactionally.
-`backend/app.py` marks prior running operations/reviews interrupted on restart,
-and `backend/watches.py` owns existing scheduling. Durable offboarding needs to
-extend these paths with persisted step scope/approval, leases, reconciliation and
-retries. The current interrupted-on-restart behavior is not resumability.
-No second queue/executor or claim of exactly-once external effects was introduced.
+## Rechecks, history and discovery control
 
-Not yet implemented: durable access workflows/steps, vault connector orchestration,
-one-tap popup offboarding approval/progress, external connectors/triggers,
-discovery/debt, expiry, proof packs, reviews or handoffs. Refer to the master plan
-for their complete gates; this first map source does not complete Phase 1.
+Real completed local workflows schedule read-only +24h/+7d/+30d vault checks.
+Reappearing access or unavailable scope raises attention, not another automatic
+removal. Reports include step outcomes/timestamps, selected current access,
+rechecks, relevant audit events and chain validity/head. Unrelated workspace
+history is omitted. The control room offers read-only workflow history and JSON
+export. A final white-label PDF/share link Proof Pack is still pending.
 
-## Subsequent workflow foundation (schema 12)
+Discovery uses its own comparison-code connection, with no vault, scanner or
+removal permission. Staff can choose only currently assigned clients; owners
+can choose their workspace clients. Viewers cannot submit observations. Each
+site needs browser host permission plus explicit client/nickname consent. The
+worker sends only a consent ID on a top-level login-form attempt; the server
+binds person/client/domain/label to stored consent. Permission removal pauses
+local collection until explicitly enabled again. Discovery can be revoked in
+the extension or Connections; offboarding and restore revoke it too. See
+[the full protocol](ACCESS_DISCOVERY.md).
 
-The initial statement that durable local workflow steps were absent is now
-superseded by ACCESS_WORKFLOWS.md. Approval-bound client-vault plans and atomic
-revocation/rotation-verification steps now extend the existing Runner and watch
-scheduler. Dry-run, MFA, scope freshness, crash resume, cancellation and restore
-approval invalidation have focused coverage. The extension workflow permission,
-popup approval/progress, external connectors and remaining phases are still
-unfinished. Schema 11 remains a supported backup source. Production is unchanged
-and browser testing stays deferred under the user's latest instruction.
+## Verification and remaining scope
 
-The complete backend snapshot with the workflow foundation passed 462 tests,
-one skipped, before the final manifest/state guard extensions. The final focused
-workflow suite passed 13 tests; workflow/review/watch regressions passed 32.
-No browser sessions were operated during this implementation turn. No production
-schema upgrade, token expansion or connector authorization was performed.
+The prior offboarding increment passed backend 471 tests (one skipped) and
+frontend 348 tests. New discovery/map/migration verification is recorded below.
+Current web and content/popup/background builds compile without replacing the
+installed extension. Isolated build artifacts are under data/discovery-validation.
 
+Remaining implementation includes shared-password debt and the complete rotation
+queue, external connector leases/reconciliation/retries, departure triggers,
+freelancer expiry, weekly reviews, full handoffs and the final Proof Pack.
+Mandatory owner/admin MFA is currently enforced only for workflow access and
+approval. Advanced-UI flag conversion and archived phishing cleanup remain.
 
-## Extension workflow and evidence increment
+Browser acceptance, agency interviews/design partners, an independent security
+review, store/helper signing and recurring off-server backups remain genuine
+gates. Connector Phase 4 is not authorized by the master plan until at least
+three agencies report the stated pain; no such interviews have been conducted.
 
-Separate eight-hour owner/MFA workflow capabilities and popup plan creation,
-fresh approval, cancellation, progress and evidence views now reuse the existing
-runner. Scanner and vault grants retain their previous scope. The Clients &
-Access page includes read-only workflow history; ordinary execution starts in
-the extension. Real completed local workflows schedule read-only +24h/+7d/+30d
-checks and report reappearing access without a second removal. JSON evidence
-includes explicit limitations; this is not yet the final PDF Client Proof Pack.
-Shared-key rotation subsequently gained an extension workflow action using the
-existing crypto and a separately connected, unlocked owner vault. Both scoped
-authorizations are required; the rotation API covers exactly the remaining roster. No browser testing or production deployment was
-performed. The full frontend snapshot passed 346 tests across 75 files before
-the final history component; final verification is recorded below.
-
-
-Final extension-workflow verification (22 October 2026): 348 frontend tests
-passed across 76 files, including a wait for sharing-poll registration that
-removed a timing-dependent test race. Web and all three extension production
-builds passed. The installed extension directory and live Oracle deployment
-were deliberately left unchanged. Validation artifacts are under
-D:/sentinelops-validation-20261022 because C: ran out of space during disposable
-SQLite test creation. Only explicitly named generated test directories from
-this work were removed; production databases and backups were preserved.
-The focused workflow/evidence/backup/sharing-companion suite passed 37 tests;
-the final scope suite passed 19 and CORS/status/workflow regression passed 14.
-
-Final clean backend rerun: 471 passed, one skipped, one existing Starlette
-TestClient deprecation warning. The prior CORS regression is resolved. Full
-JUnit report: D:/sentinelops-validation-20261022/backend-final-results.xml.
-Browser testing remains deferred; this does not complete the full master plan.
+Final discovery regression: backend 476 passed, one skipped, one existing
+Starlette TestClient deprecation warning. Final frontend suite: 359 passed across
+78 files, including worker/popup checks for exact-site permission and the final
+offline-stop UI adjustment. Web and content/popup/worker
+builds passed into isolated validation directories. No installed browser files
+or live Oracle services were replaced.

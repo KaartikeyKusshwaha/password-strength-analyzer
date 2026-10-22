@@ -26,8 +26,18 @@ def snapshot(store, workspace):
         for row in systems:
             row['kind'] = 'shared_vault'
         available = [dict(row) for row in c.execute('SELECT id,name FROM team_vaults WHERE workspace=? ORDER BY name,id', (workspace,))]
-    return {'clients': clients, 'systems': systems, 'grants': grants, 'available_vaults': available,
-            'coverage': 'Current shared-vault memberships only. Invitations are not accepted access. This does not establish website account ownership, active sessions, MFA, device compliance or completed offboarding.'}
+        people=[dict(row) for row in c.execute('SELECT u.id,u.email,m.role FROM members m JOIN users u ON u.id=m.user WHERE m.workspace=? ORDER BY u.email,u.id',(workspace,))]
+        reported=[dict(row) for row in c.execute('SELECT a.*,u.email FROM access_grants a JOIN users u ON u.id=a.person WHERE a.workspace=? ORDER BY a.client,a.domain,a.account_label,a.id',(workspace,))]
+        known=set()
+        for row in reported:
+            if row['state']=='retired':continue
+            key=(row['client'],row['domain'])
+            if key not in known:
+                systems.append({'client':row['client'],'id':'account:'+row['domain'],'name':row['domain'],'kind':'reported_account','rotation_required':False,'epoch':None});known.add(key)
+            grants.append({'id':row['id'],'client':row['client'],'person_id':row['person'],'email':row['email'],'system_id':'account:'+row['domain'],'role':row['role'],'source':row['source'],'state':row['state'],'account_label':row['account_label'],'updated_at':row['updated_at']})
+
+    return {'clients': clients, 'systems': systems, 'grants': grants, 'available_vaults': available,'people':people,'retired_records':[row for row in reported if row['state']=='retired'],
+            'coverage': 'Live shared-vault memberships, manual reports and opt-in login-attempt observations. Invitations and reported activity are not verified external access. This does not establish website account ownership, active sessions, MFA, device compliance or completed offboarding.'}
 
 
 def register(app, store, auth, throttle):

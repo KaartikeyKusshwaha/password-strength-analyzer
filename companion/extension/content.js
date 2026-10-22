@@ -9,6 +9,7 @@ import {fillLoginForm,inspectLoginForm} from './login-form';
 import manifest from './public/manifest.json';
 import {offerLogin} from './login-assistant';
 import {inspectOtp,fillOtp} from './otp-form';
+import {isDiscoveryLoginForm} from './discovery-form';
 import {loginSubmission} from './login-submit';
 
 const estimator = new ZxcvbnFactory({ translations: en.translations, graphs: common.adjacencyGraphs, dictionary: {...common.dictionary, ...en.dictionary} });
@@ -40,6 +41,11 @@ async function inspectSaveOffer(){
     section.append(brand,title,detail,save,dismiss,status);shadow.append(css,section);document.documentElement.append(host);panel=host;
   }catch{/* No draft is recoverable after worker restart. */}finally{loginOfferBusy=false;}
 }
+// Discovery never reads form values; the worker uses the user's stored nickname.
+document.addEventListener('submit',event=>{
+  if(!event.isTrusted||window.top!==window||!isDiscoveryLoginForm(event.target,location.href))return;
+  chrome.runtime.sendMessage({type:'discovery-observe'}).catch(()=>{});
+},true);
 document.addEventListener('submit',event=>{
   if(!event.isTrusted||window.top!==window||!loginOffersEnabled)return;
   const entry=loginSubmission(event.target,location.href);if(!entry)return;

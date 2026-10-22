@@ -6,6 +6,14 @@ import {api} from './api';
 vi.mock('./api',()=>({api:vi.fn()}));
 const fixture=()=>({clients:[{id:'c1',name:'Orchard'},{id:'c2',name:'Cedar'}],systems:[{client:'c1',id:'v1',name:'Orchard accounts',rotation_required:1},{client:'c2',id:'v2',name:'Cedar accounts',rotation_required:0}],grants:[{client:'c1',person_id:'p1',email:'owner@example.test',system_id:'v1',role:'owner',state:'accepted'},{client:'c2',person_id:'p2',email:'invite@example.test',system_id:'v2',role:'viewer',state:'invited'}],available_vaults:[{id:'v1',name:'Orchard accounts'}],coverage:'Vault memberships only; not proof of website access.'});
 beforeEach(()=>{api.mockReset();api.mockImplementation(async path=>path==='/clients/access-map'?fixture():{ok:true});});
+it('labels manual and discovered accounts without treating them as accepted vault access',async()=>{
+  const value=fixture();value.grants.push({id:'reported',client:'c1',person_id:'p1',email:'owner@example.test',system_id:'account:app.test',role:'member',state:'observed',source:'extension_discovery',account_label:'Social account'});value.systems.push({client:'c1',id:'account:app.test',name:'app.test',kind:'reported_account'});
+  api.mockImplementation(async path=>path==='/clients/access-map'?value:{ok:true});render(<ClientAccess/>);
+  expect(await screen.findByText('Opt-in login attempt · sign-in not verified')).toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:'Unlink metadata: app.test'})).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Retire report: Social account'}));
+  await waitFor(()=>expect(api).toHaveBeenCalledWith('/clients/access-records/reported/retire',{}));
+});
 it('distinguishes invitations from access and surfaces incomplete rotation',async()=>{
   render(<ClientAccess/>);
   expect(await screen.findByText('owner@example.test',{selector:'td'})).toBeInTheDocument();

@@ -11,7 +11,7 @@ def test_schema_ten_archive_upgrades_without_losing_prior_accounts(system, tmp_p
         c.execute('DROP TABLE clients')
         c.execute('DELETE FROM schema_migrations WHERE version>=11')
         c.execute('DROP TABLE workflow_steps')
-        c.execute('DROP TABLE workflows')
+        c.execute('DROP TABLE workflows');c.execute('DROP TABLE access_grants')
     key, archive, destination = tmp_path/'key', tmp_path/'old.sentinelbackup', tmp_path/'restored'
     init_key(key)
     assert create_backup(source, key, archive)['schema'] == 10

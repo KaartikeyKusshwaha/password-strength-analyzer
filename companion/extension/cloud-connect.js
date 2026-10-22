@@ -13,7 +13,7 @@ export async function startCloudConnection(browser,origin=CLOUD_ORIGIN,fetcher=(
   const previous=await browser.storage.local.get('cloudConnect');
   if(previous.cloudConnect&&previous.cloudConnect.expires*1000>Date.now())throw new Error('Finish or cancel the existing connection request before starting another.');
   const proof=btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-  if(!['vault','security','access'].includes(scope))throw new Error('Unsupported connection scope.');
+  if(!['vault','security','access','discovery'].includes(scope))throw new Error('Unsupported connection scope.');
   const result=await request(origin,'start',proof,fetcher,{scope,device_pairing:scope==='security'});
   if(!/^[a-f0-9]{24}$/.test(result.id)||!/^\d{6}$/.test(result.code)||!Number.isFinite(result.expires)||result.approval_url!==origin+'/#connect='+result.id)throw new Error('Unexpected connection response. Nothing was connected.');
   const pending={origin,id:result.id,proof,code:result.code,expires:result.expires,scope};
@@ -30,6 +30,15 @@ export async function finishCloudConnection(browser,fetcher=(...args)=>globalThi
   if(result.status==='pending')return null;
   if(result.status!=='approved'||result.origin!==origin)throw new Error('Unexpected connection response.');
   if((pending.scope||'vault')!==(result.scope||'vault'))throw new Error('Connection scope changed. Start again.');
+  if(pending.scope==='discovery'){
+    if(!/^[A-Za-z0-9_-]{40,100}$/.test(result.token))throw new Error('Invalid discovery connection.');
+    const connection={origin,token:result.token,kind:'discovery'};
+    const check=await fetcher(origin+'/api/companion/discovery/context',{credentials:'omit',redirect:'error',headers:{Authorization:'Bearer '+result.token},signal:AbortSignal.timeout(10000)});
+    if(!check.ok)throw new Error('Discovery access could not be verified.');
+    await browser.storage.local.set({discoveryConnection:connection,discoverySites:[]});await browser.storage.local.remove('cloudConnect');
+    try{await request(origin,pending.id+'/ack',pending.proof,fetcher);}catch{}
+    return connection;
+  }
   if(pending.scope==='access'){
     if(!/^[A-Za-z0-9_-]{40,100}$/.test(result.token))throw new Error('Invalid workflow connection.');
     const connection={origin,token:result.token,kind:'access'};

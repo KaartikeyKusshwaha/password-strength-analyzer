@@ -16,7 +16,7 @@ export default function ClientAccess(){
   return <section aria-label="Client access map">
     {error&&<p role="alert" className="notice error">{error}</p>}
     <div className="panel"><h2>Who can touch each client?</h2>
-      <p>Link existing shared vaults to clients. Memberships below are read live; credential contents are never loaded by this map.</p>
+      <p>Link shared vaults and report other account access. Vault memberships are read live; manual reports and extension login observations keep their own evidence labels. Credential contents are never loaded by this map.</p>
       <button className="button secondary" disabled={busy} onClick={()=>run(async()=>{})}>Refresh access map</button>
       {!map&&!error&&<p role="status">Loading access metadata…</p>}
       {map&&<><p className="notice">{map.coverage}</p>
@@ -24,8 +24,8 @@ export default function ClientAccess(){
         <div className="inline"><label>Client<select value={client} onChange={e=>setClient(e.target.value)}><option value="">All clients</option>{map.clients.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
           <label>Person<select value={person} onChange={e=>setPerson(e.target.value)}><option value="">All people</option>{people.map(([id,email])=><option key={id} value={id}>{email}</option>)}</select></label></div>
         {map.systems.filter(item=>(!client||item.client===client)&&item.rotation_required).map(item=><p className="notice" key={item.client+item.id}>Key rotation required: {clientName(item.client)} / {item.name}. Removed members may retain old credentials; new access is not fully secured until rotation and affected website password changes are completed.</p>)}
-        <table><caption>Vault-derived client access</caption><thead><tr><th>Client</th><th>Person</th><th>Vault source</th><th>Role</th><th>Evidence</th></tr></thead>
-          <tbody>{rows.map(row=><tr key={row.client+row.person_id+row.system_id}><td>{clientName(row.client)}</td><td>{row.email}</td><td>{vaultName(row.system_id)}</td><td>{row.role}</td><td>{row.state==='accepted'?'Accepted vault membership':'Invitation pending · not accepted access'}</td></tr>)}</tbody></table>
+        <table><caption>Client access and reported accounts</caption><thead><tr><th>Client</th><th>Person</th><th>System source</th><th>Role</th><th>Evidence</th></tr></thead>
+          <tbody>{rows.map(row=><tr key={row.id||row.client+row.person_id+row.system_id}><td>{clientName(row.client)}</td><td>{row.email}</td><td>{vaultName(row.system_id)}{row.account_label&&<p>{row.account_label}</p>}</td><td>{row.role}</td><td>{row.source==='manual'?'Manual report · external access not verified':row.source==='extension_discovery'?'Opt-in login attempt · sign-in not verified':row.state==='accepted'?'Accepted vault membership':'Invitation pending · not accepted access'}{row.id&&<button className="button secondary" disabled={busy} onClick={()=>run(()=>api('/clients/access-records/'+row.id+'/retire',{}))}>Retire report: {row.account_label}</button>}</td></tr>)}</tbody></table>
         {!rows.length&&<p>No matching memberships. This is not proof that no external account access exists.</p>}
       </>}
     </div>
@@ -38,7 +38,13 @@ export default function ClientAccess(){
         <label>Existing shared vault<select name="vault" required>{!map.available_vaults.length&&<option value="">No shared vaults available</option>}{map.available_vaults.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
         <button className="button" disabled={busy||!map.available_vaults.length}>Link shared vault</button>
       </form>}
-      {map?.systems.map(item=><div className="member-row" key={item.client+item.id}><p>{clientName(item.client)} / {item.name}</p><button className="button secondary" disabled={busy} onClick={()=>run(()=>api('/clients/'+item.client+'/vaults/'+item.id+'/unlink',{}))}>Unlink metadata: {item.name}</button></div>)}
+      {map?.systems.filter(item=>!item.kind||item.kind==='shared_vault').map(item=><div className="member-row" key={item.client+item.id}><p>{clientName(item.client)} / {item.name}</p><button className="button secondary" disabled={busy} onClick={()=>run(()=>api('/clients/'+item.client+'/vaults/'+item.id+'/unlink',{}))}>Unlink metadata: {item.name}</button></div>)}
+      {map?.clients.length>0&&map.people?.length>0&&<details><summary>Report account access without a connector</summary><p>This records a person's reported access; it does not create, verify or revoke an external account. Use a nickname, never a password or API key.</p><form onSubmit={event=>{event.preventDefault();const form=event.currentTarget,data=new FormData(form);run(async()=>{await api('/clients/access-records',Object.fromEntries(data));form.reset();});}}>
+        <label>Reported client<select name="client_id" required>{map.clients.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+        <label>Reported person<select name="person_id" required>{map.people.map(item=><option key={item.id} value={item.id}>{item.email}</option>)}</select></label>
+        <label>Exact hostname<input name="domain" required maxLength={253} placeholder="app.example.com"/></label><label>Account nickname<input name="account_label" required maxLength={100}/></label><label>Reported role<select name="role" defaultValue="member">{['owner','admin','editor','viewer','member'].map(role=><option key={role}>{role}</option>)}</select></label><button className="button" disabled={busy}>Save reported access</button>
+      </form></details>}
+      {map?.retired_records?.length>0&&<p>{map.retired_records.length} reported account record(s) retired. Retiring metadata does not revoke external access.</p>}
     </div>
     {map&&<WorkflowHistory/>}
   </section>;

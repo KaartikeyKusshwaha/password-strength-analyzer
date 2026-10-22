@@ -16,11 +16,13 @@ SECURITY_SCOPE='system:extension-security'
 SECURITY_KIND='security_connection'
 ACCESS_SCOPE='system:extension-access'
 ACCESS_KIND='access_connection'
+DISCOVERY_SCOPE='system:extension-discovery'
+DISCOVERY_KIND='discovery_connection'
 
 class Proof(BaseModel):
     model_config=ConfigDict(extra='forbid')
     proof: SecretStr = Field(min_length=43,max_length=100)
-    scope: Literal['vault','security','access'] = 'vault'
+    scope: Literal['vault','security','access','discovery'] = 'vault'
     device_pairing: bool = False
 
 class Approval(BaseModel):
@@ -74,6 +76,16 @@ def register(app,store,auth,throttle,cipher,settings,shared_metadata):
             record=lookup(c,identifier)
             reject(record['status']=='pending','This request was already decided',409)
             reject(hmac.compare_digest(body.confirmed_code,record['code']),'Connection code does not match')
+            if record.get('scope')=='discovery':
+                reject(session['role'] in {'owner','analyst','reviewer'},'Reporting permission required')
+                reject(body.vault_id is None and body.workspace_id==session['workspace'] and not body.device_pairing and body.vault_kind=='personal','Discovery approval does not match',409)
+                token=secrets.token_urlsafe(40)
+                grant=dict(id=digest(token),user=session['user'],workspace=session['workspace'],origin=record['origin'],expires=time.time()+30*86400)
+                Store.put(c,DISCOVERY_SCOPE,DISCOVERY_KIND,grant)
+                record.update(status='approved',grant=cipher.encrypt(token.encode()).decode(),user=session['user'],workspace=session['workspace'])
+                Store.put(c,SCOPE,KIND,record)
+                Store.event(c,session['workspace'],session['user'],'extension.discovery_connected','opt-in-account-metadata')
+                return {'approved':True,'scope':'Your own domain and chosen account-label observations on explicitly enabled sites, for thirty days. No passwords, browsing history, vault access or removal permission.'}
             if record.get('scope')=='access':
                 reject(body.vault_id is None and body.workspace_id==session['workspace'] and not body.device_pairing and body.vault_kind=='personal','Workflow approval does not match',409)
                 user=c.execute('SELECT mfa FROM users WHERE id=?',(session['user'],)).fetchone()
@@ -122,6 +134,9 @@ def register(app,store,auth,throttle,cipher,settings,shared_metadata):
             if record.get('scope')=='security':
                 grant=Store.get(c,SECURITY_SCOPE,SECURITY_KIND,digest(token))
                 reject(grant and grant['expires']>time.time(),'Connection revoked. Start again.',410)
+            elif record.get('scope')=='discovery':
+                grant=Store.get(c,DISCOVERY_SCOPE,DISCOVERY_KIND,digest(token))
+                reject(grant and grant['expires']>time.time(),'Connection revoked. Start again.',410)
             elif record.get('scope')=='access':
                 grant=Store.get(c,ACCESS_SCOPE,ACCESS_KIND,digest(token))
                 reject(grant and grant['expires']>time.time(),'Connection revoked. Start again.',410)
@@ -145,6 +160,10 @@ def register(app,store,auth,throttle,cipher,settings,shared_metadata):
                 if record.get('scope')=='security':
                     c.execute('DELETE FROM entities WHERE id=? AND workspace=? AND kind=?',(digest(token),SECURITY_SCOPE,SECURITY_KIND))
                     Store.event(c,record['workspace'],record['user'],'extension.security_revoked','cancelled-handoff')
+                elif record.get('scope')=='discovery':
+                    c.execute('DELETE FROM entities WHERE id=? AND workspace=? AND kind=?',(digest(token),DISCOVERY_SCOPE,DISCOVERY_KIND))
+                    c.execute("DELETE FROM entities WHERE workspace=? AND kind='discovery_consents' AND json_extract(data,'$.connection')=?",(record['workspace'],digest(token)))
+                    Store.event(c,record['workspace'],record['user'],'extension.discovery_revoked','cancelled-handoff')
                 elif record.get('scope')=='access':
                     c.execute('DELETE FROM entities WHERE id=? AND workspace=? AND kind=?',(digest(token),ACCESS_SCOPE,ACCESS_KIND))
                     Store.event(c,record['workspace'],record['user'],'extension.access_revoked','cancelled-handoff')

@@ -2,6 +2,16 @@ import {expect,it,vi} from 'vitest';
 import {startCloudConnection,finishCloudConnection,CLOUD_ORIGIN} from '../../companion/extension/cloud-connect';
 function browser(){const saved={connections:[{origin:'http://127.0.0.1:8110',token:'legacy-test-only',vaultId:'legacy'}]};return {saved,permissions:{request:vi.fn(async()=>true),contains:vi.fn(async()=>true)},tabs:{create:vi.fn(async()=>{})},storage:{local:{get:vi.fn(async()=>({...saved})),set:vi.fn(async value=>Object.assign(saved,value)),remove:vi.fn(async key=>{delete saved[key];})}}};}
 function transport(){return vi.fn(async(url)=>({ok:true,status:200,json:async()=>url.endsWith('/start')?{id:'a'.repeat(24),code:'123456',expires:Date.now()/1000+300,approval_url:CLOUD_ORIGIN+'/#connect='+'a'.repeat(24)}:url.endsWith('/poll')?{status:'approved',origin:CLOUD_ORIGIN,token:'x'.repeat(54)}:url.endsWith('/vault')?{revision:1,envelope:{version:1},vault:{id:'new-vault',name:'Work'}}:{ok:true}}));}
+it('keeps discovery separate and requires fresh per-site opt-in after connecting',async()=>{
+  const b=browser();b.saved.discoverySites=[{domain:'old.test'}];
+  const fetcher=vi.fn(async url=>({ok:true,json:async()=>url.endsWith('/start')?{id:'a'.repeat(24),code:'123456',expires:Date.now()/1000+300,approval_url:CLOUD_ORIGIN+'/#connect='+'a'.repeat(24)}:url.endsWith('/poll')?{status:'approved',scope:'discovery',origin:CLOUD_ORIGIN,token:'x'.repeat(54)}:{clients:[]}}));
+  await startCloudConnection(b,CLOUD_ORIGIN,fetcher,'discovery');
+  const connection=await finishCloudConnection(b,fetcher);
+  expect(connection.kind).toBe('discovery');expect(b.saved.discoveryConnection).toEqual(connection);
+  expect(b.saved.discoverySites).toEqual([]);expect(b.saved.connections).toHaveLength(1);
+  expect(fetcher.mock.calls.some(([url])=>url.endsWith('/discovery/context'))).toBe(true);
+  expect(fetcher.mock.calls.some(([url])=>url.endsWith('/vault'))).toBe(false);
+});
 it('stores workflow access separately and verifies its narrow context before acknowledgement',async()=>{
   const b=browser();
   const fetcher=vi.fn(async url=>({ok:true,json:async()=>url.endsWith('/start')?{id:'a'.repeat(24),code:'123456',expires:Date.now()/1000+300,approval_url:CLOUD_ORIGIN+'/#connect='+'a'.repeat(24)}:url.endsWith('/poll')?{status:'approved',scope:'access',origin:CLOUD_ORIGIN,token:'x'.repeat(54)}:{ok:true}}));

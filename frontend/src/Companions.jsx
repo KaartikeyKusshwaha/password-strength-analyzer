@@ -4,6 +4,7 @@ import { api } from "./api";
 import companionManifest from '../../companion/extension/public/manifest.json';
 import BrowserConnections from './BrowserConnections';
 import SecurityConnections from './SecurityConnections';
+import AccessConnections from './AccessConnections';
 export default function Companions({ assets, refresh, canWrite, go, devices = [] }) {
   const [error, setError] = useState(""),
     [pair, setPair] = useState(null),
@@ -32,6 +33,7 @@ export default function Companions({ assets, refresh, canWrite, go, devices = []
         </div>
       )}
       <SecurityConnections/>
+      <AccessConnections/>
       <div className="two-col">
         <section className="panel">
           <span className="tool-icon blue">

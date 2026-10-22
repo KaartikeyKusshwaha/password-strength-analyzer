@@ -1,3 +1,4 @@
+import AccountDiscovery from './AccountDiscovery';
 import AccessWorkflows from './AccessWorkflows';
 import SecurityAssistant from './SecurityAssistant';
 import CodeFill from './CodeFill';
@@ -134,6 +135,7 @@ export function Popup() {
         </div>
       </header>
       <AccessWorkflows vaultSession={session.current} selectedVault={config} vaultUnlocked={!!entries} onRotated={()=>{lockVault();setNotice('Shared vault key rotated. Unlock again for its new key.');}}/>
+      <AccountDiscovery active={active}/>
       <SecurityAssistant/>
       <LoginSaveOffers browser={chrome} origin={active?.origin}/>
       <details><summary>Control room · vault administration and history</summary><p className="fine">Manage vaults, shared access, results history and account settings. Everyday checks and credential actions stay here.</p><button className="secondary" onClick={()=>chrome.tabs.create({url:(config?.origin||pendingConnection?.origin||'https://sentinelops.129-225-76-232.sslip.io')+'/#tool=passwords'})}>Open control room</button></details>

@@ -359,7 +359,7 @@ def create_app(settings=None):
 
     @app.middleware("http")
     async def boundary(request, call_next):
-        companion = bool(re.fullmatch(r'/api/companion/(vault|actions(?:/context|/[a-f0-9]{24}/(?:claim|result|cancel))?|connect/(?:start|[a-f0-9]{24}/(?:poll|ack|cancel))|access/(?:context|revoke|workflows(?:/[a-f0-9]{24}/(?:approve|cancel|report|vaults/[a-f0-9]{24}/rotation))?)|security/(?:context|revoke|inventory-preview|device-pairing/(?:details|approve)|operations(?:/[a-f0-9]{24}(?:/cancel)?)?))',request.url.path))
+        companion = bool(re.fullmatch(r'/api/companion/(vault|actions(?:/context|/[a-f0-9]{24}/(?:claim|result|cancel))?|connect/(?:start|[a-f0-9]{24}/(?:poll|ack|cancel))|discovery/(?:context|revoke|observe|consents(?:/[a-f0-9]{24}/disable)?)|access/(?:context|revoke|workflows(?:/[a-f0-9]{24}/(?:approve|cancel|report|vaults/[a-f0-9]{24}/rotation))?)|security/(?:context|revoke|inventory-preview|device-pairing/(?:details|approve)|operations(?:/[a-f0-9]{24}(?:/cancel)?)?))',request.url.path))
         extension_origin = request.headers.get("origin", "")
         extension_origin_valid = bool(re.fullmatch(r"chrome-extension://[a-p]{32}", extension_origin))
         if companion and request.method == "OPTIONS":
@@ -538,6 +538,8 @@ def create_app(settings=None):
     extension_connect.register(app,store,auth,throttle,cipher,settings,lambda c,session,identifier:shared_companions['metadata'](c,session,identifier))
     from . import client_access
     client_access.register(app,store,auth,throttle)
+    from . import access_records
+    access_records.register(app,store,auth,throttle)
 
     @app.post('/api/vaults')
     def create_vault_space(body: VaultProperties, session=Depends(auth)):
@@ -924,6 +926,8 @@ def create_app(settings=None):
             c.execute('DELETE FROM devices WHERE workspace=? AND user=?',(session['workspace'],identifier))
             c.execute("DELETE FROM entities WHERE workspace='system:extension-security' AND kind='security_connection' AND json_extract(data,'$.user')=? AND json_extract(data,'$.workspace')=?",(identifier,session['workspace']))
             c.execute("DELETE FROM entities WHERE workspace='system:extension-access' AND kind='access_connection' AND json_extract(data,'$.user')=? AND json_extract(data,'$.workspace')=?",(identifier,session['workspace']))
+            c.execute("DELETE FROM entities WHERE workspace='system:extension-discovery' AND kind='discovery_connection' AND json_extract(data,'$.user')=? AND json_extract(data,'$.workspace')=?",(identifier,session['workspace']))
+            c.execute("DELETE FROM entities WHERE workspace=? AND kind='discovery_consents' AND json_extract(data,'$.user')=?",(session['workspace'],identifier))
             for kind in ('operations','jobs','security_reviews'):
                 for job in Store.all(c,session['workspace'],kind):
                     if job['status'] in {'queued','running'} and (job['created_by']==identifier or job.get('device_id') in devices):
