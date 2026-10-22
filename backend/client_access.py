@@ -15,6 +15,21 @@ class VaultLink(BaseModel):
     vault_id: str = Field(pattern=r'^[a-f0-9]{24}$')
 
 
+def snapshot(store, workspace):
+    with store.connect() as c:
+        clients = [dict(row) for row in c.execute('SELECT id,name FROM clients WHERE workspace=? ORDER BY name,id', (workspace,))]
+        systems = [dict(row) for row in c.execute('SELECT l.client,v.id,v.name,v.rotation_required,v.epoch FROM client_vaults l JOIN clients p ON p.id=l.client AND p.workspace=l.workspace JOIN team_vaults v ON v.id=l.vault AND v.workspace=l.workspace WHERE l.workspace=? ORDER BY p.name,v.name,v.id', (workspace,))]
+        grants = [dict(row) for row in c.execute('SELECT l.client,g.user AS person_id,u.email,v.id AS system_id,g.role,g.accepted FROM client_vaults l JOIN clients p ON p.id=l.client AND p.workspace=l.workspace JOIN team_vaults v ON v.id=l.vault AND v.workspace=l.workspace JOIN team_grants g ON g.vault=v.id JOIN members m ON m.user=g.user AND m.workspace=l.workspace JOIN users u ON u.id=g.user WHERE l.workspace=? ORDER BY l.client,u.email,v.id', (workspace,))]
+        for row in grants:
+            row['source'] = 'shared_vault_membership'
+            row['state'] = 'accepted' if row.pop('accepted') else 'invited'
+        for row in systems:
+            row['kind'] = 'shared_vault'
+        available = [dict(row) for row in c.execute('SELECT id,name FROM team_vaults WHERE workspace=? ORDER BY name,id', (workspace,))]
+    return {'clients': clients, 'systems': systems, 'grants': grants, 'available_vaults': available,
+            'coverage': 'Current shared-vault memberships only. Invitations are not accepted access. This does not establish website account ownership, active sessions, MFA, device compliance or completed offboarding.'}
+
+
 def register(app, store, auth, throttle):
     def owner(session):
         if session['role'] != 'owner':
@@ -29,19 +44,7 @@ def register(app, store, auth, throttle):
     @app.get('/api/clients/access-map')
     def access_map(session=Depends(auth)):
         owner(session)
-        workspace = session['workspace']
-        with store.connect() as c:
-            clients = [dict(row) for row in c.execute('SELECT id,name FROM clients WHERE workspace=? ORDER BY name,id', (workspace,))]
-            systems = [dict(row) for row in c.execute('SELECT l.client,v.id,v.name,v.rotation_required,v.epoch FROM client_vaults l JOIN clients p ON p.id=l.client AND p.workspace=l.workspace JOIN team_vaults v ON v.id=l.vault AND v.workspace=l.workspace WHERE l.workspace=? ORDER BY p.name,v.name,v.id', (workspace,))]
-            grants = [dict(row) for row in c.execute('SELECT l.client,g.user AS person_id,u.email,v.id AS system_id,g.role,g.accepted FROM client_vaults l JOIN clients p ON p.id=l.client AND p.workspace=l.workspace JOIN team_vaults v ON v.id=l.vault AND v.workspace=l.workspace JOIN team_grants g ON g.vault=v.id JOIN members m ON m.user=g.user AND m.workspace=l.workspace JOIN users u ON u.id=g.user WHERE l.workspace=? ORDER BY l.client,u.email,v.id', (workspace,))]
-            for row in grants:
-                row['source'] = 'shared_vault_membership'
-                row['state'] = 'accepted' if row.pop('accepted') else 'invited'
-            for row in systems:
-                row['kind'] = 'shared_vault'
-            available = [dict(row) for row in c.execute('SELECT id,name FROM team_vaults WHERE workspace=? ORDER BY name,id', (workspace,))]
-        return {'clients': clients, 'systems': systems, 'grants': grants, 'available_vaults': available,
-                'coverage': 'Current shared-vault memberships only. Invitations are not accepted access. This does not establish website account ownership, active sessions, MFA, device compliance or completed offboarding.'}
+        return snapshot(store, session['workspace'])
 
     @app.post('/api/clients')
     def create(body: ClientCreate, session=Depends(auth)):

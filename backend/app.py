@@ -359,13 +359,13 @@ def create_app(settings=None):
 
     @app.middleware("http")
     async def boundary(request, call_next):
-        companion = bool(re.fullmatch(r'/api/companion/(vault|actions(?:/context|/[a-f0-9]{24}/(?:claim|result|cancel))?|connect/(?:start|[a-f0-9]{24}/(?:poll|ack|cancel))|security/(?:context|revoke|inventory-preview|device-pairing/(?:details|approve)|operations(?:/[a-f0-9]{24}(?:/cancel)?)?))',request.url.path))
+        companion = bool(re.fullmatch(r'/api/companion/(vault|actions(?:/context|/[a-f0-9]{24}/(?:claim|result|cancel))?|connect/(?:start|[a-f0-9]{24}/(?:poll|ack|cancel))|access/(?:context|revoke|workflows(?:/[a-f0-9]{24}/(?:approve|cancel|report|vaults/[a-f0-9]{24}/rotation))?)|security/(?:context|revoke|inventory-preview|device-pairing/(?:details|approve)|operations(?:/[a-f0-9]{24}(?:/cancel)?)?))',request.url.path))
         extension_origin = request.headers.get("origin", "")
         extension_origin_valid = bool(re.fullmatch(r"chrome-extension://[a-p]{32}", extension_origin))
         if companion and request.method == "OPTIONS":
             if not extension_origin_valid:
                 return JSONResponse({"detail": "Extension origin required"}, status_code=403)
-            return Response(status_code=204, headers={"Access-Control-Allow-Origin": extension_origin, "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "Authorization, Content-Type, X-Sentinel-Companion-Version", "Vary": "Origin"})
+            return Response(status_code=204, headers={"Access-Control-Allow-Origin": extension_origin, "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "Authorization, Content-Type, X-Sentinel-Companion-Version" + (", X-Sentinel-Vault-Token" if request.url.path.endswith("/rotation") else ""), "Vary": "Origin"})
         if request.method in {"POST", "PATCH", "PUT", "DELETE"}:
             origin = request.headers.get("origin")
             if origin and origin != settings.origin and not (companion and extension_origin_valid):
@@ -897,6 +897,7 @@ def create_app(settings=None):
             user = c.execute("SELECT * FROM users WHERE id=?", (session["user"],)).fetchone()
             must(verify_password(body.password.get_secret_value(), user["password"]) and consume_factor(c, user, body.code, cipher), "Password and unused factor required", 401)
             c.execute("UPDATE users SET mfa=NULL,mfa_draft=NULL,mfa_step=-1,recovery='[]' WHERE id=?", (user["id"],))
+            c.execute("DELETE FROM entities WHERE workspace='system:extension-access' AND kind='access_connection' AND json_extract(data,'$.user')=?",(user["id"],))
             c.execute("DELETE FROM sessions WHERE user=?", (user["id"],))
             result = issue(c, response, user["id"], session["workspace"])
             Store.event(c, session["workspace"], user["id"], "auth.mfa_disabled", user["id"])
@@ -922,6 +923,7 @@ def create_app(settings=None):
             devices=[r['id'] for r in c.execute('SELECT id FROM devices WHERE workspace=? AND user=?',(session['workspace'],identifier))]
             c.execute('DELETE FROM devices WHERE workspace=? AND user=?',(session['workspace'],identifier))
             c.execute("DELETE FROM entities WHERE workspace='system:extension-security' AND kind='security_connection' AND json_extract(data,'$.user')=? AND json_extract(data,'$.workspace')=?",(identifier,session['workspace']))
+            c.execute("DELETE FROM entities WHERE workspace='system:extension-access' AND kind='access_connection' AND json_extract(data,'$.user')=? AND json_extract(data,'$.workspace')=?",(identifier,session['workspace']))
             for kind in ('operations','jobs','security_reviews'):
                 for job in Store.all(c,session['workspace'],kind):
                     if job['status'] in {'queued','running'} and (job['created_by']==identifier or job.get('device_id') in devices):
@@ -1361,7 +1363,7 @@ def create_app(settings=None):
     from .watches import register as register_watches
     app.state.watch_service=register_watches(app,store,auth,writable,throttle,persist_scan)
     from . import access_workflows
-    access_workflows.register(app,store,auth,throttle,cipher,executor)
+    access_workflows.register(app,store,auth,throttle,cipher,executor,shared_companions)
     app.state.watch_service.additional_ticks.append(app.state.access_workflow_tick)
 
     dist = ROOT / "frontend" / "dist"

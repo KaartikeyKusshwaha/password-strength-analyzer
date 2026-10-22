@@ -14,11 +14,13 @@ SCOPE='system:extension-connect'
 KIND='extension_connect'
 SECURITY_SCOPE='system:extension-security'
 SECURITY_KIND='security_connection'
+ACCESS_SCOPE='system:extension-access'
+ACCESS_KIND='access_connection'
 
 class Proof(BaseModel):
     model_config=ConfigDict(extra='forbid')
     proof: SecretStr = Field(min_length=43,max_length=100)
-    scope: Literal['vault','security'] = 'vault'
+    scope: Literal['vault','security','access'] = 'vault'
     device_pairing: bool = False
 
 class Approval(BaseModel):
@@ -72,6 +74,17 @@ def register(app,store,auth,throttle,cipher,settings,shared_metadata):
             record=lookup(c,identifier)
             reject(record['status']=='pending','This request was already decided',409)
             reject(hmac.compare_digest(body.confirmed_code,record['code']),'Connection code does not match')
+            if record.get('scope')=='access':
+                reject(body.vault_id is None and body.workspace_id==session['workspace'] and not body.device_pairing and body.vault_kind=='personal','Workflow approval does not match',409)
+                user=c.execute('SELECT mfa FROM users WHERE id=?',(session['user'],)).fetchone()
+                reject(session['role']=='owner' and user and user['mfa'],'Owner access and account MFA required')
+                token=secrets.token_urlsafe(40)
+                grant=dict(id=digest(token),user=session['user'],workspace=session['workspace'],origin=record['origin'],expires=time.time()+8*3600)
+                Store.put(c,ACCESS_SCOPE,ACCESS_KIND,grant)
+                record.update(status='approved',grant=cipher.encrypt(token.encode()).decode(),user=session['user'],workspace=session['workspace'])
+                Store.put(c,SCOPE,KIND,record)
+                Store.event(c,session['workspace'],session['user'],'extension.access_connected','workflow-only')
+                return {'approved':True,'scope':'Client access metadata and vault offboarding plans for eight hours. Each execution requires fresh password and MFA approval. No vault contents or scanning access.'}
             if record.get('scope')=='security':
                 reject(body.vault_id is None and body.vault_kind=='personal' and body.workspace_id==session['workspace'],'Workspace approval does not match',409)
                 reject(session['role'] in {'owner','analyst','reviewer'},'Assessment permission required')
@@ -109,6 +122,9 @@ def register(app,store,auth,throttle,cipher,settings,shared_metadata):
             if record.get('scope')=='security':
                 grant=Store.get(c,SECURITY_SCOPE,SECURITY_KIND,digest(token))
                 reject(grant and grant['expires']>time.time(),'Connection revoked. Start again.',410)
+            elif record.get('scope')=='access':
+                grant=Store.get(c,ACCESS_SCOPE,ACCESS_KIND,digest(token))
+                reject(grant and grant['expires']>time.time(),'Connection revoked. Start again.',410)
             else:reject(c.execute('SELECT 1 FROM companions WHERE token=? AND expires>?',(digest(token),time.time())).fetchone(),'Connection revoked. Start again.',410)
         return {'status':'approved','token':token,'origin':settings.origin,'scope':record.get('scope','vault')}
 
@@ -129,6 +145,9 @@ def register(app,store,auth,throttle,cipher,settings,shared_metadata):
                 if record.get('scope')=='security':
                     c.execute('DELETE FROM entities WHERE id=? AND workspace=? AND kind=?',(digest(token),SECURITY_SCOPE,SECURITY_KIND))
                     Store.event(c,record['workspace'],record['user'],'extension.security_revoked','cancelled-handoff')
+                elif record.get('scope')=='access':
+                    c.execute('DELETE FROM entities WHERE id=? AND workspace=? AND kind=?',(digest(token),ACCESS_SCOPE,ACCESS_KIND))
+                    Store.event(c,record['workspace'],record['user'],'extension.access_revoked','cancelled-handoff')
                 else:
                     c.execute('DELETE FROM companions WHERE token=?',(digest(token),))
                     Store.event(c,record.get('workspace') or 'personal:'+record['user'],record['user'],'companion.authorization_cancelled',record['vault_id'])

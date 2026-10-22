@@ -2,7 +2,7 @@
 import hashlib
 import json
 import time
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 from .store import Store, canonical, now, uid
 from .security import consume_factor, verify_password
@@ -51,6 +51,7 @@ def scope(c,workspace,client,person,actor):
 def view(c,row):
     value=dict(row);value['plan']=json.loads(value['plan']);value['approval']=json.loads(value['approval']) if value['approval'] else None
     value['steps']=[dict(step) for step in c.execute('SELECT * FROM workflow_steps WHERE workflow=? ORDER BY position',(row['id'],))]
+    value['rechecks']=[json.loads(item['data']) for item in c.execute("SELECT data FROM entities WHERE workspace=? AND kind='access_rechecks' AND json_extract(data,'$.workflow')=? ORDER BY json_extract(data,'$.due')",(row['workspace'],row['id']))]
     value['coverage']='Selected client vault memberships only. Cached credentials and website sessions are not erased; affected website-password rotation remains separate.'
     return value
 
@@ -72,7 +73,12 @@ def advance_one(store,workspace,identifier,clock=time.time):
         if not valid:
             c.execute("UPDATE workflows SET status='blocked',updated_at=? WHERE id=?",(now(),identifier));Store.event(c,workspace,actor,'access_workflow.approval_lost',identifier);return False
         if not step:
-            c.execute('UPDATE workflows SET status=?,updated_at=? WHERE id=?',('dry_run_complete' if plan['dry_run'] else 'complete',now(),identifier));Store.event(c,workspace,actor,'access_workflow.finished',identifier);return False
+            c.execute('UPDATE workflows SET status=?,updated_at=? WHERE id=?',('dry_run_complete' if plan['dry_run'] else 'complete',now(),identifier))
+            Store.event(c,workspace,actor,'access_workflow.finished',identifier)
+            if not plan['dry_run']:
+                from .access_evidence import schedule
+                schedule(c,row)
+            return False
         snapshot=next((item for item in plan['vaults'] if item['vault']==step['vault']),None)
         vault=c.execute('SELECT * FROM team_vaults WHERE id=? AND workspace=?',(step['vault'],workspace)).fetchone()
         grant=c.execute('SELECT * FROM team_grants WHERE vault=? AND user=?',(step['vault'],row['person'])).fetchone()
@@ -99,7 +105,7 @@ def advance_one(store,workspace,identifier,clock=time.time):
         return True
 
 
-def register(app,store,auth,throttle,cipher,executor):
+def register(app,store,auth,throttle,cipher,executor,shared_companions):
     def authorized(session):require(session['role']=='owner','Workspace owner access required',403)
     def get(c,session,identifier):return require(c.execute('SELECT * FROM workflows WHERE id=? AND workspace=?',(identifier,session['workspace'])).fetchone(),'Workflow not found',404)
     def dispatch(workspace,identifier):app.state.review_runner.enqueue_access(executor,workspace,identifier)
@@ -108,6 +114,12 @@ def register(app,store,auth,throttle,cipher,executor):
     def listing(session=Depends(auth)):
         authorized(session)
         with store.connect() as c:return {'workflows':[view(c,row) for row in c.execute('SELECT * FROM workflows WHERE workspace=? ORDER BY created_at DESC LIMIT 100',(session['workspace'],))]}
+
+    @app.get('/api/access-workflows/{identifier}/report')
+    def report(identifier:str,session=Depends(auth)):
+        authorized(session)
+        from .access_evidence import report as evidence
+        with store.connect() as c:return evidence(c,get(c,session,identifier))
 
     @app.post('/api/access-workflows')
     def create(body:PlanRequest,session=Depends(auth)):
@@ -150,7 +162,86 @@ def register(app,store,auth,throttle,cipher,executor):
             c.execute("UPDATE workflow_steps SET status='cancelled' WHERE workflow=? AND status='pending'",(identifier,));Store.event(c,session['workspace'],session['user'],'access_workflow.cancelled',identifier)
         return {'ok':True,'note':'Completed removals are not undone.'}
 
+    # Narrow bearer routes reuse the very same planner, approver and canceller.
+    from .extension_connect import ACCESS_SCOPE, ACCESS_KIND
+    from .security import digest as token_digest
+    from .client_access import snapshot
+    import re
+    def access_auth(request:Request):
+        origin=request.headers.get('origin','')
+        require(re.fullmatch(r'chrome-extension://[a-p]{32}',origin),'Extension origin required',403)
+        bearer=request.headers.get('authorization','')
+        require(bearer.startswith('Bearer '),'Workflow connection required',401)
+        with store.connect() as c:
+            grant=Store.get(c,ACCESS_SCOPE,ACCESS_KIND,token_digest(bearer[7:]))
+            require(grant and grant['expires']>time.time() and grant['origin']==origin,'Workflow connection expired or revoked',401)
+            user=owner(c,grant['workspace'],grant['user'])
+            require(user and user['mfa'],'Owner access and account MFA required',403)
+        return {**grant,'role':'owner'}
+
+    @app.get('/api/companion/access/context')
+    def extension_context(session=Depends(access_auth)):
+        return {**snapshot(store,session['workspace']),'expires':session['expires']}
+
+    @app.post('/api/companion/access/revoke')
+    def extension_revoke(session=Depends(access_auth)):
+        with store.connect(write=True) as c:
+            c.execute('DELETE FROM entities WHERE id=? AND workspace=? AND kind=?',(session['id'],ACCESS_SCOPE,ACCESS_KIND))
+            Store.event(c,session['workspace'],session['user'],'extension.access_revoked','owner-disconnected')
+        return {'ok':True}
+
+    @app.get('/api/companion/access/workflows')
+    def extension_listing(session=Depends(access_auth)):return listing(session)
+
+    @app.post('/api/companion/access/workflows')
+    def extension_create(body:PlanRequest,session=Depends(access_auth)):return create(body,session)
+
+    @app.post('/api/companion/access/workflows/{identifier}/approve')
+    def extension_approve(identifier:str,body:Approval,session=Depends(access_auth)):return approve(identifier,body,session)
+
+    @app.post('/api/companion/access/workflows/{identifier}/cancel')
+    def extension_cancel(identifier:str,session=Depends(access_auth)):return cancel(identifier,session)
+
+    @app.get('/api/companion/access/workflows/{identifier}/report')
+    def extension_report(identifier:str,session=Depends(access_auth)):return report(identifier,session)
+
+    from .sharing import TeamRotate
+    def rotation_connection(c,session,identifier,vault,request):
+        row=get(c,session,identifier);plan=json.loads(row['plan'])
+        approval=json.loads(row['approval']) if row['approval'] else None
+        require(row['status']=='waiting_unlock' and not plan['dry_run'] and row['created_by']==session['user'] and approval and approval.get('actor')==session['user'] and approval['expires']>time.time() and approval['digest']==row['plan_digest']==digest(plan),'Active approved workflow required')
+        require(any(item['vault']==vault for item in plan['vaults']),'Vault is outside this plan',403)
+        snapshot=next(item for item in plan['vaults'] if item['vault']==vault)
+        current=c.execute('SELECT epoch,rotation_required FROM team_vaults WHERE id=? AND workspace=?',(vault,session['workspace'])).fetchone()
+        require(current and current['rotation_required'] and current['epoch']==snapshot['epoch'],'This vault no longer needs the approved rotation')
+        require(c.execute('SELECT 1 FROM client_vaults WHERE client=? AND vault=? AND workspace=?',(row['client'],vault,session['workspace'])).fetchone(),'Client vault link changed')
+        require(owner(c,session['workspace'],session['user']),'Owner access required',403)
+        grant=Store.get(c,ACCESS_SCOPE,ACCESS_KIND,session['id'])
+        require(grant and grant['expires']>time.time(),'Workflow connection revoked',401)
+        token=request.headers.get('x-sentinel-vault-token','')
+        connection=c.execute('SELECT * FROM companions WHERE token=? AND expires>?',(token_digest(token),time.time())).fetchone()
+        require(connection and connection['kind']=='shared' and connection['vault_id']==vault and connection['user']==session['user'] and connection['workspace']==session['workspace'],'A separate owner connection to this exact shared vault is required',403)
+        require(not c.execute('SELECT 1 FROM team_grants WHERE vault=? AND user=?',(vault,row['person'])).fetchone(),'Access reappeared; rotation stopped')
+        return dict(connection)
+
+    @app.get('/api/companion/access/workflows/{identifier}/vaults/{vault}/rotation')
+    def rotation_context(identifier:str,vault:str,request:Request,session=Depends(access_auth)):
+        with store.connect() as c:
+            connection=rotation_connection(c,session,identifier,vault,request)
+            return shared_companions['rotation_context'](c,connection)
+
+    @app.post('/api/companion/access/workflows/{identifier}/vaults/{vault}/rotation')
+    def rotate(identifier:str,vault:str,body:TeamRotate,request:Request,session=Depends(access_auth)):
+        throttle('team-rotate:'+session['user'],20)
+        with store.connect(write=True) as c:
+            connection=rotation_connection(c,session,identifier,vault,request)
+            value=shared_companions['rotate'](c,connection,body)
+        dispatch(session['workspace'],identifier)
+        return value
+
     def tick():
+        from .access_evidence import tick as check_access
+        check_access(store)
         with store.connect() as c:rows=c.execute("SELECT id,workspace FROM workflows WHERE status IN ('queued','running','waiting_unlock') ORDER BY updated_at LIMIT 100").fetchall()
         for row in rows:dispatch(row['workspace'],row['id'])
     app.state.access_workflow_tick=tick

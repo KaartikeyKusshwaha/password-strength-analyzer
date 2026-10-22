@@ -85,6 +85,7 @@ it('locks an already-open sharing identity when another session changes protecti
   await unlock();
   const original=fetcher.getMockImplementation();
   fetcher.mockImplementation((url,options)=>url==='/api/sharing/identity'?Promise.resolve({ok:true,json:async()=>({identity:{public:{},fingerprint:'2'.repeat(64),encrypted:{ciphertext:'changed-in-another-session'}}})}):original(url,options));
+  await waitFor(()=>expect(intervals.mock.calls.some(([,delay])=>delay===8000)).toBe(true));
   const poll=intervals.mock.calls.filter(([,delay])=>delay===8000).at(-1)[0];
   await act(async()=>{await poll();});
   expect(screen.getByRole('button',{name:'Unlock sharing identity'})).toBeInTheDocument();

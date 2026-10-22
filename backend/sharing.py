@@ -347,26 +347,28 @@ def register(app,store,auth,writable,throttle):
             revoke_access(c,session['workspace'],session['user'],identifier,user)
         return {'ok':True,'rotation_required':True,'note':'Cached credentials cannot be erased. Rotate the vault key and affected website passwords.'}
 
+    def apply_rotation(c,session,identifier,body):
+        vault=team(c,session,identifier)
+        bad(vault['role']=='owner','Only the vault owner may rotate and re-distribute the vault key')
+        bad(body.revision==vault['revision'],'Shared vault changed; reload before rotating',409)
+        bad(body.payload.context==identifier and body.payload.epoch==vault['epoch']+1,'Rotation requires the next key epoch',422)
+        recipients={r['user']:dict(r) for r in c.execute('SELECT * FROM team_grants WHERE vault=?',(identifier,))}
+        bad(len(body.grants)==len(recipients) and {g.recipient for g in body.grants}==set(recipients),'Rotation must cover exactly the remaining vault members',422)
+        output=[]
+        for grant in body.grants:
+            bad(grant.role==recipients[grant.recipient]['role'],'Rotation cannot silently change a member role',422)
+            output.append((grant.recipient,validate_grant(c,grant,{**vault,'epoch':vault['epoch']+1},session['user'],grant.recipient==vault['owner'])))
+        for user,envelope in output:
+            c.execute('UPDATE team_grants SET envelope=? WHERE vault=? AND user=?',(canonical(envelope),identifier,user))
+        c.execute('UPDATE team_vaults SET payload=?,epoch=epoch+1,revision=revision+1,rotation_required=0 WHERE id=?',(canonical(body.payload.model_dump()),identifier))
+        invalidate_ownership(c,session['workspace'],identifier,session['user'],'key_rotated')
+        Store.event(c,session['workspace'],session['user'],'team_vault.key_rotated',identifier)
+        return {'revision':body.revision+1,'epoch':body.payload.epoch}
+
     @app.post('/api/team-vaults/{identifier}/rotate')
     def rotate_team(identifier: str,body: TeamRotate,session=Depends(auth)):
         writable(session);throttle('team-rotate:'+session['user'],20)
-        with store.connect(write=True) as c:
-            vault=team(c,session,identifier)
-            bad(vault['role']=='owner','Only the vault owner may rotate and re-distribute the vault key')
-            bad(body.revision==vault['revision'],'Shared vault changed; reload before rotating',409)
-            bad(body.payload.context==identifier and body.payload.epoch==vault['epoch']+1,'Rotation requires the next key epoch',422)
-            recipients={r['user']:dict(r) for r in c.execute('SELECT * FROM team_grants WHERE vault=?',(identifier,))}
-            bad(len(body.grants)==len(recipients) and {g.recipient for g in body.grants}==set(recipients),'Rotation must cover exactly the remaining vault members',422)
-            output=[]
-            for grant in body.grants:
-                bad(grant.role==recipients[grant.recipient]['role'],'Rotation cannot silently change a member role',422)
-                output.append((grant.recipient,validate_grant(c,grant,{**vault,'epoch':vault['epoch']+1},session['user'],grant.recipient==vault['owner'])))
-            for user,envelope in output:
-                c.execute('UPDATE team_grants SET envelope=? WHERE vault=? AND user=?',(canonical(envelope),identifier,user))
-            c.execute('UPDATE team_vaults SET payload=?,epoch=epoch+1,revision=revision+1,rotation_required=0 WHERE id=?',(canonical(body.payload.model_dump()),identifier))
-            invalidate_ownership(c,session['workspace'],identifier,session['user'],'key_rotated')
-            Store.event(c,session['workspace'],session['user'],'team_vault.key_rotated',identifier)
-        return {'revision':body.revision+1,'epoch':body.payload.epoch}
+        with store.connect(write=True) as c:return apply_rotation(c,session,identifier,body)
 
     def browser_context(c,connection):
         # Validate every use, including accepted grant, current membership and policy.
@@ -404,6 +406,22 @@ def register(app,store,auth,writable,throttle):
             Store.event(c,row['workspace'],connection['user'],'team_vault.browser_saved',row['id'])
         return {'revision':revision+1,'vault_id':row['id']}
 
+    def workflow_rotation_context(c,connection):
+        row,policy,member=browser_context(c,connection)
+        bad(row['role']=='owner' and member['role']=='owner' and row['owner']==connection['user'],'Owner vault connection required')
+        who=identity(c,connection['user'])
+        grants=[{'user_id':r['user'],'role':r['role'],'accepted':r['accepted'],'envelope':json.loads(r['envelope'])} for r in c.execute('SELECT * FROM team_grants WHERE vault=?',(row['id'],))]
+        directory=[]
+        for recipient in grants:
+            public=identity(c,recipient['user_id'])
+            directory.append({'id':recipient['user_id'],'public':json.loads(public['public']),'fingerprint':public['fingerprint']})
+        return {'team':{'id':row['id'],'workspace':row['workspace'],'owner':row['owner'],'owner_public':json.loads(who['public']),'owner_fingerprint':who['fingerprint'],'manifest':json.loads(row['manifest']),'epoch':row['epoch'],'revision':row['revision'],'role':row['role'],'accepted':True,'grant':json.loads(row['envelope']),'grants':grants,'payload':json.loads(row['payload'])},'directory':directory}
+
+    def workflow_rotate(c,connection,body):
+        row,policy,member=browser_context(c,connection)
+        bad(row['role']=='owner' and member['role']=='owner' and row['owner']==connection['user'],'Owner vault connection required')
+        return apply_rotation(c,{**connection,'role':member['role']},row['id'],body)
+
     from .ownership import register as register_ownership
     register_ownership(app,store,auth,writable,throttle,team,identity,validate_grant)
-    return {'metadata':browser_metadata,'read':browser_read,'write':browser_write}
+    return {'metadata':browser_metadata,'read':browser_read,'write':browser_write,'rotation_context':workflow_rotation_context,'rotate':workflow_rotate}

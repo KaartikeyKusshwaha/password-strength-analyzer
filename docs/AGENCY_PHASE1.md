@@ -78,3 +78,36 @@ one skipped, before the final manifest/state guard extensions. The final focused
 workflow suite passed 13 tests; workflow/review/watch regressions passed 32.
 No browser sessions were operated during this implementation turn. No production
 schema upgrade, token expansion or connector authorization was performed.
+
+
+## Extension workflow and evidence increment
+
+Separate eight-hour owner/MFA workflow capabilities and popup plan creation,
+fresh approval, cancellation, progress and evidence views now reuse the existing
+runner. Scanner and vault grants retain their previous scope. The Clients &
+Access page includes read-only workflow history; ordinary execution starts in
+the extension. Real completed local workflows schedule read-only +24h/+7d/+30d
+checks and report reappearing access without a second removal. JSON evidence
+includes explicit limitations; this is not yet the final PDF Client Proof Pack.
+Shared-key rotation subsequently gained an extension workflow action using the
+existing crypto and a separately connected, unlocked owner vault. Both scoped
+authorizations are required; the rotation API covers exactly the remaining roster. No browser testing or production deployment was
+performed. The full frontend snapshot passed 346 tests across 75 files before
+the final history component; final verification is recorded below.
+
+
+Final extension-workflow verification (22 October 2026): 348 frontend tests
+passed across 76 files, including a wait for sharing-poll registration that
+removed a timing-dependent test race. Web and all three extension production
+builds passed. The installed extension directory and live Oracle deployment
+were deliberately left unchanged. Validation artifacts are under
+D:/sentinelops-validation-20261022 because C: ran out of space during disposable
+SQLite test creation. Only explicitly named generated test directories from
+this work were removed; production databases and backups were preserved.
+The focused workflow/evidence/backup/sharing-companion suite passed 37 tests;
+the final scope suite passed 19 and CORS/status/workflow regression passed 14.
+
+Final clean backend rerun: 471 passed, one skipped, one existing Starlette
+TestClient deprecation warning. The prior CORS regression is resolved. Full
+JUnit report: D:/sentinelops-validation-20261022/backend-final-results.xml.
+Browser testing remains deferred; this does not complete the full master plan.

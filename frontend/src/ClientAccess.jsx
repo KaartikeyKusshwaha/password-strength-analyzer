@@ -1,5 +1,6 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {api} from './api';
+import WorkflowHistory from './WorkflowHistory';
 
 export default function ClientAccess(){
   const [map,setMap]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);
@@ -39,5 +40,6 @@ export default function ClientAccess(){
       </form>}
       {map?.systems.map(item=><div className="member-row" key={item.client+item.id}><p>{clientName(item.client)} / {item.name}</p><button className="button secondary" disabled={busy} onClick={()=>run(()=>api('/clients/'+item.client+'/vaults/'+item.id+'/unlink',{}))}>Unlink metadata: {item.name}</button></div>)}
     </div>
+    {map&&<WorkflowHistory/>}
   </section>;
 }
