@@ -1,3 +1,4 @@
+import OwnerPromotion from './OwnerPromotion';
 import SetupQr from './SetupQr';
 import ExtensionApproval from './ExtensionApproval';
 import React, {
@@ -1875,6 +1876,7 @@ export default function App() {
                   <h2>Team members</h2>
                   <Users size={20} />
                 </div>
+                {me.role==='owner'&&<OwnerPromotion members={data.members} onChanged={refresh}/>}
                 {data.members.map((m) => (
                   <div className="member-row" key={m.id}>
                     <span className="avatar light">

@@ -77,7 +77,7 @@ def test_binding_is_atomic_scoped_and_duplicate_domains_in_distinct_vaults_are_s
 def test_debt_migration_preserves_schema_thirteen_and_rolls_back_failure(tmp_path,monkeypatch):
     path=tmp_path/'legacy.db';store=Store(path)
     with store.connect(write=True) as c:
-        c.execute('DROP TABLE credential_exposures');c.execute('DELETE FROM schema_migrations WHERE version=14')
+        c.execute('DROP TABLE credential_exposures');c.execute('DROP TABLE handoff_records');c.execute('DELETE FROM schema_migrations WHERE version>=14')
         c.execute("INSERT INTO workspaces VALUES('legacy','Keep this workspace',0)")
     validate=debt_migration.validate_layout
     def fail(c):raise RuntimeError('interrupted migration')
@@ -118,7 +118,7 @@ def test_schema_thirteen_backup_preserves_reported_access_on_debt_upgrade(system
     client=post(owner,'/clients',{'name':'Preserved metadata client'}).json()['id']
     assert post(owner,'/clients/access-records',{'client_id':client,'person_id':me['id'],'domain':'example.test','account_label':'Preserve this nickname'}).status_code==200
     with app.state.store.connect(write=True) as c:
-        c.execute('DROP TABLE credential_exposures');c.execute('DELETE FROM schema_migrations WHERE version=14')
+        c.execute('DROP TABLE credential_exposures');c.execute('DROP TABLE handoff_records');c.execute('DELETE FROM schema_migrations WHERE version>=14')
     key,archive,destination=tmp_path/'backup-key',tmp_path/'schema13.backup',tmp_path/'restored'
     init_key(key);assert create_backup(source,key,archive)['schema']==13
     recovered=restore_backup(archive,key,destination)

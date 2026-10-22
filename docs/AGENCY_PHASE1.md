@@ -103,3 +103,24 @@ suite passed five tests. Frontend final rerun passed 366 tests across 80 files.
 Web and content/popup/background builds passed into data/debt-validation.
 Final complete backend rerun: 481 passed, one skipped, with the existing
 Starlette TestClient deprecation warning. Browser testing remains deferred.
+## Client handoff implementation (23 October 2026)
+
+Schema 15 adds metadata handoff snapshots, separate receiving-owner sign-off and
+immutable receipt digests. The extension coordinates the existing offboarding
+runner and reports remaining ownership steps; website Workflows retains read-only
+receipts. Settings can promote an MFA-enrolled existing member to owner with fresh
+owner authentication and explicit full-authority consent. Backups cancel active
+handoff approvals on restore. See CLIENT_HANDOFFS.md for exact semantics and the
+remaining extension ownership-transfer gap. FINAL_BROWSER_CHECK.md is the planned
+consolidated acceptance session, not a claim that it has passed.
+
+Handoff verification (23 October): the initial full backend run had 487 passed,
+one skipped and three old-schema fixture failures. Each fixture retained the
+new handoff table after deleting its migration marker. After fixing the fixtures,
+the affected handoff/access-map/reported-access/device regression passed 33 tests,
+including schema-14 backup migration and partial/unmarked schema rejection. The
+earlier integrated workflow/debt/backup/passkey/handoff run passed 51 tests.
+Frontend: 377 passed across 82 files; the new owner-promotion test passed
+separately. Both production builds and 16 root analyzer tests passed. Generated
+verification files remain under SentinelOps-Safe-To-Delete-20261022. No browser,
+installed-extension replacement, production-data mutation or deployment occurred.

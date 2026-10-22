@@ -1,5 +1,6 @@
 import React,{useEffect,useState} from 'react';
 import CredentialDebt from './CredentialDebt';
+import ClientHandoffs from './ClientHandoffs';
 import CloudConnect from './CloudConnect';
 import {accessRequest} from './access-client';
 import {rotateConnectedVault} from './workflow-rotation';
@@ -28,6 +29,7 @@ export default function AccessWorkflows({browser=chrome,request=accessRequest,va
         {!map.clients.length&&<p>Link client vaults in the control room before preparing your first plan.</p>}
       </form>}
       {map&&<CredentialDebt connection={connection} map={map} session={vaultSession} unlocked={vaultUnlocked} request={request} refresh={refresh} onApproved={onApproved} onVaultChanged={onVaultChanged}/>}
+      {map&&<ClientHandoffs connection={connection} map={map} runs={runs} request={request}/>}
       {runs.map(run=><section key={run.id} aria-label="Offboarding plan"><h3>{labels[run.status]||run.status}</h3><p>{map?.clients.find(item=>item.id===run.client)?.name||'Client'} · {map?.grants.find(item=>item.person_id===run.person)?.email||'Selected member'}</p><p>{run.plan.dry_run?'Preview only.':'Real access removal.'} {run.plan.vaults.length} vault(s). {run.steps.filter(step=>['complete','simulated'].includes(step.status)).length}/{run.steps.length} steps.</p>
         <ul>{run.plan.vaults.map(item=><li key={item.vault}>{map?.systems.find(system=>system.id===item.vault)?.name||item.vault}</li>)}</ul>
         <p className="fine">{run.coverage}</p>

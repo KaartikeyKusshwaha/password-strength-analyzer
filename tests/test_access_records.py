@@ -116,7 +116,7 @@ def test_staff_discovery_cannot_claim_another_client_or_person_and_loses_scope_o
 def test_reported_access_migration_preserves_prior_data_and_rolls_back_failure(tmp_path,monkeypatch):
     path=tmp_path/'legacy.db';store=Store(path)
     with store.connect(write=True) as c:
-        c.execute('DROP TABLE access_grants');c.execute('DROP TABLE credential_exposures');c.execute('DELETE FROM schema_migrations WHERE version>=13')
+        c.execute('DROP TABLE access_grants');c.execute('DROP TABLE credential_exposures');c.execute('DROP TABLE handoff_records');c.execute('DELETE FROM schema_migrations WHERE version>=13')
         c.execute("INSERT INTO workspaces VALUES('old','Retain this workspace',0)")
     original=access_records_migration.validate_layout
     monkeypatch.setattr(access_records_migration,'validate_layout',lambda c:(_ for _ in ()).throw(RuntimeError('interrupted')))

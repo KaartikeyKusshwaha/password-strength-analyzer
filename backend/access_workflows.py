@@ -183,7 +183,7 @@ def register(app,store,auth,throttle,cipher,executor,shared_companions):
 
     @app.get('/api/companion/access/context')
     def extension_context(session=Depends(access_auth)):
-        return {**snapshot(store,session['workspace']),'expires':session['expires']}
+        return {**snapshot(store,session['workspace']),'expires':session['expires'],'actor_id':session['user']}
 
     @app.post('/api/companion/access/revoke')
     def extension_revoke(session=Depends(access_auth)):

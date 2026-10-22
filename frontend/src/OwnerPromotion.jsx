@@ -1,0 +1,7 @@
+import React,{useState} from 'react';
+import {api} from './api';
+export default function OwnerPromotion({members,onChanged}){
+ const [error,setError]=useState(''),[busy,setBusy]=useState(false);
+ return <details><summary>Add a receiving workspace owner</summary><p>This grants full workspace owner authority, including member administration and offboarding approvals. The member must enable account MFA first. Vault contents still require their own encrypted sharing grants.</p><form onSubmit={async event=>{event.preventDefault();const form=event.currentTarget,values=new FormData(form),id=values.get('member');form.reset();setBusy(true);setError('');try{await api('/members/'+id+'/promote-owner',{confirmed:true,password:values.get('password'),code:values.get('code')});await onChanged();}catch(e){setError(e.message);}finally{setBusy(false);}}}>
+ <label>Member to promote<select name="member" required><option value="">Choose member</option>{members.filter(member=>member.role!=='owner').map(member=><option key={member.id} value={member.id}>{member.email}</option>)}</select></label><label>Current account password<input type="password" name="password" autoComplete="current-password" maxLength={256} required/></label><label>Unused MFA or recovery code<input name="code" autoComplete="one-time-code" maxLength={80} required/></label><label><input type="checkbox" required/>I approve granting this person full workspace owner access.</label><button className="button" disabled={busy}>Promote receiving owner</button></form>{error&&<p role="alert">{error}</p>}</details>;
+}
