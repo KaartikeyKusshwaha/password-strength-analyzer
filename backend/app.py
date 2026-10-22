@@ -535,6 +535,8 @@ def create_app(settings=None):
 
     from . import extension_connect
     extension_connect.register(app,store,auth,throttle,cipher,settings,lambda c,session,identifier:shared_companions['metadata'](c,session,identifier))
+    from . import client_access
+    client_access.register(app,store,auth,throttle)
 
     @app.post('/api/vaults')
     def create_vault_space(body: VaultProperties, session=Depends(auth)):

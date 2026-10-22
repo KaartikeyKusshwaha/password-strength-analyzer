@@ -66,7 +66,9 @@ const Vault = lazy(() => import("./VaultCollection"));
 const Companions = lazy(() => import("./Companions"));
 const Watches = lazy(() => import("./Watches"));
 const SecurityReviews = lazy(() => import('./SecurityReviews'));
+const ClientAccess = lazy(() => import('./ClientAccess'));
 const navigation = [
+  ['clients','Clients & Access',Users],
   ["overview", "Control center", LayoutDashboard],
   ["assets", "Asset inventory", Network],
   ["scans", "Security checks", ScanLine],
@@ -82,6 +84,7 @@ const navigation = [
   ["settings", "Settings", Settings2],
 ];
 const titles = {
+  clients:['Know who can touch each client.','Live vault memberships, explicit client links and remaining access uncertainty.'],
   reviews:['One scope. Connected checks.','Approved assessments, combined findings and tracked follow-up work.'],
   watches: ["Keep watch as your software changes.", "Approved dependency checks, durable alerts and assigned follow-up work."],
   vault: [
@@ -726,7 +729,7 @@ export default function App() {
         </div>
         <span className="nav-label">CONTROL ROOM</span>
         <nav>
-          {navigation.filter(([id])=>['vault','findings','companions','settings'].includes(id)).map(([id, label, Icon]) => (
+          {navigation.filter(([id])=>['clients','vault','findings','companions','settings'].includes(id)&&(id!=='clients'||me.role==='owner')).map(([id, label, Icon]) => (
             <button
               key={id}
               className={page === id ? "active" : ""}
@@ -739,7 +742,7 @@ export default function App() {
             </button>
           ))}
           <details><summary>Advanced</summary>
-            {navigation.filter(([id])=>!['vault','findings','companions','settings'].includes(id)).map(([id,label,Icon])=><button key={id} className={page===id?'active':''} onClick={()=>go(id)}><Icon size={18}/><span>{label}</span>{id==='agents'&&<i className="nav-ai">AI</i>}</button>)}
+            {navigation.filter(([id])=>!['clients','vault','findings','companions','settings'].includes(id)).map(([id,label,Icon])=><button key={id} className={page===id?'active':''} onClick={()=>go(id)}><Icon size={18}/><span>{label}</span>{id==='agents'&&<i className="nav-ai">AI</i>}</button>)}
           </details>
         </nav>
         <div className="sidebar-bottom">
@@ -813,7 +816,7 @@ export default function App() {
               <p>{titles[page][1]}</p>
             </div>
             <div className="heading-actions">
-              {write && !["vault","findings","companions","settings"].includes(page) && (
+              {write && !["clients","vault","findings","companions","settings"].includes(page) && (
                 <>
                   <Button secondary onClick={() => setModal("asset")}>
                     <Plus size={16} />
@@ -840,6 +843,7 @@ export default function App() {
             </div>
           )}
 
+          {page === 'clients' && me.role==='owner' && <Suspense fallback={<p>Opening client access map…</p>}><ClientAccess key={me.workspace}/></Suspense>}
           {page === "watches" && <Suspense fallback={<p>Opening dependency watches…</p>}><Watches key={me.workspace} canWrite={write} go={go}/></Suspense>}
           {page === 'reviews' && <Suspense fallback={<p>Opening security reviews…</p>}><SecurityReviews key={me.workspace} data={data} me={me} canWrite={write} refresh={refresh} go={go}/></Suspense>}
           {page === "overview" && (

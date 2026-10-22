@@ -38,6 +38,8 @@ def test_live_wal_restore_preserves_envelopes_and_mfa_but_revokes_work(system, t
         c.execute('INSERT INTO team_vaults(id,workspace,owner,name,manifest,payload,epoch,revision,rotation_required,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)',
                   ('shared-fixture', workspace, user, 'Shared', 'manifest-ciphertext', 'shared-ciphertext', 2, 9, 0, now()))
         c.execute('INSERT INTO team_grants VALUES(?,?,?,?,?,?)', ('shared-fixture', user, 'owner', 'wrapped-key-ciphertext', 1, now()))
+        c.execute('INSERT INTO clients VALUES(?,?,?,?)', ('client-fixture', workspace, 'Client restore fixture', now()))
+        c.execute('INSERT INTO client_vaults VALUES(?,?,?)', ('client-fixture', workspace, 'shared-fixture'))
         c.execute('INSERT INTO credential_actions VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
                   ('action-fixture', user, 'restore-fixture', 'personal', workspace, 'encrypted-manifest', 1, 'running', '{}', 'old-lease-hash', 'old-token', 9999999999, now(), 9999999999))
         c.execute('INSERT INTO companions(token,user,label,expires) VALUES(?,?,?,?)', ('old-token', user, 'fixture', 9999999999))
@@ -66,6 +68,8 @@ def test_live_wal_restore_preserves_envelopes_and_mfa_but_revokes_work(system, t
         assert c.execute('SELECT encrypted FROM sharing_identities').fetchone()[0] == 'encrypted-identity'
         assert c.execute('SELECT payload,epoch,revision FROM team_vaults').fetchone()[:] == ('shared-ciphertext', 2, 9)
         assert c.execute('SELECT envelope,accepted FROM team_grants').fetchone()[:] == ('wrapped-key-ciphertext', 1)
+        assert c.execute('SELECT name FROM clients').fetchone()[0] == 'Client restore fixture'
+        assert c.execute('SELECT client,workspace,vault FROM client_vaults').fetchone()[:] == ('client-fixture', workspace, 'shared-fixture')
         assert c.execute('SELECT status,lease_hash,lease_connection,lease_expires FROM credential_actions').fetchone()[:] == ('cancelled', None, None, None)
         for table in ('sessions', 'invites', 'devices', 'companions'):
             assert c.execute(f'SELECT COUNT(*) FROM {table}').fetchone()[0] == 0

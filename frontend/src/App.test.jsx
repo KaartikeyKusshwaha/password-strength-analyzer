@@ -61,13 +61,14 @@ async function renderOverview(){
 }
 
 describe("workspace flows", () => {
-  it('lands in vault management with four primary destinations and collapsed advanced tools',async()=>{
+  it('keeps client access visible to owners alongside vault management and collapsed advanced tools',async()=>{
     mockWorkspace();render(<App/>);
     expect(await screen.findByText('Your accounts, under your control.')).toBeInTheDocument();
     const advanced=screen.getByText('Advanced');
     expect(advanced.closest('details').open).toBe(false);
     const nav=advanced.closest('nav');
-    expect([...nav.children].filter(element=>element.tagName==='BUTTON')).toHaveLength(4);
+    expect([...nav.children].filter(element=>element.tagName==='BUTTON')).toHaveLength(5);
+    expect(screen.getByRole('button',{name:'Clients & Access'}).closest('details')).toBeNull();
     expect(screen.getByRole('button',{name:'Agent desk AI'}).closest('details')).toBe(advanced.closest('details'));
   });
   it('refreshes findings after following a completed background watch alert',async()=>{
