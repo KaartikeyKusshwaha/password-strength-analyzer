@@ -1,6 +1,5 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {api} from './api';
-import WorkflowHistory from './WorkflowHistory';
 
 export default function ClientAccess(){
   const [map,setMap]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);
@@ -47,6 +46,5 @@ export default function ClientAccess(){
       </form></details>}
       {map?.retired_records?.length>0&&<p>{map.retired_records.length} reported account record(s) retired. Retiring metadata does not revoke external access.</p>}
     </div>
-    {map&&<WorkflowHistory/>}
   </section>;
 }

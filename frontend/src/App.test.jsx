@@ -1,5 +1,5 @@
 import React from "react";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { webcrypto } from "node:crypto";
 import App, { Auth } from "./App";
@@ -11,7 +11,9 @@ import {version as productVersion} from '../package.json';
 // cold transform competes with native-KDF workers and is not a UI interaction.
 beforeAll(async()=>{await Promise.all([import('./ControlCenter'),import('./VaultCollection'),import('./Watches')]);},20000);
 
-function mockWorkspace() {
+beforeEach(()=>window.history.replaceState(null,'','/'));
+
+function mockWorkspace(advanced=true) {
   const user = {
     id: "user",
     email: "fixture@example.test",
@@ -22,6 +24,7 @@ function mockWorkspace() {
     workspaces: [{ id: "workspace", name: "Fixture workspace", demo: 0 }],
   };
   const data = {
+    features:{advanced_ui:advanced},
     assets: [],
     scans: [],
     findings: [],
@@ -61,15 +64,29 @@ async function renderOverview(){
 }
 
 describe("workspace flows", () => {
-  it('keeps client access visible to owners alongside vault management and collapsed advanced tools',async()=>{
+  it('keeps agency control-room pages separate from the explicitly enabled advanced route',async()=>{
     mockWorkspace();render(<App/>);
     expect(await screen.findByText('Your accounts, under your control.')).toBeInTheDocument();
-    const advanced=screen.getByText('Advanced');
-    expect(advanced.closest('details').open).toBe(false);
-    const nav=advanced.closest('nav');
-    expect([...nav.children].filter(element=>element.tagName==='BUTTON')).toHaveLength(5);
+    const advanced=screen.getByRole('button',{name:'Advanced'}),nav=advanced.closest('nav');
+    expect([...nav.children].filter(element=>element.tagName==='BUTTON')).toHaveLength(6);
+    expect(screen.queryByRole('button',{name:'Agent desk AI'})).not.toBeInTheDocument();
     expect(screen.getByRole('button',{name:'Clients & Access'}).closest('details')).toBeNull();
-    expect(screen.getByRole('button',{name:'Agent desk AI'}).closest('details')).toBe(advanced.closest('details'));
+    fireEvent.click(advanced);
+    expect(window.location.pathname).toBe('/advanced');
+    expect(screen.getByRole('button',{name:'Agent desk AI'}).closest('details').open).toBe(true);
+    fireEvent.click(screen.getByRole('button',{name:'Workflows'}));
+    expect(await screen.findByText('Review your access workflows.')).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/');
+    expect(screen.queryByRole('button',{name:'Agent desk AI'})).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading',{name:'Offboarding history'})).toBeInTheDocument();
+  });
+  it('does not expose legacy panels or start their polling when the advanced flag is disabled',async()=>{
+    const {fetcher}=mockWorkspace(false);window.history.replaceState(null,'','/advanced#page=scans');render(<App/>);
+    expect(await screen.findByText('Your accounts, under your control.')).toBeInTheDocument();
+    expect(screen.queryByRole('button',{name:'Advanced'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('button',{name:'Security checks'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('button',{name:'Run a check'})).not.toBeInTheDocument();
+    expect(fetcher.mock.calls.some(([url])=>url==='/api/notifications'||url==='/api/watches')).toBe(false);
   });
   it('refreshes findings after following a completed background watch alert',async()=>{
     const {data,fetcher}=mockWorkspace();

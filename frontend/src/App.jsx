@@ -47,6 +47,7 @@ import {
   X,
 } from "lucide-react";
 import { api } from "./api";
+import {PRIMARY_PAGES,readRoute,pageRoute} from './navigation';
 import DevicePosture from "./DevicePosture";
 import DeviceUpdates from "./DeviceUpdates";
 import MailCoverage from "./MailCoverage";
@@ -67,8 +68,10 @@ const Companions = lazy(() => import("./Companions"));
 const Watches = lazy(() => import("./Watches"));
 const SecurityReviews = lazy(() => import('./SecurityReviews'));
 const ClientAccess = lazy(() => import('./ClientAccess'));
+const WorkflowHistory = lazy(() => import('./WorkflowHistory'));
 const navigation = [
   ['clients','Clients & Access',Users],
+  ['workflows','Workflows',ClipboardCheck],
   ["overview", "Control center", LayoutDashboard],
   ["assets", "Asset inventory", Network],
   ["scans", "Security checks", ScanLine],
@@ -84,6 +87,7 @@ const navigation = [
   ["settings", "Settings", Settings2],
 ];
 const titles = {
+  workflows:['Review your access workflows.','Offboarding progress, rechecks and evidence. Start and approve routine work in the extension.'],
   clients:['Know who can touch each client.','Live vault memberships, explicit client links and remaining access uncertainty.'],
   reviews:['One scope. Connected checks.','Approved assessments, combined findings and tracked follow-up work.'],
   watches: ["Keep watch as your software changes.", "Approved dependency checks, durable alerts and assigned follow-up work."],
@@ -459,13 +463,20 @@ export default function App() {
   const [setup, setSetup] = useState(false);
   const [ready, setReady] = useState(false);
   const [page, setPage] = useState("vault");
+  const [advancedMode,setAdvancedMode]=useState(false);
   const [vaultMode,setVaultMode]=useState('personal');
   const [vaultType,setVaultType]=useState('login');
   useEffect(()=>{
     if(!me)return;
-    const route=()=>{const tool=new URLSearchParams(window.location.hash.slice(1)).get('tool');if(['passwords','authenticator','vulnerabilities'].includes(tool)){setVaultMode('personal');setVaultType(tool==='authenticator'?'totp':'login');setPage(tool==='vulnerabilities'?'overview':'vault');}};
-    route();window.addEventListener('hashchange',route);return()=>window.removeEventListener('hashchange',route);
-  },[me?.id,me?.workspace]);
+    const route=()=>{
+      const value=readRoute(window.location,data?.features?.advanced_ui===true);
+      const tool=new URLSearchParams(window.location.hash.slice(1)).get('tool');
+      setAdvancedMode(value.advanced);setPage(value.page);
+      if(['passwords','authenticator','vulnerabilities'].includes(tool)){setVaultMode('personal');setVaultType(tool==='authenticator'?'totp':'login');}
+    };
+    route();window.addEventListener('hashchange',route);window.addEventListener('popstate',route);
+    return()=>{window.removeEventListener('hashchange',route);window.removeEventListener('popstate',route);};
+  },[me?.id,me?.workspace,data?.features?.advanced_ui]);
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [page]);
@@ -540,13 +551,16 @@ export default function App() {
     }
   }
   function go(value) {
-    if(window.location.hash)window.history.replaceState(null,'',window.location.pathname+window.location.search);
+    const target=['shared-vaults','passwords','authenticator'].includes(value)?'vault':value==='vulnerabilities'?'overview':value;
+    const route=pageRoute(target,data?.features?.advanced_ui===true);
+    window.history.pushState({page:route.page},'',route.url);
+    setAdvancedMode(route.advanced);
     // Background watches update their own view. Refresh the shared snapshot
     // when navigating so findings and linked work reflect the completed check.
     refresh().catch(e=>setError(e.message));
     setVaultType(value==='authenticator'?'totp':'login');
     setVaultMode(value==='shared-vaults'?'team':'personal');
-    setPage(['shared-vaults','passwords','authenticator'].includes(value)?'vault':value==='vulnerabilities'?'overview':value);
+    setPage(route.page);
     setDetail(null);
     setMobile(false);
     setQuery("");
@@ -729,7 +743,7 @@ export default function App() {
         </div>
         <span className="nav-label">CONTROL ROOM</span>
         <nav>
-          {navigation.filter(([id])=>['clients','vault','findings','companions','settings'].includes(id)&&(id!=='clients'||me.role==='owner')).map(([id, label, Icon]) => (
+          {navigation.filter(([id])=>PRIMARY_PAGES.has(id)&&(!['clients','workflows'].includes(id)||me.role==='owner')).map(([id, label, Icon]) => (
             <button
               key={id}
               className={page === id ? "active" : ""}
@@ -741,9 +755,10 @@ export default function App() {
               {id === "agents" && <i className="nav-ai">AI</i>}
             </button>
           ))}
-          <details><summary>Advanced</summary>
-            {navigation.filter(([id])=>!['clients','vault','findings','companions','settings'].includes(id)).map(([id,label,Icon])=><button key={id} className={page===id?'active':''} onClick={()=>go(id)}><Icon size={18}/><span>{label}</span>{id==='agents'&&<i className="nav-ai">AI</i>}</button>)}
-          </details>
+          {data.features?.advanced_ui===true && !advancedMode && <button onClick={()=>go('overview')}><Settings2 size={18}/><span>Advanced</span></button>}
+          {advancedMode && data.features?.advanced_ui===true && <details open><summary>Advanced tools</summary>
+            {navigation.filter(([id])=>!PRIMARY_PAGES.has(id)).map(([id,label,Icon])=><button key={id} className={page===id?'active':''} onClick={()=>go(id)}><Icon size={18}/><span>{label}</span>{id==='findings'&&!!open.length&&<b>{open.length}</b>}{id==='agents'&&<i className="nav-ai">AI</i>}</button>)}
+          </details>}
         </nav>
         <div className="sidebar-bottom">
           <div className="agent-status">
@@ -796,7 +811,7 @@ export default function App() {
           </div>
           <div className="inline">
             <ConnectionStatus/>
-            <WatchIndicator open={()=>go('watches')}/>
+            {advancedMode && <WatchIndicator open={()=>go('watches')}/>}
             <button
               className="icon-button"
               aria-label="Sign out"
@@ -810,13 +825,13 @@ export default function App() {
           <div className="page-heading">
             <div>
               <div className="eyebrow">
-                YOUR PERSONAL SECURITY OPERATIONS
+                CLIENT ACCESS CONTROL ROOM
               </div>
               <h1>{titles[page][0]}</h1>
               <p>{titles[page][1]}</p>
             </div>
             <div className="heading-actions">
-              {write && !["clients","vault","findings","companions","settings"].includes(page) && (
+              {write && advancedMode && page!=='findings' && (
                 <>
                   <Button secondary onClick={() => setModal("asset")}>
                     <Plus size={16} />
@@ -844,6 +859,7 @@ export default function App() {
           )}
 
           {page === 'clients' && me.role==='owner' && <Suspense fallback={<p>Opening client access map…</p>}><ClientAccess key={me.workspace}/></Suspense>}
+          {page === 'workflows' && me.role==='owner' && <Suspense fallback={<p>Opening workflow history…</p>}><WorkflowHistory key={me.workspace}/></Suspense>}
           {page === "watches" && <Suspense fallback={<p>Opening dependency watches…</p>}><Watches key={me.workspace} canWrite={write} go={go}/></Suspense>}
           {page === 'reviews' && <Suspense fallback={<p>Opening security reviews…</p>}><SecurityReviews key={me.workspace} data={data} me={me} canWrite={write} refresh={refresh} go={go}/></Suspense>}
           {page === "overview" && (

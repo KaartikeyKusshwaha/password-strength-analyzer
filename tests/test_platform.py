@@ -72,6 +72,24 @@ def test_bootstrap_is_one_time_and_no_default_data(system):
         assert session_token != client.cookies.get('sentinel_session')
 
 
+def test_advanced_interface_is_opt_in_without_disabling_scanning_engines(system, monkeypatch):
+    app, client, _ = system
+    monkeypatch.delenv('ADVANCED_UI', raising=False)
+    assert Settings().advanced_ui is False
+    app.state.settings.advanced_ui = False
+    assert data(client)['features'] == {'advanced_ui': False}
+    assert client.get('/advanced').status_code == 404
+    # The flag gates legacy UI only: existing approved worker routes still work.
+    assert scan(client, asset(client)['id'])['finding_ids']
+    monkeypatch.setenv('ADVANCED_UI', 'true')
+    assert Settings().advanced_ui is True
+    app.state.settings.advanced_ui = True
+    assert data(client)['features'] == {'advanced_ui': True}
+    advanced, normal = client.get('/advanced'), client.get('/')
+    assert advanced.status_code == normal.status_code
+    assert advanced.content == normal.content
+
+
 def test_unauthorized_csrf_origin_and_validation_redaction(system):
     app, client, _ = system
     assert TestClient(app).get('/api/workspace').status_code == 401

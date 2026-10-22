@@ -52,6 +52,7 @@ class Settings:
         self.host = parsed.hostname
         self.groq_key = os.getenv("GROQ_API_KEY", "") if groq_key is None else groq_key
         self.model = model or os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+        self.advanced_ui = os.getenv('ADVANCED_UI','').strip().lower() in {'1','true','yes'}
         self.scan_hosts = {scanner.validate_host(h) for h in (scan_hosts if scan_hosts is not None else os.getenv("SCAN_HOSTS", "").split(",")) if h.strip()}
 
 
@@ -964,6 +965,7 @@ def create_app(settings=None):
             result['ownership_requests']=incoming_ownership(c,workspace,session['user']) if session['role']!='viewer' else []
         result["integrations"] = {"groq_configured": bool(settings.groq_key), "groq_model": settings.model, "scan_hosts": sorted(settings.scan_hosts), "osv": "Live API, exact pins only", "password_privacy": "Browser-local strength; optional HIBP hash-prefix lookup"}
         result["integrations"]["local_device_agent"] = not settings.secure and settings.host in {"localhost", "127.0.0.1"}
+        result['features'] = {'advanced_ui':settings.advanced_ui}
         with store.connect() as c:
             vault_count = c.execute("SELECT count(*) FROM vault_spaces WHERE user=? AND payload!='null'", (session["user"],)).fetchone()[0]
             result["connections"] = {"vault_created": bool(vault_count), "vault_count":vault_count, "browser_tokens": c.execute("SELECT count(*) FROM companions WHERE user=? AND expires>?", (session["user"], time.time())).fetchone()[0]}
@@ -1380,5 +1382,10 @@ def create_app(settings=None):
         if not (dist / "index.html").exists():
             return JSONResponse({"detail": "Build frontend: cd frontend; npm ci; npm run build"}, status_code=503)
         return FileResponse(dist / "index.html")
+
+    @app.get('/advanced')
+    def advanced_index():
+        must(settings.advanced_ui,'Advanced interface is disabled',404)
+        return index()
 
     return app
