@@ -1,0 +1,156 @@
+"""Durable local steps executed by reviews.Runner, never an LLM or new executor."""
+import hashlib
+import json
+import time
+from fastapi import Depends, HTTPException
+from pydantic import BaseModel, ConfigDict, Field, SecretStr
+from .store import Store, canonical, now, uid
+from .security import consume_factor, verify_password
+from .sharing import revoke_access
+
+ACTIVE={'queued','running','waiting_unlock'}
+
+
+def require(value,message,status=409):
+    if not value:raise HTTPException(status,message)
+    return value
+
+
+def digest(value):return hashlib.sha256(canonical(value).encode()).hexdigest()
+
+
+class PlanRequest(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    client_id:str=Field(pattern=r'^[a-f0-9]{24}$')
+    person_id:str=Field(pattern=r'^[a-f0-9]{24}$')
+    dry_run:bool=True
+
+
+class Approval(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    plan_digest:str=Field(pattern=r'^[a-f0-9]{64}$')
+    approved:bool=False
+    password:SecretStr=Field(max_length=256)
+    code:str=Field(max_length=80)
+
+
+def owner(c,workspace,actor):
+    return c.execute("SELECT u.* FROM members m JOIN users u ON u.id=m.user WHERE m.workspace=? AND m.user=? AND m.role='owner'",(workspace,actor)).fetchone()
+
+
+def scope(c,workspace,client,person,actor):
+    require(c.execute('SELECT 1 FROM clients WHERE id=? AND workspace=?',(client,workspace)).fetchone(),'Client not found',404)
+    member=require(c.execute('SELECT role FROM members WHERE user=? AND workspace=?',(person,workspace)).fetchone(),'Member not found',404)
+    require(person!=actor and member['role']!='owner','Workspace owners cannot be offboarded by this plan.')
+    rows=c.execute('SELECT v.id,v.owner,v.revision,v.epoch,g.role,g.envelope FROM client_vaults l JOIN team_vaults v ON v.id=l.vault AND v.workspace=l.workspace JOIN team_grants g ON g.vault=v.id WHERE l.client=? AND l.workspace=? AND g.user=? ORDER BY v.id',(client,workspace,person)).fetchall()
+    require(0<len(rows)<=20,'Choose a client with 1–20 matching vault memberships.')
+    require(all(row['owner']==actor and row['owner']!=person for row in rows),'Every selected vault must be owned by the approving owner; transfer ownership separately.')
+    return [{'vault':row['id'],'epoch':row['epoch'],'revision':row['revision'],'grant_digest':hashlib.sha256(row['envelope'].encode()).hexdigest()} for row in rows]
+
+
+def view(c,row):
+    value=dict(row);value['plan']=json.loads(value['plan']);value['approval']=json.loads(value['approval']) if value['approval'] else None
+    value['steps']=[dict(step) for step in c.execute('SELECT * FROM workflow_steps WHERE workflow=? ORDER BY position',(row['id'],))]
+    value['coverage']='Selected client vault memberships only. Cached credentials and website sessions are not erased; affected website-password rotation remains separate.'
+    return value
+
+
+def advance_one(store,workspace,identifier,clock=time.time):
+    """One local effect and step completion commit together; no network calls here."""
+    with store.connect(write=True) as c:
+        row=c.execute('SELECT * FROM workflows WHERE id=? AND workspace=?',(identifier,workspace)).fetchone()
+        if not row or row['status'] not in ACTIVE:return False
+        approval=json.loads(row['approval']) if row['approval'] else None
+        plan=json.loads(row['plan']);actor=row['created_by']
+        user=owner(c,workspace,actor)
+        valid=approval and approval.get('actor')==actor and approval.get('expires',0)>clock() and approval.get('digest')==row['plan_digest']==digest(plan) and user and user['mfa']
+        stored_steps=c.execute('SELECT action,vault,status FROM workflow_steps WHERE workflow=? ORDER BY position',(identifier,)).fetchall()
+        expected=[(action,item['vault']) for action in ('revoke','rotate_key','verify_absent') for item in plan['vaults']]
+        done='simulated' if plan['dry_run'] else 'complete'
+        valid=valid and plan['version']==1 and plan['client']==row['client'] and plan['person']==row['person'] and [(item['action'],item['vault']) for item in stored_steps]==expected and all(item['status'] in {'pending',done} for item in stored_steps)
+        step=c.execute("SELECT * FROM workflow_steps WHERE workflow=? AND status='pending' ORDER BY position LIMIT 1",(identifier,)).fetchone()
+        if not valid:
+            c.execute("UPDATE workflows SET status='blocked',updated_at=? WHERE id=?",(now(),identifier));Store.event(c,workspace,actor,'access_workflow.approval_lost',identifier);return False
+        if not step:
+            c.execute('UPDATE workflows SET status=?,updated_at=? WHERE id=?',('dry_run_complete' if plan['dry_run'] else 'complete',now(),identifier));Store.event(c,workspace,actor,'access_workflow.finished',identifier);return False
+        snapshot=next((item for item in plan['vaults'] if item['vault']==step['vault']),None)
+        vault=c.execute('SELECT * FROM team_vaults WHERE id=? AND workspace=?',(step['vault'],workspace)).fetchone()
+        grant=c.execute('SELECT * FROM team_grants WHERE vault=? AND user=?',(step['vault'],row['person'])).fetchone()
+        failure=None;outcome='simulated' if plan['dry_run'] else 'verified'
+        target=c.execute('SELECT role FROM members WHERE workspace=? AND user=?',(workspace,row['person'])).fetchone()
+        linked=c.execute('SELECT 1 FROM client_vaults WHERE workspace=? AND client=? AND vault=?',(workspace,row['client'],step['vault'])).fetchone()
+        if not snapshot or not vault or vault['owner']!=actor or not linked or target and target['role']=='owner':failure='scope_changed'
+        elif plan['dry_run']:pass
+        elif step['action']=='revoke':
+            if grant:
+                if vault['epoch']!=snapshot['epoch'] or vault['revision']!=snapshot['revision'] or hashlib.sha256(grant['envelope'].encode()).hexdigest()!=snapshot['grant_digest']:failure='scope_changed'
+                else:revoke_access(c,workspace,actor,step['vault'],row['person']);outcome='revoked'
+            else:outcome='already_absent'
+        elif grant:failure='access_reappeared'
+        elif step['action']=='rotate_key' and (vault['rotation_required'] or vault['epoch']<=snapshot['epoch']):
+            c.execute("UPDATE workflows SET status='waiting_unlock',updated_at=? WHERE id=?",(now(),identifier));return False
+        elif step['action'] not in {'rotate_key','verify_absent'}:failure='unsupported_step'
+        if failure:
+            c.execute('UPDATE workflow_steps SET outcome=? WHERE id=?',(failure,step['id']))
+            c.execute("UPDATE workflows SET status='blocked',updated_at=? WHERE id=?",(now(),identifier));Store.event(c,workspace,actor,'access_workflow.'+failure,identifier);return False
+        c.execute('UPDATE workflow_steps SET status=?,attempts=attempts+1,outcome=?,completed_at=? WHERE id=?',('simulated' if plan['dry_run'] else 'complete',outcome,now(),step['id']))
+        c.execute("UPDATE workflows SET status='running',updated_at=? WHERE id=?",(now(),identifier))
+        Store.event(c,workspace,actor,'access_workflow.step_completed',step['id'])
+        return True
+
+
+def register(app,store,auth,throttle,cipher,executor):
+    def authorized(session):require(session['role']=='owner','Workspace owner access required',403)
+    def get(c,session,identifier):return require(c.execute('SELECT * FROM workflows WHERE id=? AND workspace=?',(identifier,session['workspace'])).fetchone(),'Workflow not found',404)
+    def dispatch(workspace,identifier):app.state.review_runner.enqueue_access(executor,workspace,identifier)
+
+    @app.get('/api/access-workflows')
+    def listing(session=Depends(auth)):
+        authorized(session)
+        with store.connect() as c:return {'workflows':[view(c,row) for row in c.execute('SELECT * FROM workflows WHERE workspace=? ORDER BY created_at DESC LIMIT 100',(session['workspace'],))]}
+
+    @app.post('/api/access-workflows')
+    def create(body:PlanRequest,session=Depends(auth)):
+        authorized(session);throttle('access-plan:'+session['user'],20)
+        with store.connect(write=True) as c:
+            require(c.execute('SELECT count(*) FROM workflows WHERE workspace=?',(session['workspace'],)).fetchone()[0]<1000,'Workflow limit reached.')
+            snapshots=scope(c,session['workspace'],body.client_id,body.person_id,session['user'])
+            plan={'version':1,'client':body.client_id,'person':body.person_id,'dry_run':body.dry_run,'vaults':snapshots}
+            identifier=uid();at=now()
+            c.execute('INSERT INTO workflows VALUES(?,?,?,?,?,?,?,?,?,?,?)',(identifier,session['workspace'],body.client_id,body.person_id,session['user'],'awaiting_approval',canonical(plan),digest(plan),None,at,at))
+            for action in ('revoke','rotate_key','verify_absent'):
+                for item in snapshots:
+                    index=c.execute('SELECT count(*) FROM workflow_steps WHERE workflow=?',(identifier,)).fetchone()[0]
+                    c.execute('INSERT INTO workflow_steps VALUES(?,?,?,?,?,?,?,?,?)',(uid(),identifier,index,item['vault'],action,'pending',0,None,None))
+            Store.event(c,session['workspace'],session['user'],'access_workflow.planned',identifier)
+            return view(c,get(c,session,identifier))
+
+    @app.post('/api/access-workflows/{identifier}/approve')
+    def approve(identifier:str,body:Approval,session=Depends(auth)):
+        authorized(session);throttle('access-approval:'+session['user'],8)
+        with store.connect(write=True) as c:
+            row=get(c,session,identifier);plan=json.loads(row['plan'])
+            require(row['status']=='awaiting_approval' and body.approved and row['created_by']==session['user'],'This plan cannot be approved.')
+            require(body.plan_digest==row['plan_digest']==digest(plan),'Plan changed; review again.')
+            require(scope(c,session['workspace'],row['client'],row['person'],session['user'])==plan['vaults'],'Access changed; create a new plan.')
+            user=owner(c,session['workspace'],session['user'])
+            require(user and user['mfa'],'Enroll account MFA before approving access workflows.',403)
+            require(verify_password(body.password.get_secret_value(),user['password']) and consume_factor(c,user,body.code,cipher),'Current password and unused factor required.',401)
+            approval={'actor':session['user'],'at':now(),'expires':time.time()+86400,'digest':row['plan_digest']}
+            c.execute("UPDATE workflows SET status='queued',approval=?,updated_at=? WHERE id=?",(canonical(approval),now(),identifier));Store.event(c,session['workspace'],session['user'],'access_workflow.approved',identifier)
+        dispatch(session['workspace'],identifier)
+        return {'ok':True}
+
+    @app.post('/api/access-workflows/{identifier}/cancel')
+    def cancel(identifier:str,session=Depends(auth)):
+        authorized(session)
+        with store.connect(write=True) as c:
+            row=get(c,session,identifier);require(row['status'] not in {'complete','dry_run_complete','cancelled'},'Workflow already finished.')
+            c.execute("UPDATE workflows SET status='cancelled',updated_at=? WHERE id=?",(now(),identifier))
+            c.execute("UPDATE workflow_steps SET status='cancelled' WHERE workflow=? AND status='pending'",(identifier,));Store.event(c,session['workspace'],session['user'],'access_workflow.cancelled',identifier)
+        return {'ok':True,'note':'Completed removals are not undone.'}
+
+    def tick():
+        with store.connect() as c:rows=c.execute("SELECT id,workspace FROM workflows WHERE status IN ('queued','running','waiting_unlock') ORDER BY updated_at LIMIT 100").fetchall()
+        for row in rows:dispatch(row['workspace'],row['id'])
+    app.state.access_workflow_tick=tick

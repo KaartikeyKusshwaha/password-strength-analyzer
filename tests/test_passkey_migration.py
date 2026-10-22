@@ -27,6 +27,8 @@ def legacy_store(tmp_path):
         c.execute('DELETE FROM schema_migrations WHERE version>=9')
         c.execute('DROP TABLE client_vaults')
         c.execute('DROP TABLE clients')
+        c.execute('DROP TABLE workflow_steps')
+        c.execute('DROP TABLE workflows')
         c.execute('ALTER TABLE devices DROP COLUMN allow_updates')
         c.execute('ALTER TABLE devices DROP COLUMN updates_enabled')
         c.execute('INSERT INTO users(id,email,password) VALUES(?,?,?)',(USER,'fixture@example.test','unchanged-password-hash'))

@@ -67,6 +67,7 @@ class WatchService:
         self.store=store;self.persist_scan=persist_scan;self.transport=None;self.clock=time.time
         self.executor=ThreadPoolExecutor(max_workers=1,thread_name_prefix='sentinel-watch')
         self.stop_event=threading.Event();self.thread=None;self.scheduler_error=False
+        self.additional_ticks=[]
 
     def notification(self,c,workspace,watch,run,kind,finding_ids=None,count=0):
         value={'id':uid(),'watch_id':watch['id'],'watch_name':watch['name'],'run_id':run,'kind':kind,'at':now(),'finding_ids':(finding_ids or [])[:20],'count':count}
@@ -122,6 +123,7 @@ class WatchService:
         return identifier
 
     def tick(self):
+        for callback in self.additional_ticks:callback()
         chosen=None
         with self.store.connect(write=True) as c:
             rows=c.execute("SELECT workspace,data FROM entities WHERE kind='watches'").fetchall()

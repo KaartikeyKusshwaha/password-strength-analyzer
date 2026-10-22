@@ -128,6 +128,24 @@ def bad(condition,message='Sharing authorization failed',code=403):
         raise HTTPException(code,message)
 
 
+def revoke_access(c, workspace, actor, identifier, user):
+    """Transactional revocation shared by interactive and approved workflows."""
+    vault=c.execute("SELECT v.*,g.role FROM team_vaults v JOIN team_grants g ON g.vault=v.id JOIN members m ON m.workspace=v.workspace AND m.user=g.user WHERE v.id=? AND v.workspace=? AND g.user=? AND g.accepted=1 AND m.role!='viewer'",(identifier,workspace,actor)).fetchone()
+    bad(vault,'Shared vault administration unavailable',404)
+    recipient=c.execute('SELECT role FROM team_grants WHERE vault=? AND user=?',(identifier,user)).fetchone()
+    bad(recipient,'Vault member not found',404)
+    bad(user!=vault['owner'],'The vault owner cannot be offboarded through member revocation',409)
+    bad(vault['role']=='owner' or vault['role']=='admin' and recipient['role'] not in {'owner','admin'},'Insufficient vault administration access')
+    c.execute('DELETE FROM team_grants WHERE vault=? AND user=?',(identifier,user))
+    record_connection_revocations(c,c.execute("SELECT * FROM companions WHERE kind='shared' AND vault_id=? AND user=?",(identifier,user)).fetchall(),actor)
+    c.execute("DELETE FROM companions WHERE kind='shared' AND vault_id=? AND user=?",(identifier,user))
+    record_action_cancellations(c,c.execute("SELECT id,workspace,user FROM credential_actions WHERE kind='shared' AND vault_id=? AND user=? AND status NOT IN ('complete','cancelled','expired')",(identifier,user)).fetchall(),actor)
+    c.execute("UPDATE credential_actions SET status='cancelled',lease_hash=NULL,lease_connection=NULL,lease_expires=NULL WHERE kind='shared' AND vault_id=? AND user=? AND status NOT IN ('complete','cancelled','expired')",(identifier,user))
+    c.execute('UPDATE team_vaults SET rotation_required=1 WHERE id=?',(identifier,))
+    invalidate_ownership(c,workspace,identifier,actor,'access_revoked')
+    Store.event(c,workspace,actor,'team_vault.access_revoked',identifier+':'+user)
+
+
 def public_keys(public):
     try:
         encryption=serialization.load_der_public_key(base64.b64decode(public['encryption'],validate=True))
@@ -326,19 +344,7 @@ def register(app,store,auth,writable,throttle):
     def revoke_team(identifier: str,user: str,session=Depends(auth)):
         writable(session)
         with store.connect(write=True) as c:
-            vault=team(c,session,identifier)
-            recipient=c.execute('SELECT role FROM team_grants WHERE vault=? AND user=?',(identifier,user)).fetchone()
-            bad(recipient,'Vault member not found',404)
-            bad(user!=vault['owner'],'The vault owner cannot be offboarded through member revocation',409)
-            bad(vault['role']=='owner' or vault['role']=='admin' and recipient['role'] not in {'owner','admin'},'Insufficient vault administration access')
-            c.execute('DELETE FROM team_grants WHERE vault=? AND user=?',(identifier,user))
-            record_connection_revocations(c,c.execute("SELECT * FROM companions WHERE kind='shared' AND vault_id=? AND user=?",(identifier,user)).fetchall(),session['user'])
-            c.execute("DELETE FROM companions WHERE kind='shared' AND vault_id=? AND user=?",(identifier,user))
-            record_action_cancellations(c,c.execute("SELECT id,workspace,user FROM credential_actions WHERE kind='shared' AND vault_id=? AND user=? AND status NOT IN ('complete','cancelled','expired')",(identifier,user)).fetchall(),session['user'])
-            c.execute("UPDATE credential_actions SET status='cancelled',lease_hash=NULL,lease_connection=NULL,lease_expires=NULL WHERE kind='shared' AND vault_id=? AND user=? AND status NOT IN ('complete','cancelled','expired')",(identifier,user))
-            c.execute('UPDATE team_vaults SET rotation_required=1 WHERE id=?',(identifier,))
-            invalidate_ownership(c,session['workspace'],identifier,session['user'],'access_revoked')
-            Store.event(c,session['workspace'],session['user'],'team_vault.access_revoked',identifier+':'+user)
+            revoke_access(c,session['workspace'],session['user'],identifier,user)
         return {'ok':True,'rotation_required':True,'note':'Cached credentials cannot be erased. Rotate the vault key and affected website passwords.'}
 
     @app.post('/api/team-vaults/{identifier}/rotate')

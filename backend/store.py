@@ -6,7 +6,7 @@ import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
 
-SCHEMA_VERSION = 11
+SCHEMA_VERSION = 12
 
 
 def now():
@@ -91,6 +91,8 @@ class Store:
             apply_device_updates(c, now())
             from .access_migration import apply as apply_client_access
             apply_client_access(c, now())
+            from .workflow_migration import apply as apply_access_workflows
+            apply_access_workflows(c, now())
 
     @contextmanager
     def connect(self, write=False):

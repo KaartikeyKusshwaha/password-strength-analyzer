@@ -339,6 +339,7 @@ def create_app(settings=None):
                             if step['status'] in {'pending','running'}:step['status']='interrupted'
                     Store.put(c, row["workspace"], row["kind"], job)
         app.state.watch_service.start()
+        app.state.access_workflow_tick()
         try:
             yield
         finally:
@@ -1359,6 +1360,9 @@ def create_app(settings=None):
     register_vault_activity(app,store,auth,throttle)
     from .watches import register as register_watches
     app.state.watch_service=register_watches(app,store,auth,writable,throttle,persist_scan)
+    from . import access_workflows
+    access_workflows.register(app,store,auth,throttle,cipher,executor)
+    app.state.watch_service.additional_ticks.append(app.state.access_workflow_tick)
 
     dist = ROOT / "frontend" / "dist"
     app.mount("/assets", StaticFiles(directory=dist / "assets", check_dir=False), name="assets")

@@ -62,7 +62,9 @@ def test_client_schema_upgrade_preserves_old_data_and_rejects_partial_layout(tmp
     with store.connect(write=True) as c:
         c.execute('DROP TABLE client_vaults')
         c.execute('DROP TABLE clients')
-        c.execute('DELETE FROM schema_migrations WHERE version=11')
+        c.execute('DELETE FROM schema_migrations WHERE version>=11')
+        c.execute('DROP TABLE workflow_steps')
+        c.execute('DROP TABLE workflows')
         c.execute("INSERT INTO workspaces VALUES('old','Unchanged',0)")
     for _ in range(2):
         with Store(path).connect() as c:

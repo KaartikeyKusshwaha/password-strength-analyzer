@@ -1,5 +1,6 @@
 """Approved multi-check reviews. Raw submissions exist only in worker arguments."""
 import time
+import threading
 
 from fastapi import Depends, HTTPException
 
@@ -43,6 +44,34 @@ class Runner:
         self.store,self.settings,self.queue,self.execute=store,settings,queue,execute
         self.wait_seconds=120
         self.pause=time.sleep
+        self.access_pending=set();self.access_lock=threading.Lock()
+
+    def run_access(self,workspace,identifier):
+        from .access_workflows import advance_one
+        # Bounded local steps, yielding as soon as client-side unlock is needed.
+        try:
+            for _ in range(61):
+                if not advance_one(self.store,workspace,identifier):return
+        except Exception:
+            with self.store.connect(write=True) as c:
+                row=c.execute("SELECT created_by FROM workflows WHERE id=? AND workspace=? AND status IN ('queued','running','waiting_unlock')",(identifier,workspace)).fetchone()
+                if row:
+                    c.execute("UPDATE workflows SET status='blocked',updated_at=? WHERE id=?",(now(),identifier))
+                    Store.event(c,workspace,row['created_by'],'access_workflow.execution_failed',identifier)
+
+    def enqueue_access(self,executor,workspace,identifier):
+        key=(workspace,identifier)
+        with self.access_lock:
+            if key in self.access_pending:return
+            self.access_pending.add(key)
+        def work():
+            try:self.run_access(workspace,identifier)
+            finally:
+                with self.access_lock:self.access_pending.discard(key)
+        try:return executor.submit(work)
+        except BaseException:
+            with self.access_lock:self.access_pending.discard(key)
+            raise
 
     def current(self,c,workspace,identifier,actor):
         review=Store.get(c,workspace,KIND,identifier)

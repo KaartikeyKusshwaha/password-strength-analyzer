@@ -19,7 +19,7 @@ from backend.passkey_migration import validate_layout
 MAGIC = b'SNTLBK01'
 MAX_BYTES = 128 * 1024 * 1024
 SCHEMA = SCHEMA_VERSION
-SUPPORTED_SCHEMAS = (8, 9, 10, SCHEMA)
+SUPPORTED_SCHEMAS = (8, 9, 10, 11, SCHEMA)
 
 
 class BackupError(ValueError):
@@ -79,6 +79,10 @@ def validate_database(connection, server_key):
         from .access_migration import validate_layout as validate_client_access
         try: validate_client_access(connection)
         except ValueError: raise BackupError('Client access schema validation failed.') from None
+    if schema >= 12:
+        from .workflow_migration import validate_layout as validate_access_workflows
+        try: validate_access_workflows(connection)
+        except ValueError: raise BackupError('Access workflow schema validation failed.') from None
     cipher = Fernet(server_key)
     # Detect a missing/mismatched server key before declaring recovery possible.
     for row in connection.execute('SELECT mfa,mfa_draft FROM users'):
@@ -135,6 +139,11 @@ def create_backup(data_dir, key_file, output):
 
 
 def suspend_authorizations(connection):
+    # A restored approval is not authority to resume destructive access changes.
+    for row in connection.execute("SELECT id,workspace FROM workflows WHERE status NOT IN ('complete','dry_run_complete','cancelled')").fetchall():
+        connection.execute("UPDATE workflows SET status='cancelled',approval=NULL,updated_at=? WHERE id=?",(now(),row['id']))
+        connection.execute("UPDATE workflow_steps SET status='cancelled' WHERE workflow=? AND status='pending'",(row['id'],))
+        Store.event(connection,row['workspace'],'system:restore','access_workflow.cancelled',row['id'])
     """Do not replay pre-disaster bearer grants, approvals or scheduled work."""
     for table in ('sessions', 'invites', 'companions', 'devices'):
         connection.execute(f'DELETE FROM {table}')

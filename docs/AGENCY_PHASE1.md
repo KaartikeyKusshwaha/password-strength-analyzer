@@ -61,3 +61,20 @@ Not yet implemented: durable access workflows/steps, vault connector orchestrati
 one-tap popup offboarding approval/progress, external connectors/triggers,
 discovery/debt, expiry, proof packs, reviews or handoffs. Refer to the master plan
 for their complete gates; this first map source does not complete Phase 1.
+
+## Subsequent workflow foundation (schema 12)
+
+The initial statement that durable local workflow steps were absent is now
+superseded by ACCESS_WORKFLOWS.md. Approval-bound client-vault plans and atomic
+revocation/rotation-verification steps now extend the existing Runner and watch
+scheduler. Dry-run, MFA, scope freshness, crash resume, cancellation and restore
+approval invalidation have focused coverage. The extension workflow permission,
+popup approval/progress, external connectors and remaining phases are still
+unfinished. Schema 11 remains a supported backup source. Production is unchanged
+and browser testing stays deferred under the user's latest instruction.
+
+The complete backend snapshot with the workflow foundation passed 462 tests,
+one skipped, before the final manifest/state guard extensions. The final focused
+workflow suite passed 13 tests; workflow/review/watch regressions passed 32.
+No browser sessions were operated during this implementation turn. No production
+schema upgrade, token expansion or connector authorization was performed.
