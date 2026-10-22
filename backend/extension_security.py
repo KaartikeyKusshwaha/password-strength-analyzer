@@ -4,6 +4,7 @@ import time
 from fastapi import Depends, HTTPException, Request
 from .security import digest
 from .store import Store,now
+from .admin_mfa import enforce as enforce_admin_mfa
 from .extension_connect import SECURITY_SCOPE,SECURITY_KIND
 from .scanner import RULES
 from . import helper_status
@@ -28,6 +29,7 @@ def register(app,store,settings,throttle,executor,validate_operation,queue_opera
             require(grant and grant['expires']>time.time() and grant['origin']==origin,'Security connection expired or revoked',401)
             member=c.execute('SELECT u.email,m.role FROM members m JOIN users u ON u.id=m.user WHERE m.user=? AND m.workspace=?',(grant['user'],grant['workspace'])).fetchone()
             require(member and member['role'] in {'owner','analyst','reviewer'},'Assessment permission removed')
+            enforce_admin_mfa(c,grant['user'],store)
         return {**grant,'email':member['email'],'role':member['role']}
 
     @app.get('/api/companion/security/context')

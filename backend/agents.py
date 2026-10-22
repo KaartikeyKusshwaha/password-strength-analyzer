@@ -113,11 +113,15 @@ def check_progress(c, workspace, job):
 
 
 def run_job(store, workspace, identifier, key, model, transport=None):
+    from .admin_mfa import enrollment_required
     try:
         with store.connect(write=True) as c:
             job = Store.get(c, workspace, "jobs", identifier)
             if not job or job["status"] != "queued":
                 return
+            member=c.execute('SELECT role FROM members WHERE workspace=? AND user=?',(workspace,job['created_by'])).fetchone()
+            if not member or member['role']=='viewer':raise ValueError('Workflow permission was removed before planning.')
+            if enrollment_required(c,job['created_by'],store):raise ValueError('Administrator MFA enrollment required before execution.')
             findings = [f for f in Store.all(c, workspace, "findings") if f["id"] in job["finding_ids"]]
             evidence = collect_evidence(findings)
             if not evidence or len(evidence) != len(job["finding_ids"]):
@@ -132,6 +136,7 @@ def run_job(store, workspace, identifier, key, model, transport=None):
             member=c.execute('SELECT role FROM members WHERE workspace=? AND user=?',(workspace,job['created_by'])).fetchone()
             if not member or member['role']=='viewer':
                 raise ValueError('Workflow permission was removed. No result was accepted.')
+            if enrollment_required(c,job['created_by'],store):raise ValueError('Administrator MFA enrollment required before recording results.')
             findings = [f for f in Store.all(c, workspace, "findings") if f["id"] in job["finding_ids"]]
             output = dispatch_work(c, workspace, job, findings, plan)
             job.update(status="complete", plan=plan, finished_at=now())

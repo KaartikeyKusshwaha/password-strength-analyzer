@@ -13,6 +13,7 @@ from pydantic import BaseModel,ConfigDict,Field,SecretStr
 from . import scanner
 from .dependency_inventory import DependencyFormat,inventory,apply_coverage
 from .store import Store,canonical,now,uid
+from .admin_mfa import enrollment_required
 
 
 class Body(BaseModel):
@@ -79,7 +80,7 @@ class WatchService:
 
     def permission(self,c,workspace,user):
         row=c.execute('SELECT role FROM members WHERE workspace=? AND user=?',(workspace,user)).fetchone()
-        return row and row['role'] in {'owner','analyst','reviewer'}
+        return row and row['role'] in {'owner','analyst','reviewer'} and not enrollment_required(c,user,self.store)
 
     def stop_watch(self,c,workspace,watch,reason,status='interrupted'):
         if watch.get('active_run'):

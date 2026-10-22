@@ -23,7 +23,9 @@ def post(client, path, body, **kwargs):
 
 @pytest.fixture
 def system(tmp_path):
-    app = create_app(Settings(data_dir=tmp_path, groq_key=""))
+    # Legacy feature fixtures deliberately omit MFA. Default production policy
+    # and its rollout/worker boundaries are exercised in test_admin_mfa.py.
+    app = create_app(Settings(data_dir=tmp_path, groq_key="", admin_mfa_required=False))
     with TestClient(app) as client:
         token = (tmp_path / '.bootstrap-token').read_text()
         response = post(client, '/setup', {"email": "owner@example.test", "password": PASSWORD, "token": token})

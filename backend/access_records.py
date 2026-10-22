@@ -6,6 +6,7 @@ from fastapi import Depends,HTTPException,Request
 from pydantic import BaseModel,ConfigDict,Field,field_validator
 from .store import Store,now,uid
 from .security import digest
+from .admin_mfa import enforce as enforce_admin_mfa
 from .extension_connect import DISCOVERY_SCOPE,DISCOVERY_KIND
 
 
@@ -71,6 +72,7 @@ def record(c,session,body,person,source):
 def register(app,store,auth,throttle):
     def owner(session):require(session['role']=='owner','Workspace owner access required')
     def live(c,session):
+        enforce_admin_mfa(c,session['user'],store)
         grant=Store.get(c,DISCOVERY_SCOPE,DISCOVERY_KIND,session['id'])
         require(grant and grant['expires']>time.time(),'Discovery connection expired or revoked',401)
         require(c.execute("SELECT 1 FROM members WHERE user=? AND workspace=? AND role IN ('owner','analyst','reviewer')",(session['user'],session['workspace'])).fetchone(),'Reporting permission removed')
@@ -127,6 +129,7 @@ def register(app,store,auth,throttle):
             require(grant and grant['expires']>time.time() and grant['origin']==origin,'Discovery connection expired or revoked',401)
             member=c.execute('SELECT role FROM members WHERE user=? AND workspace=?',(grant['user'],grant['workspace'])).fetchone()
             require(member and member['role'] in {'owner','analyst','reviewer'},'Reporting permission removed')
+            enforce_admin_mfa(c,grant['user'],store)
         return {**grant,'role':member['role']}
 
     @app.get('/api/companion/discovery/context')

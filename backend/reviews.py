@@ -6,6 +6,7 @@ from fastapi import Depends, HTTPException
 
 from . import agents
 from .store import Store, now, uid
+from .admin_mfa import enrollment_required
 
 KIND='security_reviews'
 ACTIVE={'queued','running'}
@@ -77,7 +78,7 @@ class Runner:
         review=Store.get(c,workspace,KIND,identifier)
         if not review or review['status'] not in ACTIVE:return None
         member=c.execute('SELECT role FROM members WHERE workspace=? AND user=?',(workspace,actor)).fetchone()
-        if not member or member['role']=='viewer':raise PermissionError()
+        if not member or member['role']=='viewer' or enrollment_required(c,actor,self.store):raise PermissionError()
         return review
 
     def run(self,session,identifier,checks,transport=None):

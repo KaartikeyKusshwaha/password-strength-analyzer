@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from .store import Store, canonical, now
 from .vault_activity import record_connection_revocations, record_action_cancellations, invalidate_ownership
 from .browser_access import require_connection
+from .admin_mfa import enforce as enforce_admin_mfa
 
 
 class Body(BaseModel):
@@ -373,6 +374,7 @@ def register(app,store,auth,writable,throttle):
     def browser_context(c,connection):
         # Validate every use, including accepted grant, current membership and policy.
         require_connection(c,connection)
+        enforce_admin_mfa(c,connection['user'],store)
         bad(connection.get('kind')=='shared','Shared browser connection required',401)
         member=c.execute('SELECT role FROM members WHERE workspace=? AND user=?',(connection['workspace'],connection['user'])).fetchone()
         bad(member,'Shared browser connection expired or revoked',401)

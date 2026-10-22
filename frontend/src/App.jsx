@@ -48,6 +48,7 @@ import {
 } from "lucide-react";
 import { api } from "./api";
 import {PRIMARY_PAGES,readRoute,pageRoute} from './navigation';
+import AdminMfaEnrollment from './AdminMfaEnrollment';
 import DevicePosture from "./DevicePosture";
 import DeviceUpdates from "./DeviceUpdates";
 import MailCoverage from "./MailCoverage";
@@ -499,6 +500,7 @@ export default function App() {
     try {
       const user = await api("/me");
       setMe(user);
+      if(user.mfa_enrollment_required){setData(null);setError('');return;}
       setData(await api("/workspace"));
       setError("");
     } catch (e) {
@@ -584,6 +586,7 @@ export default function App() {
         <Auth setup={setup} onDone={refresh} />
       </>
     );
+  if(me.mfa_enrollment_required)return <AdminMfaEnrollment key={me.id} onDone={refresh} onSignOut={async()=>{await api('/logout',{});await refresh();}}/>;
   if(/^[a-f0-9]{24}$/.test(connectionRequest))return <ExtensionApproval identifier={connectionRequest} onClose={()=>{window.location.hash='';setConnectionRequest('');}}/>;
   if (!data)
     return (
@@ -1927,9 +1930,10 @@ export default function App() {
                 {me.mfa_enabled ? (
                   <>
                     <p>{me.recovery_remaining} recovery codes remain.</p>
-                    <Button secondary onClick={() => setModal("mfa-disable")}>
+                    <Button secondary disabled={me.admin_mfa_required} onClick={() => setModal("mfa-disable")}>
                       Disable with reauthentication
                     </Button>
+                    {me.admin_mfa_required&&<p>Account MFA is required while you hold an owner or shared-vault administrator role.</p>}
                   </>
                 ) : (
                   <Button onClick={() => setModal("mfa-setup")}>

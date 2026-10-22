@@ -64,6 +64,13 @@ async function renderOverview(){
 }
 
 describe("workspace flows", () => {
+  it('shows administrator enrollment before fetching workspace data or extension approval',async()=>{
+    const {fetcher}=mockWorkspace(),original=fetcher.getMockImplementation();
+    fetcher.mockImplementation(async(url,options)=>{const response=await original(url,options);if(url==='/api/me'){const user=await response.json();return {...response,json:async()=>({...user,admin_mfa_required:true,mfa_enrollment_required:true})};}return response;});
+    window.history.replaceState(null,'','/#connect='+'a'.repeat(24));render(<App/>);
+    expect(await screen.findByText('Protect your administrator account')).toBeInTheDocument();
+    expect(fetcher.mock.calls.some(([url])=>url==='/api/workspace'||url.includes('/connect/'))).toBe(false);
+  });
   it('keeps agency control-room pages separate from the explicitly enabled advanced route',async()=>{
     mockWorkspace();render(<App/>);
     expect(await screen.findByText('Your accounts, under your control.')).toBeInTheDocument();

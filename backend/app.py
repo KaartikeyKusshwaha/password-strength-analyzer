@@ -34,13 +34,16 @@ from .posture import Report as PostureReport
 from .device_updates import Report as UpdateReport
 from . import companion_status
 from .browser_access import require_connection
+from . import admin_mfa
 
 ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(ROOT / ".env")
 
 
 class Settings:
-    def __init__(self, data_dir=None, origin=None, groq_key=None, model=None, scan_hosts=None):
+    def __init__(self, data_dir=None, origin=None, groq_key=None, model=None, scan_hosts=None, admin_mfa_required=True):
+        if type(admin_mfa_required) is not bool:raise ValueError('admin_mfa_required must be boolean')
+        self.admin_mfa_required=admin_mfa_required
         self.data_dir = Path(data_dir or os.getenv("DATA_DIR", ROOT / "data"))
         self.origin = (origin or os.getenv("APP_ORIGIN", "http://127.0.0.1:8110")).rstrip("/")
         parsed = urlsplit(self.origin)
@@ -349,6 +352,7 @@ def create_app(settings=None):
 
     app = FastAPI(title="SentinelOps", version="0.22.0", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.store, app.state.settings = store, settings
+    store.admin_mfa_required=settings.admin_mfa_required
     app.state.cipher, app.state.executor = cipher, executor
     app.state.agent_transport = None
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=[settings.host, "localhost", "127.0.0.1", "testserver"] if settings.host in {"127.0.0.1", "localhost"} else [settings.host])
@@ -413,6 +417,9 @@ def create_app(settings=None):
             raise HTTPException(401, "Sign in required")
         if request.method != "GET" and not hmac.compare_digest(request.headers.get("X-CSRF-Token", ""), row["csrf"]):
             raise HTTPException(403, "CSRF token required")
+        personal_path=request.url.path in {'/api/me','/api/logout','/api/mfa/setup','/api/mfa/enable','/api/vault','/api/passkeys','/api/companions/revoke'} or bool(re.fullmatch(r'/api/vaults(?:/[a-f0-9]{24})?|/api/vault-activity/personal/[a-f0-9]{24}',request.url.path)) or request.url.path.startswith('/api/passkeys/')
+        if not personal_path:
+            with store.connect() as c:admin_mfa.enforce(c,row['user'],store)
         return dict(row)
 
     def writable(session):
@@ -624,6 +631,7 @@ def create_app(settings=None):
         must(authorization.startswith("Bearer "), "Companion token required", 401)
         with store.connect() as c:
             row = c.execute("SELECT * FROM companions WHERE token=? AND expires>?", (digest(authorization[7:]), time.time())).fetchone()
+            if row and row['kind']=='shared':admin_mfa.enforce(c,row['user'],store)
         must(row and row['vault_id'], "Companion token expired or revoked", 401)
         return dict(row)
 
@@ -691,6 +699,7 @@ def create_app(settings=None):
         authorization = request.headers.get("authorization", "")
         must(authorization.startswith("Bearer "), "Device token required", 401)
         device = must(c.execute("SELECT d.* FROM devices d JOIN members m ON d.user=m.user AND d.workspace=m.workspace WHERE d.token=? AND d.expires>? AND m.role!='viewer'", (digest(authorization[7:]), time.time())).fetchone(), "Device connection expired or revoked", 401)
+        admin_mfa.enforce(c,device['user'],store)
         return dict(device)
 
     @app.post("/api/device-agent/poll")
@@ -718,7 +727,7 @@ def create_app(settings=None):
                 Store.put(c,device['workspace'],'operations',operation)
                 return {'operation':None,'notice':'Update tool unavailable; nothing was collected.'}
             member = c.execute("SELECT role FROM members WHERE workspace=? AND user=?", (device["workspace"], operation["created_by"])).fetchone()
-            if not member or member["role"] == "viewer" or operation["target"] not in json.loads(device["targets"]) or operation['action']=='posture' and not device['allow_posture'] or operation['action']=='updates' and not device['allow_updates']:
+            if not member or member["role"] == "viewer" or admin_mfa.enrollment_required(c,operation['created_by'],store) or operation["target"] not in json.loads(device["targets"]) or operation['action']=='posture' and not device['allow_posture'] or operation['action']=='updates' and not device['allow_updates']:
                 operation.update(status="failed", error="Requested device scope is no longer authorized.")
                 Store.put(c, device["workspace"], "operations", operation)
                 return {"operation":None}
@@ -736,6 +745,7 @@ def create_app(settings=None):
             must(operation.get("device_id") == device["id"] and operation["status"] == "running" and operation.get("lease_expires", 0) > time.time() and hmac.compare_digest(operation.get("lease", ""), digest(body.lease.get_secret_value())), "Device job lease expired or invalid", 409)
             member = c.execute("SELECT role FROM members WHERE workspace=? AND user=?", (device["workspace"], operation["created_by"])).fetchone()
             must(member and member["role"] != "viewer", "Requester permission was removed", 403)
+            admin_mfa.enforce(c,operation['created_by'],store)
             observations = [o.model_dump() for o in body.observations]
             must(len(observations) == len(operation["ports"]) and {(o["host"], o["port"]) for o in observations} == {(operation["target"], p) for p in operation["ports"]}, "Report must match the authorized target and ports exactly", 422)
             if operation['action']=='updates':
@@ -813,7 +823,8 @@ def create_app(settings=None):
         with store.connect() as c:
             spaces = [dict(r) for r in c.execute("SELECT w.*,m.role FROM workspaces w JOIN members m ON m.workspace=w.id WHERE m.user=? AND w.demo=0", (session["user"],))]
             user = c.execute("SELECT mfa,recovery FROM users WHERE id=?", (session["user"],)).fetchone()
-        return {"id": session["user"], "email": session["email"], "role": session["role"], "workspace": session["workspace"], "csrf": session["csrf"], "workspaces": spaces, "mfa_enabled": bool(user["mfa"]), "recovery_remaining": len(json.loads(user["recovery"]))}
+            admin_required=store.admin_mfa_required and admin_mfa.administrative(c,session['user'])
+        return {"id": session["user"], "email": session["email"], "role": session["role"], "workspace": session["workspace"], "csrf": session["csrf"], "workspaces": spaces, "mfa_enabled": bool(user["mfa"]), "recovery_remaining": len(json.loads(user["recovery"])), 'admin_mfa_required':bool(admin_required),'mfa_enrollment_required':bool(admin_required and not user['mfa'])}
 
     @app.post("/api/workspaces")
     def create_workspace(body: Workspace, session=Depends(auth)):
@@ -897,6 +908,7 @@ def create_app(settings=None):
     def mfa_disable(body: Reauth, response: Response, session=Depends(auth)):
         throttle("mfa:" + session["user"])
         with store.connect(write=True) as c:
+            must(not store.admin_mfa_required or not admin_mfa.administrative(c,session['user']),'Administrators must retain account MFA. Transfer all administrative roles before disabling it.',403)
             user = c.execute("SELECT * FROM users WHERE id=?", (session["user"],)).fetchone()
             must(verify_password(body.password.get_secret_value(), user["password"]) and consume_factor(c, user, body.code, cipher), "Password and unused factor required", 401)
             c.execute("UPDATE users SET mfa=NULL,mfa_draft=NULL,mfa_step=-1,recovery='[]' WHERE id=?", (user["id"],))
@@ -1046,6 +1058,7 @@ def create_app(settings=None):
                 member = c.execute("SELECT role FROM members WHERE workspace=? AND user=?", (workspace, actor)).fetchone()
                 if not member or member["role"] == "viewer":
                     raise ValueError("Device/check permission was removed before execution.")
+                if admin_mfa.enrollment_required(c,actor,store):raise ValueError('Administrator MFA enrollment required before execution.')
                 operation.update(status="running", steps=[{"agent": "Scope verifier", "status": "complete"}, {"agent": "Device operator" if body.action == "device" else "Assessment operator", "status": "running"}])
                 Store.put(c, workspace, "operations", operation)
             if body.action == "device":
@@ -1070,6 +1083,7 @@ def create_app(settings=None):
                 member = c.execute("SELECT role FROM members WHERE workspace=? AND user=?", (workspace, actor)).fetchone()
                 if not member or member["role"] == "viewer":
                     raise ValueError("Permission removed before recording results.")
+                if admin_mfa.enrollment_required(c,actor,store):raise ValueError('Administrator MFA enrollment required before recording results.')
                 current_operation = Store.get(c, workspace, "operations", identifier)
                 if not current_operation or current_operation["status"] != "running":
                     return
@@ -1141,6 +1155,7 @@ def create_app(settings=None):
         except ValueError as error:
             raise HTTPException(422, str(error))
     def queue_operation(c,body,session,review_id=None):
+        admin_mfa.enforce(c,session['user'],store)
         member=c.execute('SELECT role FROM members WHERE workspace=? AND user=?',(session['workspace'],session['user'])).fetchone()
         must(member and member['role']!='viewer','Assessment permission removed',403)
         must(not any(r['status'] in {'queued','running'} and r['id']!=review_id for r in Store.all(c,session['workspace'],'security_reviews')),'A security review is already active',409)
