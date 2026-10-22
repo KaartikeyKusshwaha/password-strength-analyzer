@@ -17,6 +17,11 @@ export class AccountOperator {
     this.action=claim.action;this.plan=plan;this.lease=claim.lease;
     await this.browser.storage.session.set({accountAction:{id:job.id,lease:claim.lease}});
   }
+  async stageApproved(job){
+    await this.select(job);
+    for(let index=0;index<this.plan.items.length;index++)await this.stage(index);
+    return this.action;
+  }
   async restore(jobs) {
     if(!this.browser.storage.session)return false;
     const saved=(await this.browser.storage.session.get('accountAction')).accountAction;

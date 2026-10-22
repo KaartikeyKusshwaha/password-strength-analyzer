@@ -22,7 +22,7 @@ export async function recoverDebtBinding(session,connection,request=accessReques
   if(!pending)return false;
   if(pending.origin!==connection.origin)throw new Error('Finish the pending debt link on its original service.');
   await request(connection,'debt/bind',pending.body);
-  await session.browser.storage.local.remove(KEY);return true;
+  await session.browser.storage.local.remove(KEY);return pending.body.action_id;
 }
 export async function approveDebtRotation(session,connection,rows,request=accessRequest){
   scope(session,connection);

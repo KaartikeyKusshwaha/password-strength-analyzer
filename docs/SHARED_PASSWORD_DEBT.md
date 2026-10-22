@@ -64,8 +64,18 @@ available for autofill; Restore archived login for rotation is a separate local
 extension action after reopening.
 
 Cancelled/expired operator plans do not erase local staged passwords or blindly
-reset debt to all-clear. Existing staged proposals require review; the remaining
-extension recovery UX for expired/orphaned proposals is still a follow-up item.
+reset debt to all-clear. The extension can resolve stopped or untracked staged
+proposals after an explicit website-outcome confirmation. It preserves the unused
+password in an encrypted archived copy and does not resume expired plans or update
+queue/debt outcomes. Active matching plans must be stopped first; an untracked
+plan is not proof that no other work is active. Recovery refuses to write without
+space for the archived copy.
+
+Newly approved plans in the current unlocked extension session automatically
+stage encrypted replacements through the existing operator. They do not open or
+submit websites automatically. Another active plan prevents automatic staging.
+Local writes reject changes detected during encryption, and approval receipts
+must match the newly encrypted plan identifier.
 Restored backups cancel operator work while retaining historical debt metadata.
 
 ## Counter, map and reporting
@@ -92,6 +102,8 @@ tests check metadata-only registration, pending-link retry without a second
 approval, local archival before retirement and safe retry/restore. These are
 isolated automated tests, not the deferred real-browser acceptance gate.
 
-Final regression: backend 481 passed, one skipped; frontend 366 passed across
-80 files. Web and content/popup/background builds passed in isolated validation
-directories. No installed extension or Oracle deployment was replaced.
+Latest frontend regression: 368 passed across 80 files, including real encrypted
+staging and expired-plan recovery without restarting the plan. The popup build
+passed. The unchanged backend previously passed 481 tests, one skipped; web and
+content/popup/background builds passed at that checkpoint. No installed extension
+or Oracle deployment was replaced.

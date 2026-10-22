@@ -132,10 +132,11 @@ export class SaveSession {
     return {saved:true, updated:matches.length > 0};
   }
   async persist(next,generation=this.generation) {
-    this.active(generation);next=trackChanges(this.entries,next);validateEntries(next);
+    this.active(generation);const revision=this.revision,previous=this.entries;next=trackChanges(previous,next);validateEntries(next);
     const envelope = this.material.kind==='shared'?await this.material.handle.encrypt(next):await encryptVault(next, this.material.key, this.material.salt);
     this.active(generation);
-    const result = await this.request({revision:this.revision, envelope});
+    if(this.revision!==revision||this.entries!==previous)throw new Error('Vault changed during encryption. Refresh before retrying; nothing was overwritten.');
+    const result = await this.request({revision, envelope});
     this.active(generation);
     this.entries = next; this.revision = result.revision;
   }
@@ -155,7 +156,9 @@ export class SaveSession {
     });
     const manifest={version:1,id:Array.from(crypto.getRandomValues(new Uint8Array(12)),byte=>byte.toString(16).padStart(2,'0')).join(''),...descriptor,approved_at:Math.floor(Date.now()/1000),expires_at:Math.floor(Date.now()/1000)+1800,items};
     const envelope=this.material.kind==='shared'?await this.material.handle.sealAction(manifest):await sealAction(manifest,this.material.key);this.active(generation);
-    return this.request({id:manifest.id,vault_id:manifest.vault_id,kind:manifest.kind,entry_count:items.length,expires_at:manifest.expires_at,envelope},'/actions');
+    const receipt=await this.request({id:manifest.id,vault_id:manifest.vault_id,kind:manifest.kind,entry_count:items.length,expires_at:manifest.expires_at,envelope},'/actions');
+    if(receipt.id!==manifest.id)throw new Error('Unexpected encrypted approval receipt. Inspect the existing queue before approving again.');
+    return receipt;
   }
   async actionPlan(job) {
     if(!this.material || !this.policy || job.vault_id!==this.policy.id || job.kind!==(this.material.kind || 'personal') || job.kind==='shared' && job.user!==this.material.identity.user)throw new Error('This plan belongs to a different vault or user.');

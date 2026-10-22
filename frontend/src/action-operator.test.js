@@ -2,9 +2,33 @@ import {beforeEach,expect,it,vi} from 'vitest';
 import {webcrypto} from 'node:crypto';
 import {SaveSession} from '../../companion/extension/vault-session';
 import {AccountOperator} from '../../companion/extension/action-operator';
+import {PendingRecovery} from '../../companion/extension/pending-recovery';
 import {unlockSharingIdentity,openTeamVault} from './sharing-crypto';
 import native from './fixtures/native-sharing.json';
 beforeEach(()=>vi.stubGlobal('crypto',webcrypto));
+
+it('automatically stages only an approved plan without opening or submitting a website',async()=>{
+  const s=await system();await s.operator.stageApproved(s.job);
+  expect(s.session.entries[0].pending_change.password).toHaveLength(24);
+  expect(s.session.entries[0].password).toBe(native.entry.password);
+  expect(s.browser.runtime.sendMessage).not.toHaveBeenCalled();
+  expect(s.browser.tabs.sendMessage).not.toHaveBeenCalled();s.session.lock();
+},20000);
+
+it('recovers a stopped proposal into encrypted archived storage without restarting its plan',async()=>{
+  const s=await system();await s.operator.stageApproved(s.job);
+  const proposal=s.session.entries[0].pending_change.password,recovery=new PendingRecovery(s.session);
+  await expect(recovery.resolve(native.entry.id,s.job.id,true)).rejects.toThrow('Stop the matching');
+  s.job={...s.job,status:'expired'};s.fetcher.mockClear();
+  await recovery.resolve(native.entry.id,s.job.id,true);
+  expect(s.session.entries[0].password).toBe(proposal);
+  expect(s.session.entries[0].pending_change).toBeUndefined();
+  expect(s.session.entries[1].password).toBe(native.entry.password);
+  expect(s.session.entries[1].history.archived_at).toBeTruthy();
+  for(const [url,options] of s.fetcher.mock.calls){expect(url).not.toMatch(/\/(claim|result)$/);if(options.body){expect(options.body).not.toContain(proposal);expect(options.body).not.toContain(native.entry.password);}}
+  s.session.lock();const reopened=new SaveSession(s.browser,s.fetcher);await reopened.unlock(native.password);
+  expect(reopened.entries).toHaveLength(2);expect(reopened.entries[0].password).toBe(proposal);reopened.lock();
+},20000);
 
 async function system() {
   const who=await unlockSharingIdentity(native.user,native.identity,native.password),opened=await openTeamVault(native.team,who,native.identity.fingerprint);
