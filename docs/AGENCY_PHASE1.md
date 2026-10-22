@@ -158,3 +158,20 @@ Starlette TestClient warning remains. Initial signed invitation issuance within
 the expiry flow and durable background reminders are still unfinished. No native
 browser use, installed extension replacement or production rollout occurred.
 See ACCESS_EXPIRY.md for scope, authority bounds and scheduler timing limits.
+
+Freelancer invitation checkpoint (23 October): the extension now prepares an
+all-client-vault draft, signs each wrapped-key invitation locally across selected
+vault unlocks, and grants every invitation plus its approved expiry in one write
+transaction. Fresh password/MFA approval, exact independent vault capabilities,
+current owner/recipient identities and unchanged client/vault snapshots are
+rechecked before commit. Bad tokens/signatures/roles, subset/replay, stale or
+expired drafts and commit interruption roll back access, expiry and factor use.
+Pending drafts cancel on restore. Existing invite validation/crypto is reused.
+
+Validation: initial backend integration 51 passed across invitations, sharing,
+expiry, extension ownership and backups; short-expiry/factor-boundary regression
+2 passed. Full frontend 397 passed in 89 files, plus the subsequently added
+real-crypto invitation test passed separately. Both production builds passed.
+Final invitation-only boundary results are recorded in FREELANCER_INVITATIONS.md.
+No browser control, installed extension replacement or hosted deployment occurred.
+Durable background reminder delivery, weekly reviews and Proof Packs remain work.

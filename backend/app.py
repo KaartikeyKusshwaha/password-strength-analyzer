@@ -364,13 +364,13 @@ def create_app(settings=None):
 
     @app.middleware("http")
     async def boundary(request, call_next):
-        companion = bool(re.fullmatch(r'/api/companion/(vault|actions(?:/context|/[a-f0-9]{24}/(?:claim|result|cancel))?|connect/(?:start|[a-f0-9]{24}/(?:poll|ack|cancel))|discovery/(?:context|revoke|observe|consents(?:/[a-f0-9]{24}/disable)?)|access/(?:context|revoke|leases(?:/[a-f0-9]{24}/(?:approve|cancel))?|vaults/[a-f0-9]{24}/ownership(?:/accept|/[a-f0-9]{24}/cancel)?|handoffs(?:/[a-f0-9]{24}/(?:approve|link|signoff|cancel))?|debt(?:/bind|/[a-f0-9]{24}/(?:verify|retire|reopen))?|workflows(?:/[a-f0-9]{24}/(?:approve|cancel|report|vaults/[a-f0-9]{24}/rotation))?)|security/(?:context|revoke|inventory-preview|device-pairing/(?:details|approve)|operations(?:/[a-f0-9]{24}(?:/cancel)?)?))',request.url.path))
+        companion = bool(re.fullmatch(r'/api/companion/(vault|actions(?:/context|/[a-f0-9]{24}/(?:claim|result|cancel))?|connect/(?:start|[a-f0-9]{24}/(?:poll|ack|cancel))|discovery/(?:context|revoke|observe|consents(?:/[a-f0-9]{24}/disable)?)|access/(?:context|revoke|invitations(?:/[a-f0-9]{24}/(?:apply|vaults/[a-f0-9]{24}))?|leases(?:/[a-f0-9]{24}/(?:approve|cancel))?|vaults/[a-f0-9]{24}/ownership(?:/accept|/[a-f0-9]{24}/cancel)?|handoffs(?:/[a-f0-9]{24}/(?:approve|link|signoff|cancel))?|debt(?:/bind|/[a-f0-9]{24}/(?:verify|retire|reopen))?|workflows(?:/[a-f0-9]{24}/(?:approve|cancel|report|vaults/[a-f0-9]{24}/rotation))?)|security/(?:context|revoke|inventory-preview|device-pairing/(?:details|approve)|operations(?:/[a-f0-9]{24}(?:/cancel)?)?))',request.url.path))
         extension_origin = request.headers.get("origin", "")
         extension_origin_valid = bool(re.fullmatch(r"chrome-extension://[a-p]{32}", extension_origin))
         if companion and request.method == "OPTIONS":
             if not extension_origin_valid:
                 return JSONResponse({"detail": "Extension origin required"}, status_code=403)
-            return Response(status_code=204, headers={"Access-Control-Allow-Origin": extension_origin, "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "Authorization, Content-Type, X-Sentinel-Companion-Version" + (", X-Sentinel-Vault-Token" if request.url.path.endswith("/rotation") or re.fullmatch(r"/api/companion/access/vaults/[a-f0-9]{24}/ownership(?:/accept|/[a-f0-9]{24}/cancel)?",request.url.path) else ""), "Vary": "Origin"})
+            return Response(status_code=204, headers={"Access-Control-Allow-Origin": extension_origin, "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "Authorization, Content-Type, X-Sentinel-Companion-Version" + (", X-Sentinel-Vault-Token" if re.fullmatch(r"/api/companion/access/invitations/[a-f0-9]{24}/vaults/[a-f0-9]{24}",request.url.path) or request.url.path.endswith("/rotation") or re.fullmatch(r"/api/companion/access/vaults/[a-f0-9]{24}/ownership(?:/accept|/[a-f0-9]{24}/cancel)?",request.url.path) else ""), "Vary": "Origin"})
         if request.method in {"POST", "PATCH", "PUT", "DELETE"}:
             origin = request.headers.get("origin")
             if origin and origin != settings.origin and not (companion and extension_origin_valid):
@@ -1394,6 +1394,8 @@ def create_app(settings=None):
     access_leases.register(app,store,auth,app.state.access_auth,throttle,cipher)
     from . import extension_ownership
     extension_ownership.register(app,store,app.state.access_auth,throttle,shared_companions)
+    from . import access_invitations
+    access_invitations.register(app,store,app.state.access_auth,throttle,cipher,shared_companions)
 
     dist = ROOT / "frontend" / "dist"
     app.mount("/assets", StaticFiles(directory=dist / "assets", check_dir=False), name="assets")

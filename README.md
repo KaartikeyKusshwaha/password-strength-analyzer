@@ -15,8 +15,9 @@ Encrypted expired/orphaned proposal recovery is implemented in source. Client
 handoff coordination now records independent receiving-owner sign-off, and the
 extension performs signed ownership proposal/acceptance with local key rotation.
 The expiry engine and extension controls also implement approved contractor
-access deadlines and scheduled departure plans; initial invitation issuance and
-durable background reminder delivery remain unfinished. See
+access deadlines and scheduled departure plans. All-client-vault invitations and
+approved expiry can now be issued atomically from the extension; durable
+background reminder delivery remains unfinished. See
 [expiry scope and remaining work](docs/ACCESS_EXPIRY.md). Client proof packs remain
 unfinished.
 Existing scanner and investigation engines

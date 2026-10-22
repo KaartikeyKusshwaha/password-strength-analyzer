@@ -312,20 +312,22 @@ def register(app,store,auth,writable,throttle):
                 Store.event(c,session['workspace'],session['user'],'team_vault.invitation_accepted',identifier)
         return {'ok':True}
 
-    @app.post('/api/team-vaults/{identifier}/invite')
-    def invite_team(identifier: str,body: Grant,session=Depends(auth)):
-        writable(session);throttle('team-invite:'+session['user'],30)
-        with store.connect(write=True) as c:
-            vault=team(c,session,identifier)
-            bad(vault['role'] in {'owner','admin'},'Vault admin access required')
-            bad(not vault['rotation_required'],'Rotate the vault key before issuing new access',409)
-            bad(c.execute('SELECT count(*) FROM team_grants WHERE vault=?',(identifier,)).fetchone()[0]<20,'A team vault supports up to 20 members',409)
-            bad(not c.execute('SELECT 1 FROM team_grants WHERE vault=? AND user=?',(identifier,body.recipient)).fetchone(),'Recipient already has an invitation or access',409)
-            envelope=validate_grant(c,body,vault,session['user'])
-            c.execute('INSERT INTO team_grants VALUES(?,?,?,?,?,?)',(identifier,body.recipient,body.role,canonical(envelope),0,now()))
-            invalidate_ownership(c,session['workspace'],identifier,session['user'],'member_invited')
-            Store.event(c,session['workspace'],session['user'],'team_vault.invited',identifier+':'+body.recipient)
+    def invite_in(c,identifier,body,session):
+        vault=team(c,session,identifier)
+        bad(vault['role'] in {'owner','admin'},'Vault admin access required')
+        bad(not vault['rotation_required'],'Rotate the vault key before issuing new access',409)
+        bad(c.execute('SELECT count(*) FROM team_grants WHERE vault=?',(identifier,)).fetchone()[0]<20,'A team vault supports up to 20 members',409)
+        bad(not c.execute('SELECT 1 FROM team_grants WHERE vault=? AND user=?',(identifier,body.recipient)).fetchone(),'Recipient already has an invitation or access',409)
+        envelope=validate_grant(c,body,vault,session['user'])
+        c.execute('INSERT INTO team_grants VALUES(?,?,?,?,?,?)',(identifier,body.recipient,body.role,canonical(envelope),0,now()))
+        invalidate_ownership(c,session['workspace'],identifier,session['user'],'member_invited')
+        Store.event(c,session['workspace'],session['user'],'team_vault.invited',identifier+':'+body.recipient)
         return {'ok':True}
+
+    @app.post('/api/team-vaults/{identifier}/invite')
+    def invite_team(identifier:str,body:Grant,session=Depends(auth)):
+        writable(session);throttle('team-invite:'+session['user'],30)
+        with store.connect(write=True) as c:return invite_in(c,identifier,body,session)
 
     @app.post('/api/team-vaults/{identifier}/save')
     def save_team(identifier: str,body: TeamWrite,session=Depends(auth)):
@@ -441,4 +443,4 @@ def register(app,store,auth,writable,throttle):
         value={'id':row['id'],'name':row['name'],'workspace':row['workspace'],'owner':row['owner'],'owner_public':json.loads(who['public']),'owner_fingerprint':who['fingerprint'],'manifest':json.loads(row['manifest']),'epoch':row['epoch'],'revision':row['revision'],'role':row['role'],'accepted':True,'grant':json.loads(row['envelope']),'grants':grants,'payload':json.loads(row['payload']),'rotation_required':bool(row['rotation_required']),'browser_policy':policy}
         return {'team':value,'directory':directory}
 
-    return {'metadata':browser_metadata,'read':browser_read,'write':browser_write,'rotation_context':workflow_rotation_context,'rotate':workflow_rotate,'ownership':ownership,'ownership_context':ownership_context}
+    return {'metadata':browser_metadata,'read':browser_read,'write':browser_write,'rotation_context':workflow_rotation_context,'rotate':workflow_rotate,'ownership':ownership,'ownership_context':ownership_context,'invite':invite_in}

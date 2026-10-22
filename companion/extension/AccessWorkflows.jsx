@@ -1,3 +1,4 @@
+import FreelancerInvite from './FreelancerInvite';
 import AccessLeases from './AccessLeases';
 import VaultOwnership from './VaultOwnership';
 import React,{useEffect,useState} from 'react';
@@ -32,6 +33,7 @@ export default function AccessWorkflows({browser=chrome,request=accessRequest,va
       </form>}
       {map&&<CredentialDebt connection={connection} map={map} session={vaultSession} unlocked={vaultUnlocked} request={request} refresh={refresh} onApproved={onApproved} onVaultChanged={onVaultChanged}/>}
       <VaultOwnership connection={connection} session={vaultSession} selectedVault={selectedVault} unlocked={vaultUnlocked} request={request} onTransferred={onTransferred}/>
+      {map&&<FreelancerInvite connection={connection} map={map} session={vaultSession} selectedVault={selectedVault} unlocked={vaultUnlocked} request={request} onChanged={refresh}/>}
       {map&&<AccessLeases connection={connection} map={map} request={request} onChanged={refresh}/>}
       {map&&<ClientHandoffs connection={connection} map={map} runs={runs} request={request}/>}
       {runs.map(run=><section key={run.id} aria-label="Offboarding plan"><h3>{labels[run.status]||run.status}</h3><p>{map?.clients.find(item=>item.id===run.client)?.name||'Client'} · {map?.grants.find(item=>item.person_id===run.person)?.email||'Selected member'}</p><p>{run.plan.dry_run?'Preview only.':'Real access removal.'} {run.plan.vaults.length} vault(s). {run.steps.filter(step=>['complete','simulated'].includes(step.status)).length}/{run.steps.length} steps.</p>

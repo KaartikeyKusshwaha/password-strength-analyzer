@@ -22,6 +22,8 @@ def register(app,store,access_auth,throttle,shared):
         require(connection and connection['kind']=='shared' and connection['vault_id']==vault and connection['user']==session['user'] and connection['workspace']==session['workspace'],'A separate connection to this exact shared vault is required',403)
         return shared['ownership_context'](c,dict(connection))
 
+    app.state.exact_vault_context=context
+
     @app.get('/api/companion/access/vaults/{vault}/ownership')
     def read(vault:str,request:Request,session=Depends(access_auth)):
         with store.connect() as c:

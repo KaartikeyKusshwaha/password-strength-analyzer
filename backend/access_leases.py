@@ -130,6 +130,19 @@ def tick(store,clock=time.time):
             record['updated_at']=now();Store.put(c,workspace,KIND,record)
 
 
+def create_policy(c,body,session,*,minimum_lead=3600):
+    at=time.time();require(at+minimum_lead<=body.expires_at<=at+90*86400,'Choose an expiry between one hour and 90 days from now.',422)
+    actor=owner(c,session['workspace'],session['user']);require(actor and actor['mfa'],'Current owner access and MFA required',403)
+    require(c.execute('SELECT count(*) FROM entities WHERE workspace=? AND kind=?',(session['workspace'],KIND)).fetchone()[0]<1000,'Expiry history limit reached.')
+    require(c.execute("SELECT count(*) FROM entities WHERE workspace=? AND kind=? AND json_extract(data,'$.status') NOT IN ('complete','cancelled','blocked')",(session['workspace'],KIND)).fetchone()[0]<100,'Active expiry policy limit reached.')
+    scope=initial_scope(c,session['workspace'],body.client_id,body.person_id,session['user'])
+    for record in Store.all(c,session['workspace'],KIND):require(record['status'] in TERMINAL or record['plan']['client']!=body.client_id or record['plan']['person']!=body.person_id,'An active expiry policy already covers this client and person.')
+    plan={'version':1,'client':body.client_id,'person':body.person_id,'vaults':scope,'mode':body.mode,'expires_at':body.expires_at,'remind_at':max(at,body.expires_at-3*86400)}
+    record=dict(id=uid(),client=body.client_id,person=body.person_id,created_by=session['user'],mode=body.mode,status='awaiting_approval',plan=plan,plan_digest=digest(plan),approval=None,workflow=None,reminder_sent=False,created_at=now(),updated_at=now())
+    Store.put(c,session['workspace'],KIND,record);Store.event(c,session['workspace'],session['user'],'access_lease.planned',record['id'])
+    return display(c,session['workspace'],record)
+
+
 def register(app,store,auth,access_auth,throttle,cipher):
     def authorized(session):require(session['role']=='owner','Workspace owner access required',403)
     def get(c,session,identifier):return require(Store.get(c,session['workspace'],KIND,identifier),'Expiry policy unavailable',404)
@@ -150,15 +163,7 @@ def register(app,store,auth,access_auth,throttle,cipher):
         authorized(session);throttle('access-lease:'+session['user'],20)
         at=time.time();require(at+3600<=body.expires_at<=at+90*86400,'Choose an expiry between one hour and 90 days from now.',422)
         with store.connect(write=True) as c:
-            actor=owner(c,session['workspace'],session['user']);require(actor and actor['mfa'],'Current owner access and MFA required',403)
-            require(c.execute('SELECT count(*) FROM entities WHERE workspace=? AND kind=?',(session['workspace'],KIND)).fetchone()[0]<1000,'Expiry history limit reached.')
-            require(c.execute("SELECT count(*) FROM entities WHERE workspace=? AND kind=? AND json_extract(data,'$.status') NOT IN ('complete','cancelled','blocked')",(session['workspace'],KIND)).fetchone()[0]<100,'Active expiry policy limit reached.')
-            scope=initial_scope(c,session['workspace'],body.client_id,body.person_id,session['user'])
-            for record in Store.all(c,session['workspace'],KIND):require(record['status'] in TERMINAL or record['plan']['client']!=body.client_id or record['plan']['person']!=body.person_id,'An active expiry policy already covers this client and person.')
-            plan={'version':1,'client':body.client_id,'person':body.person_id,'vaults':scope,'mode':body.mode,'expires_at':body.expires_at,'remind_at':max(at,body.expires_at-3*86400)}
-            record=dict(id=uid(),client=body.client_id,person=body.person_id,created_by=session['user'],mode=body.mode,status='awaiting_approval',plan=plan,plan_digest=digest(plan),approval=None,workflow=None,reminder_sent=False,created_at=now(),updated_at=now())
-            Store.put(c,session['workspace'],KIND,record);Store.event(c,session['workspace'],session['user'],'access_lease.planned',record['id'])
-            return display(c,session['workspace'],record)
+            return create_policy(c,body,session)
 
     @app.post('/api/companion/access/leases/{identifier}/approve')
     def approve(identifier:str,body:Approval,session=Depends(access_auth)):

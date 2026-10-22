@@ -96,7 +96,7 @@ def register(app,store,auth,throttle,cipher,settings,shared_metadata):
                 record.update(status='approved',grant=cipher.encrypt(token.encode()).decode(),user=session['user'],workspace=session['workspace'])
                 Store.put(c,SCOPE,KIND,record)
                 Store.event(c,session['workspace'],session['user'],'extension.access_connected','workflow-only')
-                return {'approved':True,'scope':'Client access metadata, handoffs and offboarding plans for eight hours. Offboarding execution requires fresh password and MFA approval. Signed ownership transfer additionally requires a separate exact-vault connection and both participants signing locally. No vault contents without that separate connection, or scanning access.'}
+                return {'approved':True,'scope':'Client access metadata, handoffs and offboarding plans for eight hours. Offboarding execution requires fresh password and MFA approval. Signed invitations with approved expiry and ownership transfer additionally requires a separate exact-vault connection and local owner signatures; ownership transfer also requires successor acceptance. No vault contents without that separate connection, or scanning access.'}
             if record.get('scope')=='security':
                 reject(body.vault_id is None and body.vault_kind=='personal' and body.workspace_id==session['workspace'],'Workspace approval does not match',409)
                 reject(session['role'] in {'owner','analyst','reviewer'},'Assessment permission required')

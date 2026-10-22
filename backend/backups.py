@@ -153,6 +153,10 @@ def create_backup(data_dir, key_file, output):
 
 
 def suspend_authorizations(connection):
+    for row in connection.execute("SELECT workspace,data FROM entities WHERE kind='access_invitation_drafts' AND json_extract(data,'$.status')='pending'").fetchall():
+        draft=json.loads(row['data']);draft.update(status='cancelled',finished_at=now())
+        Store.put(connection,row['workspace'],'access_invitation_drafts',draft)
+        Store.event(connection,row['workspace'],'system:restore','access_invitation.cancelled',draft['id'])
     from .access_leases import KIND as LEASE_KIND,TERMINAL as LEASE_TERMINAL,cancel as cancel_lease
     for row in connection.execute('SELECT workspace,data FROM entities WHERE kind=?',(LEASE_KIND,)).fetchall():
         lease=json.loads(row['data'])
