@@ -89,95 +89,106 @@ def register(app,store,auth,writable,throttle,team,identity,validate_grant):
         if value['document']['state_digest']!=state_digest(c,vault):return 'stale'
         return 'pending'
 
-    @app.get('/api/team-vaults/{identifier}/ownership')
-    def get_proposal(identifier: str,session=Depends(auth)):
-        with store.connect() as c:
-            c.execute('BEGIN')
-            vault=team(c,session,identifier)
-            row=c.execute("SELECT data FROM entities WHERE workspace=? AND kind='ownership_transfers' AND json_extract(data,'$.document.vault_id')=? ORDER BY rowid DESC LIMIT 1",(session['workspace'],identifier)).fetchone()
-            value=json.loads(row[0]) if row else None
-            if value and session['user'] not in (value['document']['owner'],value['document']['recipient']):value=None
-            return {'proposal':{**value,'status':current_status(c,value,vault)} if value else None}
+    def get_proposal_in(c,identifier,session):
+        vault=team(c,session,identifier)
+        row=c.execute("SELECT data FROM entities WHERE workspace=? AND kind='ownership_transfers' AND json_extract(data,'$.document.vault_id')=? ORDER BY rowid DESC LIMIT 1",(session['workspace'],identifier)).fetchone()
+        value=json.loads(row[0]) if row else None
+        if value and session['user'] not in (value['document']['owner'],value['document']['recipient']):value=None
+        return {'proposal':{**value,'status':current_status(c,value,vault)} if value else None}
 
-    @app.post('/api/team-vaults/{identifier}/ownership')
-    def propose(identifier: str,body: Proposal,session=Depends(auth)):
-        writable(session);throttle('ownership:'+session['user'],20)
+    def propose_in(c,identifier,body,session):
         document=body.document.model_dump()
-        with store.connect(write=True) as c:
-            vault=team(c,session,identifier)
-            require(vault['owner']==session['user'] and vault['role']=='owner','Only the current vault owner may propose a transfer',403)
-            require(not vault['rotation_required'],'Rotate the vault key before transferring ownership')
-            require(document['owner']==session['user'] and document['vault_id']==identifier and document['workspace']==session['workspace'],'Ownership proposal scope mismatch',422)
-            require(document['recipient']!=vault['owner'],'Choose a different owner',422)
-            target=recipient(c,vault,document['recipient']);owner=identity(c,vault['owner'])
-            require(document['owner_fingerprint']==owner['fingerprint'] and document['recipient_fingerprint']==target['fingerprint'],'Verify current identity fingerprints again')
-            require(document['revision']==vault['revision'] and document['epoch']==vault['epoch'] and document['state_digest']==state_digest(c,vault),'Vault contents or access changed; prepare a new proposal')
-            require(time.time()+60<=document['expires_at']<=time.time()+1800,'Approve a transfer expiring within 30 minutes',422)
-            verify(json.loads(owner['public']),document,body.signature)
-            require(not c.execute('SELECT 1 FROM entities WHERE id=?',(document['id'],)).fetchone(),'Proposal id already exists')
-            for previous in pending(c,session['workspace'],identifier):
-                status=current_status(c,previous,vault)
-                require(status!='pending','Cancel the existing proposal before creating another')
-                previous.update(status=status,finished_at=now());Store.put(c,session['workspace'],'ownership_transfers',previous)
-            value={'id':document['id'],'document':document,'signature':body.signature,'status':'pending','created_at':now()}
-            Store.put(c,session['workspace'],'ownership_transfers',value)
-            Store.event(c,session['workspace'],session['user'],'team_vault.ownership_proposed',identifier+':'+value['id'])
-            # Keep pending proposals plus at most 100 terminal receipts per workspace.
-            terminal=c.execute("SELECT id FROM entities WHERE workspace=? AND kind='ownership_transfers' AND json_extract(data,'$.status')!='pending' ORDER BY rowid DESC LIMIT -1 OFFSET 100",(session['workspace'],)).fetchall()
-            for row in terminal:c.execute('DELETE FROM entities WHERE id=?',(row['id'],))
+        vault=team(c,session,identifier)
+        require(vault['owner']==session['user'] and vault['role']=='owner','Only the current vault owner may propose a transfer',403)
+        require(not vault['rotation_required'],'Rotate the vault key before transferring ownership')
+        require(document['owner']==session['user'] and document['vault_id']==identifier and document['workspace']==session['workspace'],'Ownership proposal scope mismatch',422)
+        require(document['recipient']!=vault['owner'],'Choose a different owner',422)
+        target=recipient(c,vault,document['recipient']);owner=identity(c,vault['owner'])
+        require(document['owner_fingerprint']==owner['fingerprint'] and document['recipient_fingerprint']==target['fingerprint'],'Verify current identity fingerprints again')
+        require(document['revision']==vault['revision'] and document['epoch']==vault['epoch'] and document['state_digest']==state_digest(c,vault),'Vault contents or access changed; prepare a new proposal')
+        require(time.time()+60<=document['expires_at']<=time.time()+1800,'Approve a transfer expiring within 30 minutes',422)
+        verify(json.loads(owner['public']),document,body.signature)
+        require(not c.execute('SELECT 1 FROM entities WHERE id=?',(document['id'],)).fetchone(),'Proposal id already exists')
+        for previous in pending(c,session['workspace'],identifier):
+            status=current_status(c,previous,vault)
+            require(status!='pending','Cancel the existing proposal before creating another')
+            previous.update(status=status,finished_at=now());Store.put(c,session['workspace'],'ownership_transfers',previous)
+        value={'id':document['id'],'document':document,'signature':body.signature,'status':'pending','created_at':now()}
+        Store.put(c,session['workspace'],'ownership_transfers',value)
+        Store.event(c,session['workspace'],session['user'],'team_vault.ownership_proposed',identifier+':'+value['id'])
+        # Keep pending proposals plus at most 100 terminal receipts per workspace.
+        terminal=c.execute("SELECT id FROM entities WHERE workspace=? AND kind='ownership_transfers' AND json_extract(data,'$.status')!='pending' ORDER BY rowid DESC LIMIT -1 OFFSET 100",(session['workspace'],)).fetchall()
+        for row in terminal:c.execute('DELETE FROM entities WHERE id=?',(row['id'],))
         return {'proposal':value}
 
-    @app.post('/api/team-vaults/{identifier}/ownership/{proposal_id}/cancel')
-    def cancel(identifier: str,proposal_id: str,session=Depends(auth)):
-        with store.connect(write=True) as c:
-            team(c,session,identifier)
-            value=Store.get(c,session['workspace'],'ownership_transfers',proposal_id)
-            require(value and value['document']['vault_id']==identifier,'Proposal not found',404)
-            document=value['document'];require(session['user'] in (document['owner'],document['recipient']),'Only the proposing owner or intended recipient may cancel',403)
-            require(value['status']=='pending','This proposal has already stopped')
-            status='cancelled' if session['user']==document['owner'] else 'declined'
-            value.update(status=status,finished_at=now());Store.put(c,session['workspace'],'ownership_transfers',value)
-            Store.event(c,session['workspace'],session['user'],'team_vault.ownership_'+status,identifier+':'+proposal_id)
+    def cancel_in(c,identifier,proposal_id,session):
+        team(c,session,identifier)
+        value=Store.get(c,session['workspace'],'ownership_transfers',proposal_id)
+        require(value and value['document']['vault_id']==identifier,'Proposal not found',404)
+        document=value['document'];require(session['user'] in (document['owner'],document['recipient']),'Only the proposing owner or intended recipient may cancel',403)
+        require(value['status']=='pending','This proposal has already stopped')
+        status='cancelled' if session['user']==document['owner'] else 'declined'
+        value.update(status=status,finished_at=now());Store.put(c,session['workspace'],'ownership_transfers',value)
+        Store.event(c,session['workspace'],session['user'],'team_vault.ownership_'+status,identifier+':'+proposal_id)
         return {'status':status}
 
-    @app.post('/api/team-vaults/{identifier}/ownership/accept')
-    def accept(identifier: str,body: Acceptance,session=Depends(auth)):
-        writable(session);throttle('ownership-accept:'+session['user'],20)
-        with store.connect(write=True) as c:
-            vault=team(c,session,identifier)
-            value=Store.get(c,session['workspace'],'ownership_transfers',body.proposal_id)
-            require(value and value['document']['vault_id']==identifier,'Proposal not found',404)
-            document=value['document']
-            require(document['recipient']==session['user'],'Only the intended new owner may accept',403)
-            require(current_status(c,value,vault)=='pending','Proposal expired, changed or stopped; ask the current owner for a new proposal')
-            require(not vault['rotation_required'] and document['owner']==vault['owner'],'Vault ownership or key state changed')
-            target=recipient(c,vault,session['user']);old_owner=identity(c,vault['owner']);new_owner=identity(c,session['user'])
-            require(document['owner_fingerprint']==old_owner['fingerprint'] and document['recipient_fingerprint']==target['fingerprint'],'Ownership identity changed')
-            verify(json.loads(old_owner['public']),document,value['signature'])
-            require(body.revision==vault['revision'] and body.payload.context==identifier and body.payload.epoch==vault['epoch']+1,'Transfer requires the unchanged revision and next key epoch',422)
-            received=body.model_dump();consent={'action':'team_vault.ownership_accept.v1','state_digest':document['state_digest'],**{k:v for k,v in received.items() if k!='signature'}}
-            verify(json.loads(new_owner['public']),consent,body.signature)
-            manifest={'id':identifier,'workspace':vault['workspace'],'owner':session['user'],'owner_fingerprint':new_owner['fingerprint']}
-            verify(json.loads(new_owner['public']),manifest,body.manifest_signature)
-            existing={r['user']:dict(r) for r in c.execute('SELECT * FROM team_grants WHERE vault=?',(identifier,))}
-            expected={user:row['role'] for user,row in existing.items()}
-            if document['former_owner_role']=='removed':expected.pop(vault['owner'])
-            else:expected[vault['owner']]=document['former_owner_role']
-            expected[session['user']]='owner'
-            require(len(body.grants)==len(expected) and {g.recipient for g in body.grants}==set(expected),'Transfer must cover exactly the approved members',422)
-            output=[];next_vault={**vault,'owner':session['user'],'epoch':vault['epoch']+1}
-            for grant in body.grants:
-                require(grant.role==expected[grant.recipient],'Transfer cannot silently change another member role',422)
-                output.append((grant.recipient,validate_grant(c,grant,next_vault,session['user'],grant.recipient==session['user'])))
-            for user,envelope in output:
-                c.execute('UPDATE team_grants SET role=?,envelope=? WHERE vault=? AND user=?',(expected[user],canonical(envelope),identifier,user))
-            if document['former_owner_role']=='removed':c.execute('DELETE FROM team_grants WHERE vault=? AND user=?',(identifier,vault['owner']))
-            c.execute('UPDATE team_vaults SET owner=?,manifest=?,payload=?,epoch=epoch+1,revision=revision+1 WHERE id=?',(session['user'],canonical({'document':manifest,'signature':body.manifest_signature}),canonical(body.payload.model_dump()),identifier))
-            record_connection_revocations(c,c.execute("SELECT * FROM companions WHERE kind='shared' AND vault_id=?",(identifier,)).fetchall(),session['user'])
-            c.execute("DELETE FROM companions WHERE kind='shared' AND vault_id=?",(identifier,))
-            record_action_cancellations(c,c.execute("SELECT id,workspace,user FROM credential_actions WHERE kind='shared' AND vault_id=? AND status NOT IN ('complete','cancelled','expired')",(identifier,)).fetchall(),session['user'])
-            c.execute("UPDATE credential_actions SET status='cancelled',lease_hash=NULL,lease_connection=NULL,lease_expires=NULL WHERE kind='shared' AND vault_id=? AND status NOT IN ('complete','cancelled','expired')",(identifier,))
-            value.update(status='accepted',finished_at=now(),acceptance_signature=body.signature,new_epoch=vault['epoch']+1)
-            Store.put(c,session['workspace'],'ownership_transfers',value)
-            Store.event(c,session['workspace'],session['user'],'team_vault.ownership_transferred',identifier+':'+body.proposal_id)
+    def accept_in(c,identifier,body,session):
+        vault=team(c,session,identifier)
+        value=Store.get(c,session['workspace'],'ownership_transfers',body.proposal_id)
+        require(value and value['document']['vault_id']==identifier,'Proposal not found',404)
+        document=value['document']
+        require(document['recipient']==session['user'],'Only the intended new owner may accept',403)
+        require(current_status(c,value,vault)=='pending','Proposal expired, changed or stopped; ask the current owner for a new proposal')
+        require(not vault['rotation_required'] and document['owner']==vault['owner'],'Vault ownership or key state changed')
+        target=recipient(c,vault,session['user']);old_owner=identity(c,vault['owner']);new_owner=identity(c,session['user'])
+        require(document['owner_fingerprint']==old_owner['fingerprint'] and document['recipient_fingerprint']==target['fingerprint'],'Ownership identity changed')
+        verify(json.loads(old_owner['public']),document,value['signature'])
+        require(body.revision==vault['revision'] and body.payload.context==identifier and body.payload.epoch==vault['epoch']+1,'Transfer requires the unchanged revision and next key epoch',422)
+        received=body.model_dump();consent={'action':'team_vault.ownership_accept.v1','state_digest':document['state_digest'],**{k:v for k,v in received.items() if k!='signature'}}
+        verify(json.loads(new_owner['public']),consent,body.signature)
+        manifest={'id':identifier,'workspace':vault['workspace'],'owner':session['user'],'owner_fingerprint':new_owner['fingerprint']}
+        verify(json.loads(new_owner['public']),manifest,body.manifest_signature)
+        existing={r['user']:dict(r) for r in c.execute('SELECT * FROM team_grants WHERE vault=?',(identifier,))}
+        expected={user:row['role'] for user,row in existing.items()}
+        if document['former_owner_role']=='removed':expected.pop(vault['owner'])
+        else:expected[vault['owner']]=document['former_owner_role']
+        expected[session['user']]='owner'
+        require(len(body.grants)==len(expected) and {g.recipient for g in body.grants}==set(expected),'Transfer must cover exactly the approved members',422)
+        output=[];next_vault={**vault,'owner':session['user'],'epoch':vault['epoch']+1}
+        for grant in body.grants:
+            require(grant.role==expected[grant.recipient],'Transfer cannot silently change another member role',422)
+            output.append((grant.recipient,validate_grant(c,grant,next_vault,session['user'],grant.recipient==session['user'])))
+        for user,envelope in output:
+            c.execute('UPDATE team_grants SET role=?,envelope=? WHERE vault=? AND user=?',(expected[user],canonical(envelope),identifier,user))
+        if document['former_owner_role']=='removed':c.execute('DELETE FROM team_grants WHERE vault=? AND user=?',(identifier,vault['owner']))
+        c.execute('UPDATE team_vaults SET owner=?,manifest=?,payload=?,epoch=epoch+1,revision=revision+1 WHERE id=?',(session['user'],canonical({'document':manifest,'signature':body.manifest_signature}),canonical(body.payload.model_dump()),identifier))
+        record_connection_revocations(c,c.execute("SELECT * FROM companions WHERE kind='shared' AND vault_id=?",(identifier,)).fetchall(),session['user'])
+        c.execute("DELETE FROM companions WHERE kind='shared' AND vault_id=?",(identifier,))
+        record_action_cancellations(c,c.execute("SELECT id,workspace,user FROM credential_actions WHERE kind='shared' AND vault_id=? AND status NOT IN ('complete','cancelled','expired')",(identifier,)).fetchall(),session['user'])
+        c.execute("UPDATE credential_actions SET status='cancelled',lease_hash=NULL,lease_connection=NULL,lease_expires=NULL WHERE kind='shared' AND vault_id=? AND status NOT IN ('complete','cancelled','expired')",(identifier,))
+        value.update(status='accepted',finished_at=now(),acceptance_signature=body.signature,new_epoch=vault['epoch']+1)
+        Store.put(c,session['workspace'],'ownership_transfers',value)
+        Store.event(c,session['workspace'],session['user'],'team_vault.ownership_transferred',identifier+':'+body.proposal_id)
         return {'owner':session['user'],'epoch':vault['epoch']+1,'revision':vault['revision']+1,'shared_connections_revoked':True}
+
+    @app.get('/api/team-vaults/{identifier}/ownership')
+    def get_proposal(identifier:str,session=Depends(auth)):
+        with store.connect() as c:
+            c.execute('BEGIN')
+            return get_proposal_in(c,identifier,session)
+
+    @app.post('/api/team-vaults/{identifier}/ownership')
+    def propose(identifier:str,body:Proposal,session=Depends(auth)):
+        writable(session);throttle('ownership:'+session['user'],20)
+        with store.connect(write=True) as c:return propose_in(c,identifier,body,session)
+
+    @app.post('/api/team-vaults/{identifier}/ownership/{proposal_id}/cancel')
+    def cancel(identifier:str,proposal_id:str,session=Depends(auth)):
+        with store.connect(write=True) as c:return cancel_in(c,identifier,proposal_id,session)
+
+    @app.post('/api/team-vaults/{identifier}/ownership/accept')
+    def accept(identifier:str,body:Acceptance,session=Depends(auth)):
+        writable(session);throttle('ownership-accept:'+session['user'],20)
+        with store.connect(write=True) as c:return accept_in(c,identifier,body,session)
+
+    return {'proposal':get_proposal_in,'propose':propose_in,'cancel':cancel_in,'accept':accept_in}

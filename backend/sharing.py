@@ -425,5 +425,20 @@ def register(app,store,auth,writable,throttle):
         return apply_rotation(c,{**connection,'role':member['role']},row['id'],body)
 
     from .ownership import register as register_ownership
-    register_ownership(app,store,auth,writable,throttle,team,identity,validate_grant)
-    return {'metadata':browser_metadata,'read':browser_read,'write':browser_write,'rotation_context':workflow_rotation_context,'rotate':workflow_rotate}
+    ownership=register_ownership(app,store,auth,writable,throttle,team,identity,validate_grant)
+
+    def ownership_context(c,connection):
+        row,policy,member=browser_context(c,connection)
+        bad(member['role']=='owner','Current workspace owner connection required')
+        who=identity(c,row['owner'])
+        grants=[{'user_id':r['user'],'role':r['role'],'accepted':bool(r['accepted']),'envelope':json.loads(r['envelope'])} for r in c.execute('SELECT * FROM team_grants WHERE vault=? ORDER BY user',(row['id'],))]
+        directory=[]
+        for recipient in grants:
+            public=identity(c,recipient['user_id'])
+            person=c.execute('SELECT u.email,m.role FROM users u JOIN members m ON m.user=u.id WHERE m.workspace=? AND u.id=?',(row['workspace'],recipient['user_id'])).fetchone()
+            bad(person,'Vault member is no longer in this workspace',409)
+            directory.append({'id':recipient['user_id'],'email':person['email'],'role':person['role'],'public':json.loads(public['public']),'fingerprint':public['fingerprint']})
+        value={'id':row['id'],'name':row['name'],'workspace':row['workspace'],'owner':row['owner'],'owner_public':json.loads(who['public']),'owner_fingerprint':who['fingerprint'],'manifest':json.loads(row['manifest']),'epoch':row['epoch'],'revision':row['revision'],'role':row['role'],'accepted':True,'grant':json.loads(row['envelope']),'grants':grants,'payload':json.loads(row['payload']),'rotation_required':bool(row['rotation_required']),'browser_policy':policy}
+        return {'team':value,'directory':directory}
+
+    return {'metadata':browser_metadata,'read':browser_read,'write':browser_write,'rotation_context':workflow_rotation_context,'rotate':workflow_rotate,'ownership':ownership,'ownership_context':ownership_context}

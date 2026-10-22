@@ -22,10 +22,13 @@ access and every vault must have a newer fully rotated key epoch.
 
 `client_offboard` transfers the preparing vault owner out of the client vaults.
 It requires the recipient to own every vault, the outgoing owner to have no
-remaining vault grant and a new key epoch. This uses the existing mutually signed
-ownership protocol. **Ownership proposal/acceptance currently remains in the
-website; moving that protocol into the extension is still unfinished.** The
-handoff UI cannot bypass it or certify it as completed prematurely.
+remaining vault grant and a new key epoch. The extension now prepares, reviews,
+accepts and cancels the existing mutually signed ownership protocol. Each party
+selects and unlocks the exact shared vault in their own extension; the receiving
+owner accepts explicitly. Acceptance rotates the key, revokes the old browser
+connections and cancels unfinished shared password-action plans. Reconnect and
+verify the new owner before reopening. See EXTENSION_OWNERSHIP.md. The handoff UI
+cannot bypass the transfer or certify it prematurely.
 
 Preparing-owner approval binds the exact current scope and expires after seven
 days. Sign-off requires the separate receiving owner's current password and an

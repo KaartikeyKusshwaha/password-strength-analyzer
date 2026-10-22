@@ -124,3 +124,19 @@ Frontend: 377 passed across 82 files; the new owner-promotion test passed
 separately. Both production builds and 16 root analyzer tests passed. Generated
 verification files remain under SentinelOps-Safe-To-Delete-20261022. No browser,
 installed-extension replacement, production-data mutation or deployment occurred.
+
+Extension ownership checkpoint (23 October): ownership proposal, review,
+acceptance and cancellation now run in the extension with the unchanged signed
+protocol. Both workflow and exact-vault capabilities are checked in the effect
+transaction. Scope/proposal changes and concurrent local vault changes stop
+upload; uncertain acceptance locks without reporting success. Receiving-owner
+handoff sign-off can follow the real transfer. No crypto format was redesigned.
+
+Validation: protocol 28 passed; adapter/handoff/access integration 16 passed;
+sharing/passphrase/MFA/connect regression 35 passed with one new CORS assertion
+failure. Fixing the dual-vault preflight header and assertion yielded 14 passed
+in the final adapter/access/connect regression. Full frontend: 387 passed in 86
+files, followed by 10 final operator/crypto/UI cases for exact proposal binding.
+Web and final extension builds passed. Native browser acceptance, rollout and
+remaining freelancer/review/proof-pack work are pending. Installed files and
+production data were not changed. See EXTENSION_OWNERSHIP.md.

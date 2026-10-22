@@ -1,0 +1,34 @@
+import {it,expect,vi} from 'vitest';
+import {webcrypto} from 'node:crypto';
+import {SaveSession} from '../../companion/extension/vault-session';
+import {loadConnectedOwnership,changeConnectedOwnership} from '../../companion/extension/ownership-operator';
+import {createSharingIdentity,createTeamVault,openTeamVault} from './sharing-crypto';
+const ownerID='a'.repeat(24),nextID='b'.repeat(24),vault='c'.repeat(24),workspace='d'.repeat(24),passphrase='Public-fixture-only!river-orbit-79';
+const access={origin:'https://service.example.test',kind:'access',token:'x'.repeat(54)};
+it('transfers from two extension sessions using real crypto without uploading credentials',async()=>{
+ vi.stubGlobal('crypto',webcrypto);
+ const owner=await createSharingIdentity(ownerID,passphrase),recipient=await createSharingIdentity(nextID,passphrase),created=await createTeamVault(owner.identity,workspace,'Client',vault);
+ const ownerGrant={...created.grant,issuer_public:owner.record.public,issuer_grant:null};
+ let team={id:vault,workspace,owner:ownerID,owner_public:owner.record.public,owner_fingerprint:owner.identity.fingerprint,role:'owner',accepted:true,epoch:1,revision:1,rotation_required:false,browser_policy:{browser_enabled:true,browser_fill:true,browser_save:true,origins:[],lock_seconds:180},manifest:{document:{id:vault,workspace,owner:ownerID,owner_fingerprint:owner.identity.fingerprint},signature:created.manifest_signature},payload:created.payload,grant:ownerGrant,grants:[{user_id:ownerID,role:'owner',accepted:true,envelope:ownerGrant}]};
+ const handle=await openTeamVault(team,owner.identity,owner.identity.fingerprint);
+ const entry={id:'entry',type:'login',title:'Disposable',origin:'https://example.test',username:'fixture-user-private',password:'fixture-secret-private'};
+ const payload=await handle.handle.encrypt([entry]);
+ const rawInvite=await handle.handle.invite({id:nextID,public:recipient.record.public,fingerprint:recipient.identity.fingerprint},'editor');
+ const invite={...rawInvite,issuer_public:owner.record.public,issuer_grant:null};handle.handle.close();
+ team={...team,payload,grants:[...team.grants,{user_id:nextID,role:'editor',accepted:true,envelope:invite}]};
+ const directory=[{id:ownerID,role:'owner',email:'owner@example.test',public:owner.record.public,fingerprint:owner.identity.fingerprint},{id:nextID,role:'owner',email:'next@example.test',public:recipient.record.public,fingerprint:recipient.identity.fingerprint}];
+ function session(identity,view){return openTeamVault(view,identity,owner.identity.fingerprint).then(opened=>{const value=new SaveSession({});value.config={...access,vaultId:vault,vaultKind:'shared',token:'v'.repeat(54)};value.material={kind:'shared',identity,trusted:owner.identity.fingerprint,epoch:1,handle:opened.handle};value.entries=opened.entries;value.revision=1;return value;});}
+ const original=await session(owner.identity,team),receiving=await session(recipient.identity,{...team,role:'editor',grant:invite});let proposal=null,accepted;
+ const outgoing=vi.fn(async(_,path,body)=>{if(!body)return {team,directory,proposal};proposal={...body,id:body.document.id,status:'pending'};return {proposal};});
+ const snapshot=await loadConnectedOwnership(access,original,outgoing);
+ await changeConnectedOwnership(access,original,snapshot,'propose',nextID,'removed',outgoing);
+ const incoming=vi.fn(async(_,path,body)=>{if(!body)return {team:{...team,role:'editor',grant:invite},directory,proposal};accepted=body;return {shared_connections_revoked:true,epoch:2};});
+ const review=await loadConnectedOwnership(access,receiving,incoming);
+ await changeConnectedOwnership(access,receiving,review,'accept',null,'removed',incoming);
+ expect(receiving.material).toBeNull();expect(accepted.grants.map(grant=>grant.recipient)).toEqual([nextID]);
+ expect(JSON.stringify(accepted)).not.toContain(entry.password);expect(JSON.stringify(accepted)).not.toContain(entry.username);
+ const next={...team,owner:nextID,owner_public:recipient.record.public,owner_fingerprint:recipient.identity.fingerprint,role:'owner',epoch:2,revision:2,manifest:{document:{id:vault,workspace,owner:nextID,owner_fingerprint:recipient.identity.fingerprint},signature:accepted.manifest_signature},grant:{...accepted.grants[0],issuer_public:recipient.record.public,issuer_grant:null},payload:accepted.payload};
+ const reopened=await openTeamVault(next,recipient.identity,recipient.identity.fingerprint);expect(reopened.entries).toEqual([entry]);reopened.handle.close();
+ await expect(original.material.handle.decrypt({...accepted.payload,epoch:1})).rejects.toThrow();original.lock();
+ expect(incoming.mock.calls.at(-1)[4]).toMatchObject({vaultToken:'v'.repeat(54)});
+},30000);

@@ -12,8 +12,9 @@ Unreleased source now adds client access mapping, approved local vault
 offboarding, extension-side shared-key rotation and opt-in account discovery.
 Shared-password debt now reuses the encrypted rotation operator in this source.
 Encrypted expired/orphaned proposal recovery is implemented in source. Client
-handoff coordination now records independent receiving-owner sign-off; moving
-ownership transfer into the extension and client proof packs remain unfinished.
+handoff coordination now records independent receiving-owner sign-off, and the
+extension performs signed ownership proposal/acceptance with local key rotation.
+Client proof packs remain unfinished.
 Existing scanner and investigation engines
 are supporting capabilities; they are not the product's primary proposition.
 Agents do not receive passwords, vault keys or authenticator secrets. CSV import
@@ -34,7 +35,7 @@ See [implementation scope](docs/AGENCY_PHASE1.md), [workflow guarantees](docs/AC
 and [discovery privacy/control](docs/ACCESS_DISCOVERY.md). See also
 [shared-password debt and local archival](docs/SHARED_PASSWORD_DEBT.md).
 
-Client handoffs and their remaining extension ownership-transfer gap are documented
+Client handoffs and extension ownership transfer are documented
 in [Client handoffs](docs/CLIENT_HANDOFFS.md). Settings can promote an existing
 MFA-enrolled member to a receiving workspace owner with explicit fresh approval;
 promotion grants no vault keys. The [consolidated final browser checklist](docs/FINAL_BROWSER_CHECK.md)
