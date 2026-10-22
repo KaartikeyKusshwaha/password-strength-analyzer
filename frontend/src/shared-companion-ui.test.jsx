@@ -21,7 +21,7 @@ it('the popup opens a shared vault locally and checks fresh policy before fillin
   // Real Argon2 + native key import may exceed RTL's default one-second wait under load.
   await screen.findByText('Unlocked · this popup only',{}, {timeout:10000});expect(screen.queryByText('Save a login manually')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button',{name:'Fill this login'}));
-  await waitFor(()=>expect(browser.tabs.sendMessage).toHaveBeenCalledWith(41,{type:'fill-login',entry:{origin:native.entry.origin,username:native.entry.username,password:native.entry.password}},{frameId:0}));
+  await waitFor(()=>expect(browser.tabs.sendMessage).toHaveBeenCalledWith(41,{type:'fill-login',entry:{origin:native.entry.origin,username:native.entry.username,password:native.entry.password}},{frameId:0}),{timeout:5000});
   await screen.findByText('Username and password filled. Review the website before submitting.');
   browser.tabs.sendMessage.mockClear();value={...value,vault:{...value.vault,browser_fill:false}};
   fireEvent.click(screen.getByRole('button',{name:'Fill this login'}));await screen.findByRole('alert');

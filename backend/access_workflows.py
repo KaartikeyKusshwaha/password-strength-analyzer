@@ -56,6 +56,24 @@ def view(c,row):
     return value
 
 
+def prepare(c,workspace,client,person,actor,dry_run=True,*,snapshots=None,source=None):
+    """Create the existing durable plan; internal callers may bind a narrow scope."""
+    limit=2000 if source and source.get('kind') in {'access_lease','scheduled_departure'} else 1000
+    require(c.execute('SELECT count(*) FROM workflows WHERE workspace=?',(workspace,)).fetchone()[0]<limit,'Workflow limit reached.')
+    snapshots=scope(c,workspace,client,person,actor) if snapshots is None else snapshots
+    require(0<len(snapshots)<=20 and len({item['vault'] for item in snapshots})==len(snapshots),'Invalid workflow vault scope.')
+    plan={'version':1,'client':client,'person':person,'dry_run':dry_run,'vaults':snapshots}
+    if source:plan['source']=source
+    identifier=uid();at=now()
+    c.execute('INSERT INTO workflows VALUES(?,?,?,?,?,?,?,?,?,?,?)',(identifier,workspace,client,person,actor,'awaiting_approval',canonical(plan),digest(plan),None,at,at))
+    for action in ('revoke','rotate_key','verify_absent'):
+        for item in snapshots:
+            index=c.execute('SELECT count(*) FROM workflow_steps WHERE workflow=?',(identifier,)).fetchone()[0]
+            c.execute('INSERT INTO workflow_steps VALUES(?,?,?,?,?,?,?,?,?)',(uid(),identifier,index,item['vault'],action,'pending',0,None,None))
+    Store.event(c,workspace,actor,'access_workflow.planned',identifier)
+    return c.execute('SELECT * FROM workflows WHERE id=?',(identifier,)).fetchone()
+
+
 def advance_one(store,workspace,identifier,clock=time.time):
     """One local effect and step completion commit together; no network calls here."""
     with store.connect(write=True) as c:
@@ -65,6 +83,9 @@ def advance_one(store,workspace,identifier,clock=time.time):
         plan=json.loads(row['plan']);actor=row['created_by']
         user=owner(c,workspace,actor)
         valid=approval and approval.get('actor')==actor and approval.get('expires',0)>clock() and approval.get('digest')==row['plan_digest']==digest(plan) and user and user['mfa']
+        if plan.get('source',{}).get('kind')=='access_lease':
+            from .access_leases import authorized_workflow
+            valid=valid and authorized_workflow(c,row,plan,approval,clock())
         stored_steps=c.execute('SELECT action,vault,status FROM workflow_steps WHERE workflow=? ORDER BY position',(identifier,)).fetchall()
         expected=[(action,item['vault']) for action in ('revoke','rotate_key','verify_absent') for item in plan['vaults']]
         done='simulated' if plan['dry_run'] else 'complete'
@@ -77,7 +98,7 @@ def advance_one(store,workspace,identifier,clock=time.time):
             Store.event(c,workspace,actor,'access_workflow.finished',identifier)
             if not plan['dry_run']:
                 from .access_evidence import schedule
-                schedule(c,row)
+                schedule(c,row,clock)
             return False
         snapshot=next((item for item in plan['vaults'] if item['vault']==step['vault']),None)
         vault=c.execute('SELECT * FROM team_vaults WHERE id=? AND workspace=?',(step['vault'],workspace)).fetchone()
@@ -93,7 +114,7 @@ def advance_one(store,workspace,identifier,clock=time.time):
                 else:revoke_access(c,workspace,actor,step['vault'],row['person']);outcome='revoked'
             else:outcome='already_absent'
         elif grant:failure='access_reappeared'
-        elif step['action']=='rotate_key' and (vault['rotation_required'] or vault['epoch']<=snapshot['epoch']):
+        elif step['action']=='rotate_key' and (vault['rotation_required'] or vault['epoch']<snapshot['epoch'] or not snapshot.get('absent_at_plan') and vault['epoch']==snapshot['epoch']):
             c.execute("UPDATE workflows SET status='waiting_unlock',updated_at=? WHERE id=?",(now(),identifier));return False
         elif step['action'] not in {'rotate_key','verify_absent'}:failure='unsupported_step'
         if failure:
@@ -125,17 +146,8 @@ def register(app,store,auth,throttle,cipher,executor,shared_companions):
     def create(body:PlanRequest,session=Depends(auth)):
         authorized(session);throttle('access-plan:'+session['user'],20)
         with store.connect(write=True) as c:
-            require(c.execute('SELECT count(*) FROM workflows WHERE workspace=?',(session['workspace'],)).fetchone()[0]<1000,'Workflow limit reached.')
-            snapshots=scope(c,session['workspace'],body.client_id,body.person_id,session['user'])
-            plan={'version':1,'client':body.client_id,'person':body.person_id,'dry_run':body.dry_run,'vaults':snapshots}
-            identifier=uid();at=now()
-            c.execute('INSERT INTO workflows VALUES(?,?,?,?,?,?,?,?,?,?,?)',(identifier,session['workspace'],body.client_id,body.person_id,session['user'],'awaiting_approval',canonical(plan),digest(plan),None,at,at))
-            for action in ('revoke','rotate_key','verify_absent'):
-                for item in snapshots:
-                    index=c.execute('SELECT count(*) FROM workflow_steps WHERE workflow=?',(identifier,)).fetchone()[0]
-                    c.execute('INSERT INTO workflow_steps VALUES(?,?,?,?,?,?,?,?,?)',(uid(),identifier,index,item['vault'],action,'pending',0,None,None))
-            Store.event(c,session['workspace'],session['user'],'access_workflow.planned',identifier)
-            return view(c,get(c,session,identifier))
+            row=prepare(c,session['workspace'],body.client_id,body.person_id,session['user'],body.dry_run)
+            return view(c,row)
 
     @app.post('/api/access-workflows/{identifier}/approve')
     def approve(identifier:str,body:Approval,session=Depends(auth)):
@@ -243,6 +255,8 @@ def register(app,store,auth,throttle,cipher,executor,shared_companions):
 
     def tick():
         from .access_evidence import tick as check_access
+        from .access_leases import tick as check_leases
+        check_leases(store)
         check_access(store)
         with store.connect() as c:rows=c.execute("SELECT id,workspace FROM workflows WHERE status IN ('queued','running','waiting_unlock') ORDER BY updated_at LIMIT 100").fetchall()
         for row in rows:dispatch(row['workspace'],row['id'])

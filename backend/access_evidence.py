@@ -28,7 +28,7 @@ def tick(store,clock=time.time):
             for item in plan['vaults']:
                 vault=c.execute('SELECT workspace,epoch,rotation_required FROM team_vaults WHERE id=?',(item['vault'],)).fetchone()
                 grant=c.execute('SELECT 1 FROM team_grants WHERE vault=? AND user=?',(item['vault'],row['person'])).fetchone() if vault and vault['workspace']==workspace else None
-                state='unavailable' if not vault or vault['workspace']!=workspace else 'access_reappeared' if grant else 'rotation_pending' if vault['rotation_required'] or vault['epoch']<=item['epoch'] else 'absent'
+                state='unavailable' if not vault or vault['workspace']!=workspace else 'access_reappeared' if grant else 'rotation_pending' if vault['rotation_required'] or (vault['epoch']<item['epoch'] or not item.get('absent_at_plan') and vault['epoch']==item['epoch']) else 'absent'
                 observations.append({'vault':item['vault'],'state':state})
             check.update(status='attention' if any(item['state']!='absent' for item in observations) else 'verified',checked_at=now(),observations=observations)
             Store.put(c,workspace,'access_rechecks',check)

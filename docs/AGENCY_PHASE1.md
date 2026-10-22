@@ -140,3 +140,21 @@ files, followed by 10 final operator/crypto/UI cases for exact proposal binding.
 Web and final extension builds passed. Native browser acceptance, rollout and
 remaining freelancer/review/proof-pack work are pending. Installed files and
 production data were not changed. See EXTENSION_OWNERSHIP.md.
+
+Expiry checkpoint (23 October): fixed-scope contractor deadlines now run through
+the existing access runner, with day-27 reminder records, fresh policy approval,
+automatic server revocation, unlock-gated key rotation, rechecks and cancellation.
+Scheduled last days prepare a plan for fresh approval rather than removing access.
+Additional vault access stays outside the original consent and is surfaced as
+uncovered. Backup restore cancels policy authority. Bounded scheduler scans rotate
+by least-recently-checked record to avoid starvation by waiting unlocks.
+
+Validation: 48 expiry/workflow/recheck/backup/access integration tests passed.
+After the scheduler fairness change, all 18 expiry tests passed. Full frontend:
+392 tests passed in 87 files. An earlier full run hit the real-crypto autofill
+test's one-second wait; it passed alone and the bounded five-second wait also
+passed in the full rerun. Web and final extension builds passed. The existing
+Starlette TestClient warning remains. Initial signed invitation issuance within
+the expiry flow and durable background reminders are still unfinished. No native
+browser use, installed extension replacement or production rollout occurred.
+See ACCESS_EXPIRY.md for scope, authority bounds and scheduler timing limits.

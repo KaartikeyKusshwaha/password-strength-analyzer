@@ -364,7 +364,7 @@ def create_app(settings=None):
 
     @app.middleware("http")
     async def boundary(request, call_next):
-        companion = bool(re.fullmatch(r'/api/companion/(vault|actions(?:/context|/[a-f0-9]{24}/(?:claim|result|cancel))?|connect/(?:start|[a-f0-9]{24}/(?:poll|ack|cancel))|discovery/(?:context|revoke|observe|consents(?:/[a-f0-9]{24}/disable)?)|access/(?:context|revoke|vaults/[a-f0-9]{24}/ownership(?:/accept|/[a-f0-9]{24}/cancel)?|handoffs(?:/[a-f0-9]{24}/(?:approve|link|signoff|cancel))?|debt(?:/bind|/[a-f0-9]{24}/(?:verify|retire|reopen))?|workflows(?:/[a-f0-9]{24}/(?:approve|cancel|report|vaults/[a-f0-9]{24}/rotation))?)|security/(?:context|revoke|inventory-preview|device-pairing/(?:details|approve)|operations(?:/[a-f0-9]{24}(?:/cancel)?)?))',request.url.path))
+        companion = bool(re.fullmatch(r'/api/companion/(vault|actions(?:/context|/[a-f0-9]{24}/(?:claim|result|cancel))?|connect/(?:start|[a-f0-9]{24}/(?:poll|ack|cancel))|discovery/(?:context|revoke|observe|consents(?:/[a-f0-9]{24}/disable)?)|access/(?:context|revoke|leases(?:/[a-f0-9]{24}/(?:approve|cancel))?|vaults/[a-f0-9]{24}/ownership(?:/accept|/[a-f0-9]{24}/cancel)?|handoffs(?:/[a-f0-9]{24}/(?:approve|link|signoff|cancel))?|debt(?:/bind|/[a-f0-9]{24}/(?:verify|retire|reopen))?|workflows(?:/[a-f0-9]{24}/(?:approve|cancel|report|vaults/[a-f0-9]{24}/rotation))?)|security/(?:context|revoke|inventory-preview|device-pairing/(?:details|approve)|operations(?:/[a-f0-9]{24}(?:/cancel)?)?))',request.url.path))
         extension_origin = request.headers.get("origin", "")
         extension_origin_valid = bool(re.fullmatch(r"chrome-extension://[a-p]{32}", extension_origin))
         if companion and request.method == "OPTIONS":
@@ -1390,6 +1390,8 @@ def create_app(settings=None):
     credential_debt.register(app,store,auth,app.state.access_auth,throttle)
     from . import handoffs
     handoffs.register(app,store,auth,app.state.access_auth,throttle,cipher)
+    from . import access_leases
+    access_leases.register(app,store,auth,app.state.access_auth,throttle,cipher)
     from . import extension_ownership
     extension_ownership.register(app,store,app.state.access_auth,throttle,shared_companions)
 

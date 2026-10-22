@@ -153,6 +153,10 @@ def create_backup(data_dir, key_file, output):
 
 
 def suspend_authorizations(connection):
+    from .access_leases import KIND as LEASE_KIND,TERMINAL as LEASE_TERMINAL,cancel as cancel_lease
+    for row in connection.execute('SELECT workspace,data FROM entities WHERE kind=?',(LEASE_KIND,)).fetchall():
+        lease=json.loads(row['data'])
+        if lease['status'] not in LEASE_TERMINAL:cancel_lease(connection,row['workspace'],lease,'system:restore','backup_restored')
     for row in connection.execute("SELECT id,workspace FROM handoff_records WHERE status NOT IN ('complete','complete_with_exceptions','cancelled')").fetchall():
         connection.execute("UPDATE handoff_records SET status='cancelled',approval=NULL,receipt=NULL,updated_at=? WHERE id=?",(now(),row['id']))
         Store.event(connection,row['workspace'],'system:restore','handoff.cancelled',row['id'])

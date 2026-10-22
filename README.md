@@ -14,7 +14,11 @@ Shared-password debt now reuses the encrypted rotation operator in this source.
 Encrypted expired/orphaned proposal recovery is implemented in source. Client
 handoff coordination now records independent receiving-owner sign-off, and the
 extension performs signed ownership proposal/acceptance with local key rotation.
-Client proof packs remain unfinished.
+The expiry engine and extension controls also implement approved contractor
+access deadlines and scheduled departure plans; initial invitation issuance and
+durable background reminder delivery remain unfinished. See
+[expiry scope and remaining work](docs/ACCESS_EXPIRY.md). Client proof packs remain
+unfinished.
 Existing scanner and investigation engines
 are supporting capabilities; they are not the product's primary proposition.
 Agents do not receive passwords, vault keys or authenticator secrets. CSV import
