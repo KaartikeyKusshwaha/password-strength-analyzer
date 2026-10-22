@@ -1,7 +1,7 @@
 # Delegated-access references for shared-password debt
 
 Checked against official documentation on 22 October 2026. These references
-inform the next debt-flow implementation; they are not claims of automatic
+inform the debt-flow guidance; they are not claims of automatic
 platform integration or completed delegation. Follow each service's own flow,
 then record the result. Do not collect client passwords through an intake form.
 
@@ -21,5 +21,5 @@ weak passwords. Rotating a password does not eliminate shared-password debt.
 Retiring debt must require explicit confirmation that delegated access works
 and the shared login has been retired. User confirmation must be labelled as
 such; it is not independent website verification. The existing encrypted
-credential-action queue should supply staging/rotation progress rather than
-introducing another executor. No passwords or unlock keys belong in debt records.
+credential-action queue supplies staging/rotation progress without another
+executor. No passwords or unlock keys belong in debt records.

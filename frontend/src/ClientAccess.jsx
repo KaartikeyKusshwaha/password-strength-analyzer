@@ -20,6 +20,7 @@ export default function ClientAccess(){
       <button className="button secondary" disabled={busy} onClick={()=>run(async()=>{})}>Refresh access map</button>
       {!map&&!error&&<p role="status">Loading access metadata…</p>}
       {map&&<><p className="notice">{map.coverage}</p>
+        {map.debt&&<div><h3>Reported shared-password debt</h3><p>Rotation alone does not retire a shared login. Retirement and verification are owner confirmations, not independent checks of external services.</p>{map.clients.map(item=>{const count=map.debt.counts[item.id];return count?<p key={item.id}>{item.name}: {count.peak} → {count.active} active shared-login record(s)</p>:null;})}<p>Register, rotate and retire shared logins from the extension. An empty registry is not proof that no shared passwords exist.</p></div>}
         {!map.clients.length&&<p>No clients yet. Create a client record, then link an existing shared vault.</p>}
         <div className="inline"><label>Client<select value={client} onChange={e=>setClient(e.target.value)}><option value="">All clients</option>{map.clients.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
           <label>Person<select value={person} onChange={e=>setPerson(e.target.value)}><option value="">All people</option>{people.map(([id,email])=><option key={id} value={id}>{email}</option>)}</select></label></div>

@@ -186,4 +186,6 @@ def register(app,store,auth,companion_auth,throttle):
             state='complete' if all(i['state'] in {'confirmed_by_user','discarded'} for i in items) else 'running' if any(i['state']=='queued' for i in items) else 'awaiting_confirmation'
             c.execute('UPDATE credential_actions SET items=?,status=?,lease_expires=? WHERE id=?',(canonical(items),state,min(row['expires_at'],time.time()+300),identifier))
             Store.event(c,row['workspace'] or 'personal:'+row['user'],row['user'],'credential_action.'+body.state,identifier+':'+str(body.index))
+            from .credential_debt import update_from_action
+            update_from_action(c,row,body.index,body.state)
         return {'status':state,'items':items,'verification':'User confirmation is not independent website verification.'}

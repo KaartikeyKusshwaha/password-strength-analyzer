@@ -1,4 +1,5 @@
 import React,{useEffect,useState} from 'react';
+import CredentialDebt from './CredentialDebt';
 import CloudConnect from './CloudConnect';
 import {accessRequest} from './access-client';
 import {rotateConnectedVault} from './workflow-rotation';
@@ -6,13 +7,13 @@ import {rotateConnectedVault} from './workflow-rotation';
 const terminal=new Set(['complete','dry_run_complete','cancelled','blocked']);
 const labels={awaiting_approval:'Review and approve',queued:'Queued',running:'Removing selected access',waiting_unlock:'Access removed; vault key rotation needed',complete:'Selected vault steps verified',dry_run_complete:'Preview complete; no access changed',cancelled:'Cancelled',blocked:'Stopped; review required'};
 
-export default function AccessWorkflows({browser=chrome,request=accessRequest,vaultSession=null,selectedVault=null,vaultUnlocked=false,onRotated=()=>{}}){
+export default function AccessWorkflows({browser=chrome,request=accessRequest,vaultSession=null,selectedVault=null,vaultUnlocked=false,onRotated=()=>{},onApproved=()=>{},onVaultChanged=()=>{}}){
   const [connection,setConnection]=useState(null),[ready,setReady]=useState(false),[map,setMap]=useState(null),[runs,setRuns]=useState([]),[client,setClient]=useState(''),[person,setPerson]=useState(''),[preview,setPreview]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[report,setReport]=useState(null);
   async function refresh(value=connection){
     const [context,result]=await Promise.all([request(value,'context'),request(value,'workflows')]);setMap(context);setRuns(result.workflows);
   }
   useEffect(()=>{let live=true;browser.storage.local.get('accessConnection').then(async saved=>{if(!live)return;if(saved.accessConnection){setConnection(saved.accessConnection);try{await refresh(saved.accessConnection);}catch(e){if(live)setError(e.message);}}if(live)setReady(true);});return()=>{live=false;};},[]);
-  useEffect(()=>{if(!connection||!runs.some(run=>!terminal.has(run.status)&&run.status!=='awaiting_approval'))return;const timer=setInterval(()=>refresh().catch(e=>setError(e.message)),5000);return()=>clearInterval(timer);},[connection,runs]);
+  useEffect(()=>{if(!connection||!runs.some(run=>!terminal.has(run.status)&&run.status!=='awaiting_approval')&&!map?.debt?.exposures.some(item=>['queued','running','awaiting_confirmation'].includes(item.action_status)))return;const timer=setInterval(()=>refresh().catch(e=>setError(e.message)),5000);return()=>clearInterval(timer);},[connection,runs]);
   const people=[...new Map((map?.grants||[]).filter(grant=>grant.client===client).map(grant=>[grant.person_id,grant])).values()];
   async function action(work,reload=true){setBusy(true);setError('');setNotice('');try{await work();if(reload)await refresh();}catch(e){setError(e.message);}finally{setBusy(false);}}
   return <details><summary>Client access · offboarding workflows</summary><p>Remove selected client vault memberships with one approved plan. Website sessions and copied passwords require separate follow-up.</p>
@@ -26,6 +27,7 @@ export default function AccessWorkflows({browser=chrome,request=accessRequest,va
         <button disabled={busy||!person||!client}>Prepare offboarding plan</button>
         {!map.clients.length&&<p>Link client vaults in the control room before preparing your first plan.</p>}
       </form>}
+      {map&&<CredentialDebt connection={connection} map={map} session={vaultSession} unlocked={vaultUnlocked} request={request} refresh={refresh} onApproved={onApproved} onVaultChanged={onVaultChanged}/>}
       {runs.map(run=><section key={run.id} aria-label="Offboarding plan"><h3>{labels[run.status]||run.status}</h3><p>{map?.clients.find(item=>item.id===run.client)?.name||'Client'} · {map?.grants.find(item=>item.person_id===run.person)?.email||'Selected member'}</p><p>{run.plan.dry_run?'Preview only.':'Real access removal.'} {run.plan.vaults.length} vault(s). {run.steps.filter(step=>['complete','simulated'].includes(step.status)).length}/{run.steps.length} steps.</p>
         <ul>{run.plan.vaults.map(item=><li key={item.vault}>{map?.systems.find(system=>system.id===item.vault)?.name||item.vault}</li>)}</ul>
         <p className="fine">{run.coverage}</p>

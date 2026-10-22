@@ -36,7 +36,9 @@ def snapshot(store, workspace):
                 systems.append({'client':row['client'],'id':'account:'+row['domain'],'name':row['domain'],'kind':'reported_account','rotation_required':False,'epoch':None});known.add(key)
             grants.append({'id':row['id'],'client':row['client'],'person_id':row['person'],'email':row['email'],'system_id':'account:'+row['domain'],'role':row['role'],'source':row['source'],'state':row['state'],'account_label':row['account_label'],'updated_at':row['updated_at']})
 
-    return {'clients': clients, 'systems': systems, 'grants': grants, 'available_vaults': available,'people':people,'retired_records':[row for row in reported if row['state']=='retired'],
+    from .credential_debt import listing
+    with store.connect() as c:debt=listing(c,workspace)
+    return {'clients': clients, 'systems': systems, 'grants': grants, 'available_vaults': available,'people':people,'debt':debt,'retired_records':[row for row in reported if row['state']=='retired'],
             'coverage': 'Live shared-vault memberships, manual reports and opt-in login-attempt observations. Invitations and reported activity are not verified external access. This does not establish website account ownership, active sessions, MFA, device compliance or completed offboarding.'}
 
 

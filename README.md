@@ -10,7 +10,8 @@ Normal save/fill/authenticator and supported assessment actions run in the
 extension. The website manages vaults, results, connections and settings.
 Unreleased source now adds client access mapping, approved local vault
 offboarding, extension-side shared-key rotation and opt-in account discovery.
-The complete rotation/debt queue and client proof packs remain planned. Existing scanner and investigation engines
+Shared-password debt now reuses the encrypted rotation operator in this source.
+Expired/orphaned proposal recovery and client proof packs remain unfinished. Existing scanner and investigation engines
 are supporting capabilities; they are not the product's primary proposition.
 Agents do not receive passwords, vault keys or authenticator secrets. CSV import
 from existing password managers remains the adoption path.
@@ -27,7 +28,8 @@ passwords or claim that a login succeeded. A separate extension capability
 handles approval-bound vault offboarding, local key rotation, progress and
 read-only rechecks. This source has not been deployed to the hosted pilot.
 See [implementation scope](docs/AGENCY_PHASE1.md), [workflow guarantees](docs/ACCESS_WORKFLOWS.md)
-and [discovery privacy/control](docs/ACCESS_DISCOVERY.md).
+and [discovery privacy/control](docs/ACCESS_DISCOVERY.md). See also
+[shared-password debt and local archival](docs/SHARED_PASSWORD_DEBT.md).
 
 ## Connected workflows
 

@@ -359,7 +359,7 @@ def create_app(settings=None):
 
     @app.middleware("http")
     async def boundary(request, call_next):
-        companion = bool(re.fullmatch(r'/api/companion/(vault|actions(?:/context|/[a-f0-9]{24}/(?:claim|result|cancel))?|connect/(?:start|[a-f0-9]{24}/(?:poll|ack|cancel))|discovery/(?:context|revoke|observe|consents(?:/[a-f0-9]{24}/disable)?)|access/(?:context|revoke|workflows(?:/[a-f0-9]{24}/(?:approve|cancel|report|vaults/[a-f0-9]{24}/rotation))?)|security/(?:context|revoke|inventory-preview|device-pairing/(?:details|approve)|operations(?:/[a-f0-9]{24}(?:/cancel)?)?))',request.url.path))
+        companion = bool(re.fullmatch(r'/api/companion/(vault|actions(?:/context|/[a-f0-9]{24}/(?:claim|result|cancel))?|connect/(?:start|[a-f0-9]{24}/(?:poll|ack|cancel))|discovery/(?:context|revoke|observe|consents(?:/[a-f0-9]{24}/disable)?)|access/(?:context|revoke|debt(?:/bind|/[a-f0-9]{24}/(?:verify|retire|reopen))?|workflows(?:/[a-f0-9]{24}/(?:approve|cancel|report|vaults/[a-f0-9]{24}/rotation))?)|security/(?:context|revoke|inventory-preview|device-pairing/(?:details|approve)|operations(?:/[a-f0-9]{24}(?:/cancel)?)?))',request.url.path))
         extension_origin = request.headers.get("origin", "")
         extension_origin_valid = bool(re.fullmatch(r"chrome-extension://[a-p]{32}", extension_origin))
         if companion and request.method == "OPTIONS":
@@ -1369,6 +1369,8 @@ def create_app(settings=None):
     from . import access_workflows
     access_workflows.register(app,store,auth,throttle,cipher,executor,shared_companions)
     app.state.watch_service.additional_ticks.append(app.state.access_workflow_tick)
+    from . import credential_debt
+    credential_debt.register(app,store,auth,app.state.access_auth,throttle)
 
     dist = ROOT / "frontend" / "dist"
     app.mount("/assets", StaticFiles(directory=dist / "assets", check_dir=False), name="assets")

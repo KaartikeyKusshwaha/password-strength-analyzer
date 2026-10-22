@@ -134,7 +134,7 @@ export function Popup() {
           <small>YOUR SECURITY COMPANION · {versions.loaded}</small>
         </div>
       </header>
-      <AccessWorkflows vaultSession={session.current} selectedVault={config} vaultUnlocked={!!entries} onRotated={()=>{lockVault();setNotice('Shared vault key rotated. Unlock again for its new key.');}}/>
+      <AccessWorkflows vaultSession={session.current} selectedVault={config} vaultUnlocked={!!entries} onApproved={()=>setActionRefresh(value=>value+1)} onVaultChanged={()=>{setEntries(session.current.entries);setRevision(session.current.revision);}} onRotated={()=>{lockVault();setNotice('Shared vault key rotated. Unlock again for its new key.');}}/>
       <AccountDiscovery active={active}/>
       <SecurityAssistant/>
       <LoginSaveOffers browser={chrome} origin={active?.origin}/>
@@ -290,7 +290,7 @@ export function Popup() {
               </button>
             </section>
           )}
-          <VaultHealth entries={entries} session={session.current} browser={chrome} onApproved={()=>setActionRefresh(value=>value+1)}/>
+          <VaultHealth entries={entries} session={session.current} browser={chrome} onApproved={()=>setActionRefresh(value=>value+1)} onVaultChanged={()=>{setEntries(session.current.entries);setRevision(session.current.revision);}}/>
           <ActionQueue session={session.current} browser={chrome} refresh={actionRefresh} onChange={()=>{if(session.current.entries){setEntries(session.current.entries);setRevision(session.current.revision);}}}/>
           <h2>This website</h2>
           <p className="fine">

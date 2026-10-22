@@ -213,7 +213,7 @@ def test_workflow_migration_rolls_back_new_tables_on_failure(tmp_path,monkeypatc
     from backend import workflow_migration
     path=tmp_path/'old-schema.db';store=Store(path)
     with store.connect(write=True) as c:
-        c.execute('DROP TABLE workflow_steps');c.execute('DROP TABLE workflows');c.execute('DROP TABLE access_grants')
+        c.execute('DROP TABLE workflow_steps');c.execute('DROP TABLE workflows');c.execute('DROP TABLE access_grants');c.execute('DROP TABLE credential_exposures')
         c.execute('DELETE FROM schema_migrations WHERE version>=12')
         c.execute("INSERT INTO workspaces VALUES('fixture','Keep this client space',0)")
     def fail(c):raise RuntimeError('simulated schema validation failure')

@@ -135,7 +135,7 @@ def test_update_payload_is_refused_for_plain_tcp_job(system,monkeypatch):
 def test_version_ten_migration_preserves_existing_device_and_never_grants_new_access(tmp_path):
     path=tmp_path/'old.db';store=Store(path)
     with store.connect(write=True) as c:
-        c.execute('ALTER TABLE devices DROP COLUMN allow_updates');c.execute('ALTER TABLE devices DROP COLUMN updates_enabled');c.execute('DELETE FROM schema_migrations WHERE version>=10');c.execute('DROP TABLE client_vaults');c.execute('DROP TABLE clients');c.execute('DROP TABLE workflow_steps');c.execute('DROP TABLE workflows');c.execute('DROP TABLE access_grants')
+        c.execute('ALTER TABLE devices DROP COLUMN allow_updates');c.execute('ALTER TABLE devices DROP COLUMN updates_enabled');c.execute('DELETE FROM schema_migrations WHERE version>=10');c.execute('DROP TABLE client_vaults');c.execute('DROP TABLE clients');c.execute('DROP TABLE workflow_steps');c.execute('DROP TABLE workflows');c.execute('DROP TABLE access_grants');c.execute('DROP TABLE credential_exposures')
         c.execute('INSERT INTO devices(id,token,workspace,user,label,targets,expires,allow_posture) VALUES(?,?,?,?,?,?,?,?)',('device','secret-hash','space','user','Existing','["127.0.0.1"]',9999999999,1))
     for _ in range(2):
         with Store(path).connect() as c:
@@ -164,7 +164,7 @@ def test_combined_review_update_observations_feed_one_approved_agent_job(system)
 def test_update_migration_rolls_back_columns_and_marker_on_validation_failure(tmp_path,monkeypatch):
     path=tmp_path/'rollback.db';store=Store(path)
     with store.connect(write=True) as c:
-        c.execute('ALTER TABLE devices DROP COLUMN allow_updates');c.execute('ALTER TABLE devices DROP COLUMN updates_enabled');c.execute('DELETE FROM schema_migrations WHERE version>=10');c.execute('DROP TABLE client_vaults');c.execute('DROP TABLE clients');c.execute('DROP TABLE workflow_steps');c.execute('DROP TABLE workflows');c.execute('DROP TABLE access_grants')
+        c.execute('ALTER TABLE devices DROP COLUMN allow_updates');c.execute('ALTER TABLE devices DROP COLUMN updates_enabled');c.execute('DELETE FROM schema_migrations WHERE version>=10');c.execute('DROP TABLE client_vaults');c.execute('DROP TABLE clients');c.execute('DROP TABLE workflow_steps');c.execute('DROP TABLE workflows');c.execute('DROP TABLE access_grants');c.execute('DROP TABLE credential_exposures')
     def fail(c):raise RuntimeError('simulated migration validation failure')
     monkeypatch.setattr(device_update_migration,'validate_layout',fail)
     with pytest.raises(RuntimeError):Store(path)

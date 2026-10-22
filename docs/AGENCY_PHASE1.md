@@ -72,8 +72,13 @@ frontend 348 tests. New discovery/map/migration verification is recorded below.
 Current web and content/popup/background builds compile without replacing the
 installed extension. Isolated build artifacts are under data/discovery-validation.
 
-Remaining implementation includes shared-password debt and the complete rotation
-queue, external connector leases/reconciliation/retries, departure triggers,
+Shared-password debt now extends the existing encrypted operator; see
+[its scope and recovery limits](SHARED_PASSWORD_DEBT.md). Schema 14 adds only
+metadata and preserves schemas 8–13 as backup inputs. The extension can register,
+approve, follow progress, verify, archive/retire and reopen shared-login debt.
+Owner confirmations are not independent external verification.
+
+Remaining implementation includes expired/orphaned proposal recovery UX, external connector leases/reconciliation/retries, departure triggers,
 freelancer expiry, weekly reviews, full handoffs and the final Proof Pack.
 Mandatory owner/admin MFA is currently enforced only for workflow access and
 approval. Advanced-UI flag conversion and archived phishing cleanup remain.
@@ -89,3 +94,10 @@ Starlette TestClient deprecation warning. Final frontend suite: 359 passed acros
 offline-stop UI adjustment. Web and content/popup/worker
 builds passed into isolated validation directories. No installed browser files
 or live Oracle services were replaced.
+
+Debt verification snapshot: backend 480 passed, one skipped, before the final
+reopen assertion and schema-13 backup test extension. The final focused debt
+suite passed five tests. Frontend final rerun passed 366 tests across 80 files.
+Web and content/popup/background builds passed into data/debt-validation.
+Final complete backend rerun: 481 passed, one skipped, with the existing
+Starlette TestClient deprecation warning. Browser testing remains deferred.

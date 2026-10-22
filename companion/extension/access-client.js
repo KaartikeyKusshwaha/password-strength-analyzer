@@ -2,7 +2,7 @@ import {serviceOrigin} from './policy';
 
 export async function accessRequest(connection,path='',body,fetcher=(...args)=>globalThis.fetch(...args),options={}){
   if(connection?.kind!=='access'||!/^([A-Za-z0-9_-]{40,100})$/.test(connection.token||''))throw new Error('Connect access workflows first.');
-  if(!/^(context|revoke|workflows(?:\/[a-f0-9]{24}\/(?:approve|cancel|report|vaults\/[a-f0-9]{24}\/rotation))?)$/.test(path))throw new Error('Unsupported workflow action.');
+  if(!/^(context|revoke|debt(?:\/bind|\/[a-f0-9]{24}\/(?:verify|retire|reopen))?|workflows(?:\/[a-f0-9]{24}\/(?:approve|cancel|report|vaults\/[a-f0-9]{24}\/rotation))?)$/.test(path))throw new Error('Unsupported workflow action.');
   if(options.vaultToken&&!path.endsWith('/rotation'))throw new Error('Vault authorization is limited to rotation.');
   const response=await fetcher(serviceOrigin(connection.origin)+'/api/companion/access/'+path,{
     method:body===undefined?'GET':'POST',credentials:'omit',redirect:'error',signal:options.signal?AbortSignal.any([options.signal,AbortSignal.timeout(15000)]):AbortSignal.timeout(15000),

@@ -179,6 +179,8 @@ def register(app,store,auth,throttle,cipher,executor,shared_companions):
             require(user and user['mfa'],'Owner access and account MFA required',403)
         return {**grant,'role':'owner'}
 
+    app.state.access_auth=access_auth
+
     @app.get('/api/companion/access/context')
     def extension_context(session=Depends(access_auth)):
         return {**snapshot(store,session['workspace']),'expires':session['expires']}

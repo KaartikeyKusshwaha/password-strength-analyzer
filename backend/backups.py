@@ -19,7 +19,7 @@ from backend.passkey_migration import validate_layout
 MAGIC = b'SNTLBK01'
 MAX_BYTES = 128 * 1024 * 1024
 SCHEMA = SCHEMA_VERSION
-SUPPORTED_SCHEMAS = (8, 9, 10, 11, 12, SCHEMA)
+SUPPORTED_SCHEMAS = (8, 9, 10, 11, 12, 13, SCHEMA)
 
 
 class BackupError(ValueError):
@@ -87,6 +87,10 @@ def validate_database(connection, server_key):
         from .access_records_migration import validate_layout as validate_access_records
         try: validate_access_records(connection)
         except ValueError: raise BackupError('Reported access schema validation failed.') from None
+    if schema >= 14:
+        from .debt_migration import validate_layout as validate_debt
+        try: validate_debt(connection)
+        except ValueError: raise BackupError('Credential debt schema validation failed.') from None
     cipher = Fernet(server_key)
     # Detect a missing/mismatched server key before declaring recovery possible.
     for row in connection.execute('SELECT mfa,mfa_draft FROM users'):
