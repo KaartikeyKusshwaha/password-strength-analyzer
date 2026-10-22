@@ -364,7 +364,7 @@ def create_app(settings=None):
 
     @app.middleware("http")
     async def boundary(request, call_next):
-        companion = bool(re.fullmatch(r'/api/companion/(vault|actions(?:/context|/[a-f0-9]{24}/(?:claim|result|cancel))?|connect/(?:start|[a-f0-9]{24}/(?:poll|ack|cancel))|discovery/(?:context|revoke|observe|consents(?:/[a-f0-9]{24}/disable)?)|access/(?:context|revoke|invitations(?:/[a-f0-9]{24}/(?:apply|vaults/[a-f0-9]{24}))?|leases(?:/[a-f0-9]{24}/(?:approve|cancel))?|vaults/[a-f0-9]{24}/ownership(?:/accept|/[a-f0-9]{24}/cancel)?|handoffs(?:/[a-f0-9]{24}/(?:approve|link|signoff|cancel))?|debt(?:/bind|/[a-f0-9]{24}/(?:verify|retire|reopen))?|workflows(?:/[a-f0-9]{24}/(?:approve|cancel|report|vaults/[a-f0-9]{24}/rotation))?)|security/(?:context|revoke|inventory-preview|device-pairing/(?:details|approve)|operations(?:/[a-f0-9]{24}(?:/cancel)?)?))',request.url.path))
+        companion = bool(re.fullmatch(r'/api/companion/(reminders/(?:context|revoke)|vault|actions(?:/context|/[a-f0-9]{24}/(?:claim|result|cancel))?|connect/(?:start|[a-f0-9]{24}/(?:poll|ack|cancel))|discovery/(?:context|revoke|observe|consents(?:/[a-f0-9]{24}/disable)?)|access/(?:context|revoke|invitations(?:/[a-f0-9]{24}/(?:apply|vaults/[a-f0-9]{24}))?|leases(?:/[a-f0-9]{24}/(?:approve|cancel))?|vaults/[a-f0-9]{24}/ownership(?:/accept|/[a-f0-9]{24}/cancel)?|handoffs(?:/[a-f0-9]{24}/(?:approve|link|signoff|cancel))?|debt(?:/bind|/[a-f0-9]{24}/(?:verify|retire|reopen))?|workflows(?:/[a-f0-9]{24}/(?:approve|cancel|report|vaults/[a-f0-9]{24}/rotation))?)|security/(?:context|revoke|inventory-preview|device-pairing/(?:details|approve)|operations(?:/[a-f0-9]{24}(?:/cancel)?)?))',request.url.path))
         extension_origin = request.headers.get("origin", "")
         extension_origin_valid = bool(re.fullmatch(r"chrome-extension://[a-p]{32}", extension_origin))
         if companion and request.method == "OPTIONS":
@@ -912,6 +912,7 @@ def create_app(settings=None):
             user = c.execute("SELECT * FROM users WHERE id=?", (session["user"],)).fetchone()
             must(verify_password(body.password.get_secret_value(), user["password"]) and consume_factor(c, user, body.code, cipher), "Password and unused factor required", 401)
             c.execute("UPDATE users SET mfa=NULL,mfa_draft=NULL,mfa_step=-1,recovery='[]' WHERE id=?", (user["id"],))
+            c.execute("DELETE FROM entities WHERE workspace='system:extension-reminders' AND kind='reminder_connection' AND json_extract(data,'$.user')=?",(user["id"],))
             c.execute("DELETE FROM entities WHERE workspace='system:extension-access' AND kind='access_connection' AND json_extract(data,'$.user')=?",(user["id"],))
             c.execute("DELETE FROM sessions WHERE user=?", (user["id"],))
             result = issue(c, response, user["id"], session["workspace"])
@@ -940,6 +941,7 @@ def create_app(settings=None):
             c.execute("DELETE FROM entities WHERE workspace='system:extension-security' AND kind='security_connection' AND json_extract(data,'$.user')=? AND json_extract(data,'$.workspace')=?",(identifier,session['workspace']))
             c.execute("DELETE FROM entities WHERE workspace='system:extension-access' AND kind='access_connection' AND json_extract(data,'$.user')=? AND json_extract(data,'$.workspace')=?",(identifier,session['workspace']))
             c.execute("DELETE FROM entities WHERE workspace='system:extension-discovery' AND kind='discovery_connection' AND json_extract(data,'$.user')=? AND json_extract(data,'$.workspace')=?",(identifier,session['workspace']))
+            c.execute("DELETE FROM entities WHERE workspace='system:extension-reminders' AND kind='reminder_connection' AND json_extract(data,'$.user')=? AND json_extract(data,'$.workspace')=?",(identifier,session['workspace']))
             c.execute("DELETE FROM entities WHERE workspace=? AND kind='discovery_consents' AND json_extract(data,'$.user')=?",(session['workspace'],identifier))
             for kind in ('operations','jobs','security_reviews'):
                 for job in Store.all(c,session['workspace'],kind):
@@ -1396,6 +1398,8 @@ def create_app(settings=None):
     extension_ownership.register(app,store,app.state.access_auth,throttle,shared_companions)
     from . import access_invitations
     access_invitations.register(app,store,app.state.access_auth,throttle,cipher,shared_companions)
+    from . import access_reminders
+    access_reminders.register(app,store,auth,throttle)
 
     dist = ROOT / "frontend" / "dist"
     app.mount("/assets", StaticFiles(directory=dist / "assets", check_dir=False), name="assets")

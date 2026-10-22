@@ -1,3 +1,4 @@
+import AccessReminders from './AccessReminders';
 import AccountDiscovery from './AccountDiscovery';
 import AccessWorkflows from './AccessWorkflows';
 import SecurityAssistant from './SecurityAssistant';
@@ -135,6 +136,7 @@ export function Popup() {
           <small>YOUR SECURITY COMPANION · {versions.loaded}</small>
         </div>
       </header>
+      <AccessReminders/>
       <AccessWorkflows onTransferred={verified=>{lockVault();setNotice(verified?'Vault ownership transferred. Reconnect this vault and verify the new owner fingerprint before reopening.':'Ownership acceptance could not be confirmed. Vault locked; refresh the handoff and reconnect if its browser connection was revoked.');}} vaultSession={session.current} selectedVault={config} vaultUnlocked={!!entries} onApproved={approvedAction} onVaultChanged={()=>{setEntries(session.current.entries);setRevision(session.current.revision);}} onRotated={()=>{lockVault();setNotice('Shared vault key rotated. Unlock again for its new key.');}}/>
       <AccountDiscovery active={active}/>
       <SecurityAssistant/>

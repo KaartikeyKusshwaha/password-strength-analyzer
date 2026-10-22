@@ -61,3 +61,9 @@ it('stores security access separately after verifying it and retains existing va
   expect(fetcher.mock.calls.some(([url])=>url.endsWith('/security/context'))).toBe(true);
   expect(fetcher.mock.calls.some(([url])=>url.endsWith('/vault'))).toBe(false);
 });
+
+it('approves read-only reminders separately without storing an operator capability',async()=>{
+ const b=browser();
+ const fetcher=vi.fn(async url=>({ok:true,json:async()=>url.endsWith('/start')?{id:'a'.repeat(24),code:'123456',expires:Date.now()/1000+300,approval_url:CLOUD_ORIGIN+'/#connect='+'a'.repeat(24)}:url.endsWith('/poll')?{status:'approved',scope:'reminders',origin:CLOUD_ORIGIN,token:'x'.repeat(54)}:{alerts:[],expires:Date.now()/1000+90*86400}}));
+ await startCloudConnection(b,CLOUD_ORIGIN,fetcher,'reminders');const value=await finishCloudConnection(b,fetcher);expect(value.kind).toBe('reminders');expect(value.id).toBeTruthy();expect(b.saved.reminderConnection).toEqual(value);expect(b.saved.accessConnection).toBeUndefined();expect(fetcher.mock.calls.some(([url])=>url.endsWith('/reminders/context'))).toBe(true);expect(fetcher.mock.calls.some(([url])=>url.endsWith('/vault')||url.endsWith('/access/context'))).toBe(false);
+});

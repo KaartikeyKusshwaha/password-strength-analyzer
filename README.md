@@ -16,8 +16,9 @@ handoff coordination now records independent receiving-owner sign-off, and the
 extension performs signed ownership proposal/acceptance with local key rotation.
 The expiry engine and extension controls also implement approved contractor
 access deadlines and scheduled departure plans. All-client-vault invitations and
-approved expiry can now be issued atomically from the extension; durable
-background reminder delivery remains unfinished. See
+approved expiry can now be issued atomically from the extension. Separately
+approved read-only background reminders poll for expiry status without extending
+the operator token; see [reminder scope](docs/ACCESS_REMINDERS.md). See
 [expiry scope and remaining work](docs/ACCESS_EXPIRY.md). Client proof packs remain
 unfinished.
 Existing scanner and investigation engines

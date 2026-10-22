@@ -2,7 +2,7 @@ import {createLoginOffers} from '../login-offers';
 // Plaintext captures are tab-bound, in worker memory, and expire after 3 minutes.
 // They are never written to extension storage or returned to a website.
 const captures = new Map();
-function releaseCapture(id){const value=captures.get(id);captures.delete(id);if(value)globalThis.sentinelMonitor?.setCapture(value.tab,false);}
+function releaseCapture(id){const value=captures.get(id);captures.delete(id);globalThis.sentinelCaptureActive=!!captures.size;if(!captures.size)globalThis.sentinelReminderMonitor?.restoreBadge().catch(()=>{});if(value)globalThis.sentinelMonitor?.setCapture(value.tab,false);}
 function sweep() { for(const [id,value] of captures) if(value.expires<=Date.now()) releaseCapture(id); }
 function captureEntry(entry,sender,deadline=Date.now()+180000){
   const origin=new URL(sender.url).origin;
@@ -12,10 +12,11 @@ function captureEntry(entry,sender,deadline=Date.now()+180000){
   const id=crypto.randomUUID();
   const expires=Math.min(deadline,Date.now()+180000);
   if(!Number.isFinite(expires)||expires<=Date.now())throw new Error('Save entry expired.');
+  globalThis.sentinelCaptureActive=true;
   captures.set(id,{origin,username:entry.username,password:entry.password,tab:sender.tab.id,expires});
   globalThis.sentinelMonitor?.setCapture(sender.tab.id,true);
   chrome.action.setBadgeText({text:'1'});chrome.action.setBadgeBackgroundColor({color:'#28684c'});
-  setTimeout(()=>{sweep();if(!captures.size)chrome.action.setBadgeText({text:''});},expires-Date.now());
+  setTimeout(()=>{sweep();if(!captures.size){chrome.action.setBadgeText({text:''});globalThis.sentinelReminderMonitor?.restoreBadge().catch(()=>{});}},expires-Date.now());
   return id;
 }
 async function openPrivateSave(id,value){
@@ -34,7 +35,7 @@ async function privateReceiver(value,sender) {
 }
 chrome.windows.onRemoved.addListener(windowId=>{
   for(const [id,value] of captures)if(value.windowId===windowId)releaseCapture(id);
-  if(!captures.size)chrome.action.setBadgeText({text:''});
+  if(!captures.size){chrome.action.setBadgeText({text:''});globalThis.sentinelReminderMonitor?.restoreBadge().catch(()=>{});}
 });
 chrome.runtime.onMessage.addListener((message,sender,reply)=>{
   if(sender.id!==chrome.runtime.id)return;
@@ -74,7 +75,7 @@ chrome.runtime.onMessage.addListener((message,sender,reply)=>{
     const value=captures.get(message.id);
     privateReceiver(value,sender).then(allowed=>{
       if(!allowed){reply({ok:false});return;}
-      releaseCapture(message.id);if(!captures.size)chrome.action.setBadgeText({text:''});reply({ok:true});
+      releaseCapture(message.id);if(!captures.size){chrome.action.setBadgeText({text:''});globalThis.sentinelReminderMonitor?.restoreBadge().catch(()=>{});}reply({ok:true});
     }).catch(()=>reply({ok:false}));
     return true;
   }

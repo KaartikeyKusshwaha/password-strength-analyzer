@@ -175,3 +175,19 @@ real-crypto invitation test passed separately. Both production builds passed.
 Final invitation-only boundary results are recorded in FREELANCER_INVITATIONS.md.
 No browser control, installed extension replacement or hosted deployment occurred.
 Durable background reminder delivery, weekly reviews and Proof Packs remain work.
+
+
+Read-only reminder checkpoint (23 October): a separate comparison-code-approved
+90-day owner/MFA connection projects expiry and execution alerts without vault,
+scan, approval or mutation authority. The worker restores bounded polling after
+startup, respects service-host permission and secure-save badge priority, caches
+counts only and discards late disconnected responses. Offline checks retry;
+expired/revoked connections stop polling. Extension disconnect, Settings revoke,
+workspace offboarding, MFA disable and restore invalidate reminder authority.
+The eight-hour action connection is unchanged. See ACCESS_REMINDERS.md.
+
+Validation: 47 backend reminder/connect/MFA/backup/expiry tests passed; full
+frontend passed 405 tests across 92 files. Web, popup and worker production builds
+passed. The existing Starlette warning and strength-dictionary chunk warning
+remain. No browser, installed-build replacement or hosted rollout occurred.
+Native alarm/restart acceptance, weekly reviews and Client Proof Packs remain.

@@ -174,6 +174,7 @@ def suspend_authorizations(connection):
         connection.execute(f'DELETE FROM {table}')
     connection.execute("DELETE FROM entities WHERE workspace='system:extension-connect' AND kind='extension_connect'")
     connection.execute("DELETE FROM entities WHERE workspace='system:extension-security' AND kind='security_connection'")
+    connection.execute("DELETE FROM entities WHERE workspace='system:extension-reminders' AND kind='reminder_connection'")
     connection.execute("DELETE FROM entities WHERE workspace='system:extension-access' AND kind='access_connection'")
     connection.execute("DELETE FROM entities WHERE workspace='system:extension-discovery' AND kind='discovery_connection'")
     connection.execute("DELETE FROM entities WHERE kind='discovery_consents'")

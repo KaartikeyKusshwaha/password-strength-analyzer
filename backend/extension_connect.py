@@ -16,13 +16,15 @@ SECURITY_SCOPE='system:extension-security'
 SECURITY_KIND='security_connection'
 ACCESS_SCOPE='system:extension-access'
 ACCESS_KIND='access_connection'
+REMINDER_SCOPE='system:extension-reminders'
+REMINDER_KIND='reminder_connection'
 DISCOVERY_SCOPE='system:extension-discovery'
 DISCOVERY_KIND='discovery_connection'
 
 class Proof(BaseModel):
     model_config=ConfigDict(extra='forbid')
     proof: SecretStr = Field(min_length=43,max_length=100)
-    scope: Literal['vault','security','access','discovery'] = 'vault'
+    scope: Literal['vault','security','access','discovery','reminders'] = 'vault'
     device_pairing: bool = False
 
 class Approval(BaseModel):
@@ -76,6 +78,16 @@ def register(app,store,auth,throttle,cipher,settings,shared_metadata):
             record=lookup(c,identifier)
             reject(record['status']=='pending','This request was already decided',409)
             reject(hmac.compare_digest(body.confirmed_code,record['code']),'Connection code does not match')
+            if record.get('scope')=='reminders':
+                reject(body.vault_id is None and body.workspace_id==session['workspace'] and not body.device_pairing and body.vault_kind=='personal','Reminder approval does not match',409)
+                member=c.execute("SELECT u.mfa FROM users u JOIN members m ON m.user=u.id WHERE m.workspace=? AND m.user=? AND m.role='owner'",(session['workspace'],session['user'])).fetchone()
+                reject(member and member['mfa'],'Current owner access and account MFA required')
+                token=secrets.token_urlsafe(40)
+                grant=dict(id=digest(token),user=session['user'],workspace=session['workspace'],origin=record['origin'],expires=time.time()+90*86400)
+                Store.put(c,REMINDER_SCOPE,REMINDER_KIND,grant)
+                record.update(status='approved',grant=cipher.encrypt(token.encode()).decode(),user=session['user'],workspace=session['workspace'])
+                Store.put(c,SCOPE,KIND,record);Store.event(c,session['workspace'],session['user'],'extension.reminders_connected','read-only-90-days')
+                return {'approved':True,'scope':'Read-only client-access expiry reminders for up to 90 days. No vault contents, grant, removal, scan, device or approval permission.'}
             if record.get('scope')=='discovery':
                 reject(session['role'] in {'owner','analyst','reviewer'},'Reporting permission required')
                 reject(body.vault_id is None and body.workspace_id==session['workspace'] and not body.device_pairing and body.vault_kind=='personal','Discovery approval does not match',409)
@@ -137,6 +149,9 @@ def register(app,store,auth,throttle,cipher,settings,shared_metadata):
             elif record.get('scope')=='discovery':
                 grant=Store.get(c,DISCOVERY_SCOPE,DISCOVERY_KIND,digest(token))
                 reject(grant and grant['expires']>time.time(),'Connection revoked. Start again.',410)
+            elif record.get('scope')=='reminders':
+                grant=Store.get(c,REMINDER_SCOPE,REMINDER_KIND,digest(token))
+                reject(grant and grant['expires']>time.time(),'Connection revoked. Start again.',410)
             elif record.get('scope')=='access':
                 grant=Store.get(c,ACCESS_SCOPE,ACCESS_KIND,digest(token))
                 reject(grant and grant['expires']>time.time(),'Connection revoked. Start again.',410)
@@ -164,6 +179,9 @@ def register(app,store,auth,throttle,cipher,settings,shared_metadata):
                     c.execute('DELETE FROM entities WHERE id=? AND workspace=? AND kind=?',(digest(token),DISCOVERY_SCOPE,DISCOVERY_KIND))
                     c.execute("DELETE FROM entities WHERE workspace=? AND kind='discovery_consents' AND json_extract(data,'$.connection')=?",(record['workspace'],digest(token)))
                     Store.event(c,record['workspace'],record['user'],'extension.discovery_revoked','cancelled-handoff')
+                elif record.get('scope')=='reminders':
+                    c.execute('DELETE FROM entities WHERE id=? AND workspace=? AND kind=?',(digest(token),REMINDER_SCOPE,REMINDER_KIND))
+                    Store.event(c,record['workspace'],record['user'],'extension.reminders_revoked','cancelled-handoff')
                 elif record.get('scope')=='access':
                     c.execute('DELETE FROM entities WHERE id=? AND workspace=? AND kind=?',(digest(token),ACCESS_SCOPE,ACCESS_KIND))
                     Store.event(c,record['workspace'],record['user'],'extension.access_revoked','cancelled-handoff')

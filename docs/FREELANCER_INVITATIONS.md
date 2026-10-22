@@ -47,8 +47,8 @@ Time spent signing within its 15-minute deadline does not impose a second full
 hour of lead time. UI supports 1–90 days. The stored expiry approval remains
 narrowly bound to these vaults and the verified recipient. Rotation at removal
 still needs local unlock; old decrypted copies and external website access are
-not erased. Durable day-27 extension background reminder delivery remains
-unfinished; reminders are currently stored and displayed on refresh.
+not erased. Day-27 background reminder polling is now available through its separate
+read-only approval; see ACCESS_REMINDERS.md for delivery delays and limits.
 
 Automated tests cover real two-vault issuance/acceptance/expiry, invalid signatures,
 wrong capabilities/recipient/role, stale snapshots, subset/replay failures,

@@ -62,14 +62,11 @@ immediately after submission and never enter policy data or an AI planner.
 Initial invitation issuance is now available in the extension as an atomic
 all-client-vault flow. See FREELANCER_INVITATIONS.md for the signing, scope and
 rollback rules. Existing memberships/invitations can still use the expiry-only
-flow. **Not finished:** durable background extension reminder delivery.
-The day-27 event is stored and visible when the extension refreshes; it is not an
-email, push notification or guaranteed background badge. Workflow connections
-expire after eight hours, so they cannot honestly be treated as a month-long
-notification channel. A separately approved read-only reminder channel remains
-to be implemented; destructive operator-token lifetime must not be extended
-silently. The initial invitation and expiry controls are implemented; this is not a claim
-that background reminder delivery or every onboarding requirement is complete.
+flow. Background reminder polling is now implemented through a separately approved
+read-only 90-day connection. It records only counts/status locally and displays
+an R/? toolbar badge; live owner/MFA, expiry and revocation remain enforced.
+The operator token still expires after eight hours. See ACCESS_REMINDERS.md for
+polling delays, cached-data scope, badge priority and reconnection limits.
 
 Tests cover real two-vault expiry/rotation/rechecks, pending invitations,
 pre-approval inactivity, scheduled departures, cancellation, lost authority,

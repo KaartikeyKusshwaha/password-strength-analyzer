@@ -6,3 +6,7 @@ globalThis.sentinelMonitor.install();
 
 import {createAccessDiscovery} from './access-discovery';
 createAccessDiscovery(chrome).install();
+
+import {createReminderMonitor} from './access-reminders';
+globalThis.sentinelReminderMonitor=createReminderMonitor(chrome);
+globalThis.sentinelReminderMonitor.install();

@@ -9,8 +9,8 @@ Use disposable accounts/credentials and retain no secrets in screenshots/logs.
 
 - Pin one Git commit for backend, web and packaged extension. Record hashes and
   deployed version. Do not test the old Oracle release against unreleased source.
-- Complete pending durable reminder delivery, weekly access review and Client
-  Proof Pack work. Atomic all-client-vault freelancer invitations, the expiry
+- Complete pending weekly access review and Client Proof Pack work. Read-only
+  background reminder polling is in source and needs alarm/restart acceptance. Atomic all-client-vault freelancer invitations, the expiry
   engine and extension controls are in source. Extension ownership transfer is now in source and needs this
   acceptance pass. External connector development is
   gated by three agency pain reports in the master plan; interviews are pending.
