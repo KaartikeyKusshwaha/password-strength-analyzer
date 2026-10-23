@@ -241,3 +241,28 @@ backup checks (one platform skip), 42 helper/release checks and container startu
 Local helper/security tests passed 23, frontend availability cases two, web build
 passed. This fixes missing-download guidance; it does not distribute a helper.
 Installed Edge cloud comparison-code pairing still awaits the native-popup step.
+
+### Render pairing reached the vault API — 24 October 2026
+
+The user completed a new comparison-code approval in Edge. The actual approval
+page displayed “Approved. Return to the extension and choose Finish connection.”
+The authenticated Connections report subsequently recorded successful vault
+contact at 03:40:42 IST from companion version 0.25.1. This confirms an approved
+Render vault connection and an authenticated vault API request, not an independently
+observed successful unlock or autofill. An older approved connection still has no
+recorded vault contact. Neither connection was revoked during this observation.
+Screenshot: `data/render-edge-contact-0251-20261024.png`.
+
+The locally built companion is 0.25.1; the currently deployed Render download is
+still 0.25.0. The control-room version warning reflects that difference and does
+not invalidate the successful contact. Commit 527ba79 improves unreachable-server
+errors and warns about ambiguous timed-out writes without automatically replaying
+them or silently changing a vault's server. Its 12 targeted tests and root build
+passed. CI run 40024857918 passed five isolated extension cases, 73 PostgreSQL
+checks (one skipped), 42 helper/release checks and container startup.
+
+A fresh Edge practice login page was opened with both fields empty. The subsequent
+read-only check still found both empty; the installed-extension Fill action is
+awaiting the user's native-popup click. No website login was submitted. Cloud
+secure-save, TOTP and the two-account shared-vault removal test remain unverified
+in the installed browser; isolated CI cases do not substitute for those gates.
