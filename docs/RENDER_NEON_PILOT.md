@@ -40,10 +40,11 @@ migration and restore/cutover check succeed. Do not initialize over existing dat
 2. Obtain a new encrypted, validated backup of the old application and its
    matching server MFA key. The retained 21 October backup is not evidence of
    the newest state. Never destroy the source after a failed export.
-3. Prepare/validate the PostgreSQL import and export/restore tools. Preserve
+3. Use the PostgreSQL import and export/restore tools below. Preserve
    encrypted vault bytes, revisions, IDs, audit order and counters. Invalidate
    sessions, pending approvals and connection grants deliberately on cutover.
-   **These data migration and PostgreSQL backup tools remain unfinished.**
+   Local synthetic round-trip checks are implemented; actual Neon import and
+   restore still require validation before cutover.
 4. Apply the empty schema to a dedicated database and import into that empty
    target in one validated transaction. Compare counts, payload digests, audit
    chains and constraint behavior. Do not use live customer credentials in tests.
@@ -56,6 +57,35 @@ migration and restore/cutover check succeed. Do not initialize over existing dat
 7. Verify a fresh PostgreSQL encrypted export and isolated restore before
    declaring cutover. Keep Oracle intact until rollback and data preservation
    are proven. Remove temporary diagnostic access separately from deleting data.
+
+## Offline archive commands
+
+Supply `DATABASE_URL` and the matching `APP_ENCRYPTION_KEY` privately in the
+operator environment. Never put either in a command argument, log or Git file.
+The URL must use `sslmode=verify-full`. Provision the dedicated empty schema
+with `deploy/postgres_schema.py` first; the archive command never creates one.
+
+```powershell
+python -m backend.postgres_backups import --key-file <private-backup-key-file> --archive <authenticated-source.sentinelbackup>
+python -m backend.postgres_backups export --key-file <private-backup-key-file> --archive <new-postgres.sentinelbackup>
+```
+
+Import reuses the existing authenticated restore/migration protocol, including
+revoking sessions, extension/device capabilities, passkeys, pending destructive
+approvals and replayable scheduled work. Owners must sign in and reconnect
+clients afterward. It refuses any nonempty target and mismatched MFA key,
+compares imported rows/digests and audit chains, and resets identity sequences
+inside the transaction. A failed import rolls back all imported records.
+
+Export takes a read-only repeatable-read PostgreSQL snapshot into an in-memory
+SQLite archive and encrypts it using the existing backup format. It preserves
+binary passkey fields, vault ciphertext, IDs/revisions and insertion ordering.
+It validates audit chains and the MFA key before publishing an exclusively
+created encrypted output. Export does not revoke the live source's authority.
+Import uses a private temporary restore directory which is removed afterward;
+no database contents or credentials are printed. Both directions have size/row
+bounds. Archives remain readable by the existing isolated SQLite restore tool.
+These commands are operator-only; no database-download web route is added.
 
 ## Free-tier behavior
 
@@ -95,3 +125,8 @@ tests passed against the isolated PostgreSQL server, including access-map and
 Proof Pack generation; 28 existing SQLite login/MFA tests also passed. These
 checks do not establish Docker, Neon, Render or browser acceptance. The only
 warning was the existing Starlette test-client dependency deprecation.
+
+Archive follow-up: 40 backup/PostgreSQL round-trip/provenance/release tests
+passed, including PostgreSQL-to-PostgreSQL isolated restore, binary credential
+preservation, identity continuation, nonempty-target rejection, mismatched-key
+rejection, exclusive archive creation and simulated mid-import rollback.

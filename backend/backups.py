@@ -141,6 +141,11 @@ def create_backup(data_dir, key_file, output):
     finally:
         snapshot.close()
         source.close()
+    return write_snapshot(database_bytes, server_key, backup_key, source_schema, output)
+
+
+def write_snapshot(database_bytes, server_key, backup_key, source_schema, output):
+    """Encrypt an already validated snapshot using the established archive format."""
     manifest = canonical({'format': 1, 'schema': source_schema, 'created_at': now(),
                           'database_bytes': len(database_bytes)}).encode()
     payload = struct.pack('>I', len(manifest)) + manifest + server_key + database_bytes
