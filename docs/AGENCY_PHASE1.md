@@ -191,3 +191,28 @@ frontend passed 405 tests across 92 files. Web, popup and worker production buil
 passed. The existing Starlette warning and strength-dictionary chunk warning
 remain. No browser, installed-build replacement or hosted rollout occurred.
 Native alarm/restart acceptance, weekly reviews and Client Proof Packs remain.
+
+
+Weekly review checkpoint (23 October): opt-in weekly/manual metadata compilation
+now runs through the existing WatchService, reviews.Runner, executor, Groq
+planner, evidence validator, dispatcher and progress checker. Only fixed issue
+categories and opaque evidence IDs reach Groq. Current source digests, live owner
+MFA and bounded consent are checked before and after planning. Extension sign-off
+binds exact evidence/plan and fresh factors, creating/reusing follow-up tasks
+without changing access. Subsequent batches cover omissions; expired, cancelled,
+restored or changed-source authority does not silently resume. Repeated tasks
+are reused by source plus issue category so escalations get their own action.
+New reminder approvals include review availability; old expiry-only grants do
+not silently gain that scope. See WEEKLY_ACCESS_REVIEWS.md.
+
+Validation: 30 integrated review/reminder/connect/backup tests passed, 22 platform
+tests passed, seven review/batch tests passed, then the final eight-test review
+suite (including reused-task progress and category escalation) passed. Full
+frontend: 408 passed across 93 files. An earlier overloaded full run timed out
+two existing vault tests; a serialized run isolated an intermittent disabled
+second-click issue in the autofill test. Waiting for its enabled state retains
+all denial/no-secret assertions; the final full run passed. Web, popup and worker
+builds passed; the known dictionary chunk and Starlette warnings remain. No
+browser, installed build replacement, live credential mutation or deployment
+occurred. Client Proof Packs, remaining helper work and production/browser gates
+are still required.

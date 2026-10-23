@@ -31,7 +31,15 @@ def register(app,store,auth,throttle):
                 if state=='active' and not lease.get('reminder_sent'):continue
                 client=c.execute('SELECT name FROM clients WHERE workspace=? AND id=?',(session['workspace'],lease['client'])).fetchone()
                 alerts.append({'id':lease['id'],'client':client['name'] if client else 'Former client','state':'expiring' if state=='active' else state,'expires_at':lease['plan']['expires_at']})
-            return {'alerts':alerts,'expires':session['expires'],'checked_at':now(),'coverage':'Expiry reminders and execution status only. Read-only; no vault contents, passwords, access changes or external account assertions.'}
+            # Only newly approved reminder grants include review notifications.
+            # Older expiry-only capabilities do not silently gain new reads.
+            if session.get('review_alerts'):
+                from .access_reviews import display
+                for saved in c.execute("SELECT data FROM entities WHERE workspace=? AND kind='access_reviews' AND json_extract(data,'$.status') IN ('planning','ready') ORDER BY rowid DESC LIMIT 30",(session['workspace'],)):
+                    review=display(c,session['workspace'],json.loads(saved[0]))
+                    alerts.append({'id':review['id'],'client':'Weekly access review','state':'review_'+review['status'],'expires_at':review['expires']})
+                alerts=alerts[:1000]
+            return {'alerts':alerts,'expires':session['expires'],'checked_at':now(),'coverage':'Expiry execution status, plus weekly-review availability only when explicitly approved. Read-only; no vault contents, passwords, access changes or external account assertions.'}
 
     @app.post('/api/companion/reminders/revoke')
     def revoke(session=Depends(reminder_auth)):

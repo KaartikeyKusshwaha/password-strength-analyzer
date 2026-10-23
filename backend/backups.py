@@ -170,6 +170,12 @@ def suspend_authorizations(connection):
         connection.execute("UPDATE workflow_steps SET status='cancelled' WHERE workflow=? AND status='pending'",(row['id'],))
         Store.event(connection,row['workspace'],'system:restore','access_workflow.cancelled',row['id'])
     """Do not replay pre-disaster bearer grants, approvals or scheduled work."""
+    for row in connection.execute("SELECT workspace,data FROM entities WHERE kind='access_review_policy'").fetchall():
+        config=json.loads(row['data']);config.update(enabled=False,next_due=None,last_status='backup_restored')
+        Store.put(connection,row['workspace'],'access_review_policy',config)
+    for row in connection.execute("SELECT workspace,data FROM entities WHERE kind='access_reviews' AND json_extract(data,'$.status') IN ('planning','ready')").fetchall():
+        review=json.loads(row['data']);review.update(status='cancelled',finished_at=now())
+        Store.put(connection,row['workspace'],'access_reviews',review)
     for table in ('sessions', 'invites', 'companions', 'devices'):
         connection.execute(f'DELETE FROM {table}')
     connection.execute("DELETE FROM entities WHERE workspace='system:extension-connect' AND kind='extension_connect'")

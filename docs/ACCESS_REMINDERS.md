@@ -46,3 +46,7 @@ live-owner/MFA failures, revocation, restore, comparison-code cancellation,
 worker permission checks, cookie/token transport, stale responses and capture
 badge priority. No notification permission, paid service or new credential store
 was added.
+
+New reminder approvals also include weekly-review availability, without its plan
+or evidence. Older expiry-only grants do not gain that scope; reconnect with the
+new comparison-code consent to include reviews. See WEEKLY_ACCESS_REVIEWS.md.

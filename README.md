@@ -176,3 +176,5 @@ The legacy command-line learning tool remains in `password_analyzer.py`. It is n
 **Windows Update checks:** separately opt-in to offline-cache counts and update-related restart status with device agent 0.8.0. Results connect to reviews and AI task planning; no updates are installed or reboot performed. Cached zero does not prove patch coverage. See [scope and setup](docs/WINDOWS_UPDATES.md).
 
 **Offline vault recovery:** prepare an encrypted kit and a separate random key before forgetting a personal-vault master. Activation/recovery rotates the data key and revokes only that vault’s browser connections and private action queues. Current and historical sources are explicit; no server escrow or automatic snapshot substitution. [Protocol and limits](docs/VAULT_RECOVERY_KITS.md).
+
+Weekly access-review source implementation: [scope, planning and owner sign-off](docs/WEEKLY_ACCESS_REVIEWS.md). Native acceptance and hosted rollout remain pending.

@@ -83,11 +83,11 @@ def register(app,store,auth,throttle,cipher,settings,shared_metadata):
                 member=c.execute("SELECT u.mfa FROM users u JOIN members m ON m.user=u.id WHERE m.workspace=? AND m.user=? AND m.role='owner'",(session['workspace'],session['user'])).fetchone()
                 reject(member and member['mfa'],'Current owner access and account MFA required')
                 token=secrets.token_urlsafe(40)
-                grant=dict(id=digest(token),user=session['user'],workspace=session['workspace'],origin=record['origin'],expires=time.time()+90*86400)
+                grant=dict(id=digest(token),user=session['user'],workspace=session['workspace'],origin=record['origin'],expires=time.time()+90*86400,review_alerts=True)
                 Store.put(c,REMINDER_SCOPE,REMINDER_KIND,grant)
                 record.update(status='approved',grant=cipher.encrypt(token.encode()).decode(),user=session['user'],workspace=session['workspace'])
                 Store.put(c,SCOPE,KIND,record);Store.event(c,session['workspace'],session['user'],'extension.reminders_connected','read-only-90-days')
-                return {'approved':True,'scope':'Read-only client-access expiry reminders for up to 90 days. No vault contents, grant, removal, scan, device or approval permission.'}
+                return {'approved':True,'scope':'Read-only client-access expiry and weekly-review status reminders for up to 90 days. No vault contents, grant, removal, scan, device or approval permission.'}
             if record.get('scope')=='discovery':
                 reject(session['role'] in {'owner','analyst','reviewer'},'Reporting permission required')
                 reject(body.vault_id is None and body.workspace_id==session['workspace'] and not body.device_pairing and body.vault_kind=='personal','Discovery approval does not match',409)

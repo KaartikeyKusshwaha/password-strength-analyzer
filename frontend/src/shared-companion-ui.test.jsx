@@ -23,6 +23,9 @@ it('the popup opens a shared vault locally and checks fresh policy before fillin
   fireEvent.click(screen.getByRole('button',{name:'Fill this login'}));
   await waitFor(()=>expect(browser.tabs.sendMessage).toHaveBeenCalledWith(41,{type:'fill-login',entry:{origin:native.entry.origin,username:native.entry.username,password:native.entry.password}},{frameId:0}),{timeout:5000});
   await screen.findByText('Username and password filled. Review the website before submitting.');
+  // The success status can render before React flushes the finally/unbusy
+  // update. A second click must represent an enabled, user-actionable control.
+  await waitFor(()=>expect(screen.getByRole('button',{name:'Fill this login'})).toBeEnabled());
   browser.tabs.sendMessage.mockClear();value={...value,vault:{...value.vault,browser_fill:false}};
   fireEvent.click(screen.getByRole('button',{name:'Fill this login'}));await screen.findByRole('alert');
   expect(browser.tabs.sendMessage).toHaveBeenCalledTimes(1);

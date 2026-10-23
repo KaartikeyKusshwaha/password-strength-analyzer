@@ -364,7 +364,7 @@ def create_app(settings=None):
 
     @app.middleware("http")
     async def boundary(request, call_next):
-        companion = bool(re.fullmatch(r'/api/companion/(reminders/(?:context|revoke)|vault|actions(?:/context|/[a-f0-9]{24}/(?:claim|result|cancel))?|connect/(?:start|[a-f0-9]{24}/(?:poll|ack|cancel))|discovery/(?:context|revoke|observe|consents(?:/[a-f0-9]{24}/disable)?)|access/(?:context|revoke|invitations(?:/[a-f0-9]{24}/(?:apply|vaults/[a-f0-9]{24}))?|leases(?:/[a-f0-9]{24}/(?:approve|cancel))?|vaults/[a-f0-9]{24}/ownership(?:/accept|/[a-f0-9]{24}/cancel)?|handoffs(?:/[a-f0-9]{24}/(?:approve|link|signoff|cancel))?|debt(?:/bind|/[a-f0-9]{24}/(?:verify|retire|reopen))?|workflows(?:/[a-f0-9]{24}/(?:approve|cancel|report|vaults/[a-f0-9]{24}/rotation))?)|security/(?:context|revoke|inventory-preview|device-pairing/(?:details|approve)|operations(?:/[a-f0-9]{24}(?:/cancel)?)?))',request.url.path))
+        companion = bool(re.fullmatch(r'/api/companion/(reminders/(?:context|revoke)|vault|actions(?:/context|/[a-f0-9]{24}/(?:claim|result|cancel))?|connect/(?:start|[a-f0-9]{24}/(?:poll|ack|cancel))|discovery/(?:context|revoke|observe|consents(?:/[a-f0-9]{24}/disable)?)|access/(?:reviews(?:/(?:enable|pause|run|[a-f0-9]{24}/(?:cancel|signoff)))?|context|revoke|invitations(?:/[a-f0-9]{24}/(?:apply|vaults/[a-f0-9]{24}))?|leases(?:/[a-f0-9]{24}/(?:approve|cancel))?|vaults/[a-f0-9]{24}/ownership(?:/accept|/[a-f0-9]{24}/cancel)?|handoffs(?:/[a-f0-9]{24}/(?:approve|link|signoff|cancel))?|debt(?:/bind|/[a-f0-9]{24}/(?:verify|retire|reopen))?|workflows(?:/[a-f0-9]{24}/(?:approve|cancel|report|vaults/[a-f0-9]{24}/rotation))?)|security/(?:context|revoke|inventory-preview|device-pairing/(?:details|approve)|operations(?:/[a-f0-9]{24}(?:/cancel)?)?))',request.url.path))
         extension_origin = request.headers.get("origin", "")
         extension_origin_valid = bool(re.fullmatch(r"chrome-extension://[a-p]{32}", extension_origin))
         if companion and request.method == "OPTIONS":
@@ -1350,6 +1350,7 @@ def create_app(settings=None):
             must(not any(j["status"] in {"queued", "running"} for j in Store.all(c, session["workspace"], "jobs")), "An agent run is already active", 409)
             for identifier in body.finding_ids:
                 finding = must(Store.get(c, session["workspace"], "findings", identifier))
+                must(finding.get('kind')!='access_review','Use the owner-approved weekly access review flow for this evidence',409)
                 must(finding["status"] == "open", "Select open findings for an agent workflow", 409)
             value = dict(id=uid(), mode=body.mode, finding_ids=list(dict.fromkeys(body.finding_ids)), status="queued", created_by=session["user"], created_at=now(), steps=[], permissions={"create_tasks": body.create_tasks, "create_investigation": body.create_investigation})
             Store.put(c, session["workspace"], "jobs", value)
@@ -1398,6 +1399,8 @@ def create_app(settings=None):
     extension_ownership.register(app,store,app.state.access_auth,throttle,shared_companions)
     from . import access_invitations
     access_invitations.register(app,store,app.state.access_auth,throttle,cipher,shared_companions)
+    from . import access_reviews
+    access_reviews.register(app,store,auth,app.state.access_auth,throttle,cipher,settings,executor)
     from . import access_reminders
     access_reminders.register(app,store,auth,throttle)
 

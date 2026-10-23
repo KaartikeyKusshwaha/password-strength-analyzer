@@ -74,6 +74,25 @@ class Runner:
             with self.access_lock:self.access_pending.discard(key)
             raise
 
+    def enqueue_access_review(self,executor,workspace,identifier,transport=None):
+        # Same executor/deduplication and existing agent dispatcher, no second runner.
+        key=(workspace,'review:'+identifier)
+        with self.access_lock:
+            if key in self.access_pending:return
+            self.access_pending.add(key)
+        def work():
+            try:
+                with self.store.connect() as c:
+                    review=Store.get(c,workspace,'access_reviews',identifier)
+                if review and review['status']=='planning' and review.get('job'):
+                    agents.run_job(self.store,workspace,review['job'],self.settings.groq_key,self.settings.model,transport)
+            finally:
+                with self.access_lock:self.access_pending.discard(key)
+        try:return executor.submit(work)
+        except BaseException:
+            with self.access_lock:self.access_pending.discard(key)
+            raise
+
     def current(self,c,workspace,identifier,actor):
         review=Store.get(c,workspace,KIND,identifier)
         if not review or review['status'] not in ACTIVE:return None

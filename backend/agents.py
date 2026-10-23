@@ -29,7 +29,15 @@ class AgentPlan(BaseModel):
 
 
 def collect_evidence(findings):
-    return [{"finding_id": f["id"], "rule": f["rule"], "title": RULES[f["rule"]][1], "severity": f["severity"], "confidence": f["confidence"], "guidance": RULES[f["rule"]][3], "reference": RULES[f["rule"]][4]} for f in findings[:20] if f["rule"] in RULES]
+    from .access_review_evidence import RULES as ACCESS_RULES
+    values=[]
+    for f in findings[:20]:
+        if f['rule'] in RULES:
+            values.append({"finding_id": f["id"], "rule": f["rule"], "title": RULES[f["rule"]][1], "severity": f["severity"], "confidence": f["confidence"], "guidance": RULES[f["rule"]][3], "reference": RULES[f["rule"]][4]})
+        elif f.get('kind')=='access_review' and f['rule'] in ACCESS_RULES:
+            severity,title,guidance=ACCESS_RULES[f['rule']]
+            values.append(dict(finding_id=f['id'],rule=f['rule'],title=title,severity=severity,confidence='recorded_metadata',guidance=guidance,reference='SentinelOps recorded access metadata; not external-account verification'))
+    return values
 
 
 def request_plan(evidence, key, model, mode, transport=None):
@@ -57,6 +65,8 @@ def snapshot(findings):
 
 def dispatch_work(c, workspace, job, findings, plan):
     """Only these two tools may mutate workspace records. One transaction, no retries."""
+    if job.get('mode')!='access_review' and any(f.get('kind')=='access_review' for f in findings):
+        raise ValueError('Access review evidence requires its dedicated owner sign-off.')
     permissions = job.get("permissions", {})
     if not any(permissions.get(k) for k in ("create_tasks", "create_investigation")):
         return {"tasks": [], "reused_tasks": [], "investigation": None, "status": "draft_only"}
@@ -68,6 +78,16 @@ def dispatch_work(c, workspace, job, findings, plan):
     output = {"tasks": [], "reused_tasks": [], "investigation": None, "status": "created"}
     if permissions.get("create_tasks"):
         existing = {t["finding_id"]: t for t in Store.all(c, workspace, "tasks") if t["status"] != "resolved"}
+        if job.get('mode')=='access_review':
+            # Repeated weekly evidence links the existing open action, rather
+            # than manufacturing a new debt/stale-report task every week.
+            by_key={}
+            for identifier,task in list(existing.items()):
+                prior=Store.get(c,workspace,'findings',identifier)
+                if prior and prior.get('kind')=='access_review':by_key[(prior['rule'],prior['access_item']['key'])]=task
+            for finding in findings:
+                key=(finding['rule'],finding['access_item']['key'])
+                if key in by_key:existing[finding['id']]=by_key[key]
         recommendations = {r["finding_id"]: r for r in plan["recommendations"]}
         for finding in findings:
             if finding["id"] in existing:
@@ -88,11 +108,15 @@ def dispatch_work(c, workspace, job, findings, plan):
 def check_progress(c, workspace, job):
     """Compare current scan/review evidence; never infer a fix from silence."""
     scans, tasks = Store.all(c, workspace, "scans"), Store.all(c, workspace, "tasks")
+    access_keys={f['id']:(f['rule'],f['access_item']['key']) for f in Store.all(c,workspace,'findings') if f.get('kind')=='access_review'} if job.get('mode')=='access_review' else {}
     checks = []
     for identifier in job["finding_ids"]:
         finding = Store.get(c, workspace, "findings", identifier)
         original = job.get("snapshot", {}).get(identifier)
         state, scan_id = "unavailable", None
+        if finding and original and finding.get('kind')=='access_review':
+            # Tasks and owner sign-off never prove an external account was fixed.
+            state='requires_current_access_review'
         if finding and original and finding.get('rule') in RULES:
             latest = next((s for s in scans if all(s.get(k) == original.get(k) for k in ("asset_id", "kind", "label"))), None)
             scan_id = latest["id"] if latest else None
@@ -106,7 +130,7 @@ def check_progress(c, workspace, job):
                 state = "not_observed_in_recheck"
             else:
                 state = "inconclusive_recheck"
-        checks.append(dict(finding_id=identifier, state=state, scan_id=scan_id, tasks=[{"id": t["id"], "status": t["status"]} for t in tasks if t["finding_id"] == identifier]))
+        checks.append(dict(finding_id=identifier, state=state, scan_id=scan_id, tasks=[{"id": t["id"], "status": t["status"]} for t in tasks if t["finding_id"] == identifier or identifier in access_keys and access_keys.get(t['finding_id'])==access_keys[identifier]]))
     job["progress"] = {"checked_at": now(), "checks": checks, "limits": "Progress reflects recorded scans and human reviews. Absence from a scan does not prove a fix. Only an independent reviewer can resolve a finding."}
     Store.put(c, workspace, "jobs", job)
     return job["progress"]
@@ -122,7 +146,12 @@ def run_job(store, workspace, identifier, key, model, transport=None):
             member=c.execute('SELECT role FROM members WHERE workspace=? AND user=?',(workspace,job['created_by'])).fetchone()
             if not member or member['role']=='viewer':raise ValueError('Workflow permission was removed before planning.')
             if enrollment_required(c,job['created_by'],store):raise ValueError('Administrator MFA enrollment required before execution.')
+            if job.get('mode')=='access_review':
+                from .access_reviews import validate_job
+                validate_job(c,workspace,job)
             findings = [f for f in Store.all(c, workspace, "findings") if f["id"] in job["finding_ids"]]
+            if job.get('mode')!='access_review' and any(f.get('kind')=='access_review' for f in findings):
+                raise ValueError('Use the weekly access review approval flow for this evidence.')
             evidence = collect_evidence(findings)
             if not evidence or len(evidence) != len(job["finding_ids"]):
                 raise ValueError("Evidence is no longer available.")
@@ -137,6 +166,9 @@ def run_job(store, workspace, identifier, key, model, transport=None):
             if not member or member['role']=='viewer':
                 raise ValueError('Workflow permission was removed. No result was accepted.')
             if enrollment_required(c,job['created_by'],store):raise ValueError('Administrator MFA enrollment required before recording results.')
+            if job.get('mode')=='access_review':
+                from .access_reviews import validate_job
+                validate_job(c,workspace,job)
             findings = [f for f in Store.all(c, workspace, "findings") if f["id"] in job["finding_ids"]]
             output = dispatch_work(c, workspace, job, findings, plan)
             job.update(status="complete", plan=plan, finished_at=now())
