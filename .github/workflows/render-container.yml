@@ -11,10 +11,54 @@ on:
       - 'frontend/**'
       - 'companion/extension/**'
       - 'companion/package_extension.py'
+      - 'deploy/postgres*.py'
+      - 'tests/test_postgres*.py'
       - '.github/workflows/render-container.yml'
 permissions:
   contents: read
 jobs:
+  postgres:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: sentinelops_migration_test
+          POSTGRES_PASSWORD: disposable-ci-fixture-only
+          POSTGRES_DB: postgres
+        ports:
+          - 15439:5432
+        options: >-
+          --health-cmd "pg_isready -U sentinelops_migration_test -d postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Install pinned test dependencies
+        run: python -m pip install -r requirements-dev.txt
+      - name: Prepare local-only disposable PostgreSQL fixture
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])/'sentinelops-postgres-fixture'
+          root.mkdir(mode=0o700)
+          key=root/'password'
+          key.write_text('disposable-ci-fixture-only')
+          key.chmod(0o600)
+          config=root/'config.json'
+          config.write_text(json.dumps({'host':'127.0.0.1','port':15439,'password_file':str(key)}))
+          with open(os.environ['GITHUB_ENV'],'a') as stream:
+              stream.write('SENTINEL_TEST_PG_CONFIG='+str(config)+'\n')
+          PY
+      - name: Verify real PostgreSQL workflows, migrations and backup recovery
+        run: python -m pytest tests/test_postgres_schema.py tests/test_postgres_store.py tests/test_postgres_app.py tests/test_postgres_backups.py tests/test_postgres_backup_pull.py tests/test_backups.py tests/test_offserver_backup.py -q
   container:
     if: github.event.repository.private == false
     runs-on: ubuntu-24.04
