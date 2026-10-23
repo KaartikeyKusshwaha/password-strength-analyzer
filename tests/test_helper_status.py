@@ -94,3 +94,15 @@ def test_missing_or_forged_source_inventory_is_not_a_current_build(tmp_path,sour
     metadata['sources']=sources
     (tmp_path/'helper-manifest.json').write_text(json.dumps(metadata))
     assert status(tmp_path)=={'available':False}
+
+
+def test_connections_metadata_and_download_both_reject_tampered_helper(system,tmp_path,monkeypatch):
+    from backend import helper_status
+    _,owner,_=system
+    artifact,metadata=helper(tmp_path)
+    monkeypatch.setattr(helper_status,'ROOT',tmp_path)
+    monkeypatch.setattr(helper_status,'status',lambda:status(tmp_path))
+    assert owner.get('/api/companions').json()['helper']['sha256']==metadata['sha256']
+    artifact.write_bytes(b'x'*metadata['bytes'])
+    assert owner.get('/api/companions').json()['helper']=={'available':False}
+    assert owner.get('/api/device-helper/windows').status_code==404

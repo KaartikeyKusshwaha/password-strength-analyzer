@@ -11,10 +11,12 @@ export default function Companions({ assets, refresh, canWrite, go, devices = []
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState("");
   const [deviceConfig, setDeviceConfig] = useState(null);
+  const [helper, setHelper] = useState(null);
   const [connectionRefresh,setConnectionRefresh]=useState(0);
   const [vaults, setVaults] = useState([]);
   const [sharedVaults,setSharedVaults]=useState([]),[vaultKind,setVaultKind]=useState('personal');
   useEffect(()=>{Promise.all([api('/vaults'),api('/team-vaults')]).then(([personal,shared])=>{setVaults(personal.vaults);setSharedVaults(shared.vaults);}).catch(error=>setError(error.message));},[]);
+  useEffect(()=>{let live=true;api('/companions').then(value=>{if(live)setHelper(value.helper?.available===true?value.helper:{available:false});}).catch(()=>{if(live)setHelper({error:true});});return()=>{live=false;};},[]);
   return (
     <>
       <p className="notice">
@@ -193,8 +195,7 @@ export default function Companions({ assets, refresh, canWrite, go, devices = []
           </span>
           <h2>Device companion</h2>
           <p>Start device checks in the browser extension under Check my security. Install the optional Windows helper on the computer you want to assess; a hosted website cannot inspect your computer’s ports.</p>
-          <a className="button secondary" href="/api/device-helper/windows" download><Download size={15}/>Download Windows helper</a>
-          <ol className="fine"><li>Open the downloaded helper and choose Install for this user. This pilot is unsigned; review its source and checksum before running.</li><li>Keep the helper window open and read its short pairing code.</li><li>In the extension, choose Connect device helper. Enter the code, compare the device and scope, then approve with your app password and MFA if enabled.</li><li>Run a device check from the extension. Progress and results appear there automatically.</li></ol>
+          {helper?.available ? <><a className="button secondary" href="/api/device-helper/windows" download><Download size={15}/>Download Windows helper</a><p className="fine">Version {helper.version} · Unsigned pilot · SHA-256: <code>{helper.sha256}</code></p><ol className="fine"><li>Open the downloaded helper and choose Install for this user. This pilot is unsigned; review its source and checksum before running.</li><li>Keep the helper window open and read its short pairing code.</li><li>In the extension, choose Connect device helper. Enter the code, compare the device and scope, then approve with your app password and MFA if enabled.</li><li>Run a device check from the extension. Progress and results appear there automatically.</li></ol></> : <p role="status">{!helper?'Checking helper availability…':helper.error?'Could not verify the helper download. Refresh Connections to retry.':'The Windows helper download is not available on this deployment. Device checks need a separately installed and paired helper; website and vault features remain available.'}</p>}
           <p className="fine">The helper only checks its own loopback ports and the read-only posture/update checks you explicitly allow. It does not repair your OS or run arbitrary commands. Open ports are observations, not proven vulnerabilities.</p>
           <details><summary>Advanced · Python helper and manual device connections</summary>
           <p>For a separately managed Python device agent or an authorized private LAN target, create a scoped connection and run the agent yourself. Keep the process open to receive approved checks.</p>

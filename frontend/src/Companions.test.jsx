@@ -22,3 +22,16 @@ it('pairs an accepted shared vault with explicit scope and never offers pending 
   expect(JSON.parse(request[1].body)).toMatchObject({kind:'shared',vault_id:identifier,label:'Work browser'});
   expect(screen.getByText(/one shared vault plus your encrypted sharing identity/)).toBeInTheDocument();
 });
+
+
+it('does not offer an unavailable helper and exposes a verified build checksum when available',async()=>{
+  let helper={available:false};
+  vi.stubGlobal('fetch',vi.fn(async url=>({ok:true,json:async()=>url==='/api/vaults'||url==='/api/team-vaults'?{vaults:[]}:url==='/api/companions'?{connections:[],helper}:{connections:[]}})));
+  const view=render(<Companions assets={[]} refresh={vi.fn()} canWrite={false} go={vi.fn()}/>);
+  await screen.findByText(/Windows helper download is not available/);
+  expect(screen.queryByRole('link',{name:'Download Windows helper'})).not.toBeInTheDocument();
+  view.unmount();helper={available:true,version:'0.2.0',sha256:'a'.repeat(64)};
+  render(<Companions assets={[]} refresh={vi.fn()} canWrite={false} go={vi.fn()}/>);
+  expect(await screen.findByRole('link',{name:'Download Windows helper'})).toHaveAttribute('href','/api/device-helper/windows');
+  expect(screen.getByText('a'.repeat(64))).toBeInTheDocument();
+});

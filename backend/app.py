@@ -671,7 +671,8 @@ def create_app(settings=None):
     def companions(session=Depends(auth)):
         with store.connect() as c:
             rows = [companion_status.public_status(c,dict(r)) for r in c.execute("SELECT * FROM companions WHERE user=? AND expires>? ORDER BY expires DESC", (session["user"], time.time()))]
-        return {"connections": rows, "download_version":companion_status.packaged_version(ROOT/'companion'/'extension'/'sentinelops-companion.zip')}
+        from . import helper_status
+        return {"connections": rows, "download_version":companion_status.packaged_version(ROOT/'companion'/'extension'/'sentinelops-companion.zip'),"helper":helper_status.status()}
 
     @app.post("/api/device-connections")
     def connect_device(body: DeviceConnection, session=Depends(auth)):
