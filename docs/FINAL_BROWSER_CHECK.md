@@ -5,6 +5,10 @@ No browser control was used to prepare it. Finish implementation and release
 preflight first; native prompts, MFA and consent remain user actions when needed.
 Use disposable accounts/credentials and retain no secrets in screenshots/logs.
 
+A separate [built-extension Playwright suite](EXTENSION_E2E.md) now passes five
+synthetic Chromium cases in Linux CI. It strengthens messaging/form evidence;
+it does not complete any installed Edge/cloud-vault gate below.
+
 ## Before starting
 
 - Pin one Git commit for backend, web and packaged extension. Record hashes and
