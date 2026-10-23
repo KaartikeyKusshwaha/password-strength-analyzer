@@ -104,6 +104,12 @@ class PostgresStore(Store):
         if not (local and allow_local) and options.get('sslmode')!='verify-full':
             raise ValueError('Hosted PostgreSQL requires sslmode=verify-full.')
         self.url=url;self.schema=schema;self.path=None
+        self.connection_options={}
+        if not options.get('sslrootcert') and not (local and allow_local):
+            # Windows libpq may not find OS trust roots. Use the CA bundle
+            # already supplied by httpx; hostname verification stays mandatory.
+            import certifi
+            self.connection_options['sslrootcert']=certifi.where()
         # Constructor only validates; application cold starts never recreate or
         # silently repair missing schema markers/tables.
         with self.connect() as c:
@@ -123,7 +129,7 @@ class PostgresStore(Store):
     def connect(self,write=False):
         import psycopg
         from psycopg import sql
-        connection=psycopg.connect(self.url,connect_timeout=10,application_name='sentinelops',prepare_threshold=None)
+        connection=psycopg.connect(self.url,connect_timeout=10,application_name='sentinelops',prepare_threshold=None,**self.connection_options)
         try:
             with connection.transaction():
                 connection.execute(sql.SQL('SET LOCAL search_path TO {}').format(sql.Identifier(self.schema)))

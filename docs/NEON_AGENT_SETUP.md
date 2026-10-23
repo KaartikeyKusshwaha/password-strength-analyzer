@@ -78,13 +78,59 @@ end-to-end tests of the requested services remain pending actual integration;
 the generated root package does not yet define a build command. Prior Render
 container/PostgreSQL tests are separate evidence, not proof of Neon services.
 
-## Next action
+## Resolved account setup and current state
 
-Resolve the organization membership or supplied IDs first. If changing accounts,
-run `neon login` and promptly complete its browser authorization with the account
-that can access the specified project. Then retry the read-only plan, confirm
-the project's region and no-cost availability of the remaining services before
-any apply. Keep the existing Psycopg driver for the Python backend. Do not
-replace existing SentinelOps identities or send vault secrets to a new provider
-as part of a tooling installation. A managed-auth integration needs deliberate
-account-ID mapping and the existing role/MFA/security boundaries preserved.
+The earlier paragraphs are historical checkpoints. After the user asked to use
+their actual account without requiring them to locate IDs, read-only discovery
+found exactly one workspace, `Kaartikey` (`org-lucky-pond-63419672`), on Free,
+with no projects. Created `sentinelops-pilot` in `aws-ap-southeast-1`:
+
+- Project: `round-butterfly-96197521`; branch `main` (`br-cold-rice-aoeomf6n`).
+- PostgreSQL 18; project owner subscription `free_v3`; compute fixed at 0.25 CU.
+- Updated the ignored `.neon` link and existing Codex OAuth MCP entry to this
+  project; retained the other MCP entries. No further sign-in was needed.
+- `neon config plan` and `neon deploy` succeeded. Deployed Managed Auth, private
+  `assets` bucket, `hello` function and Realtime. AI Gateway remains undeclared;
+  no paid upgrade was performed. Neon may create a default gateway credential
+  on a project; it was not pulled or used for inference.
+- Deploy pulled 12 managed variables into the existing ignored `.env`. All
+  pre-existing application variable values were compared and preserved. Database
+  TLS mode was then strengthened to `verify-full` for both connection strings.
+- Windows libpq could not validate the connection with its system CA lookup.
+  Using the existing HTTP client's certifi CA bundle fixed verification. The
+  Psycopg adapter now supplies that bundle when no explicit root is configured;
+  it still rejects hosted connections without full certificate/hostname checks.
+- Created only the dedicated empty `sentinelops` schema (27 tables/schema 15);
+  did not touch Managed Auth or other schemas. The application adapter validated
+  the schema over both direct and pooled certificate-verified connections. No
+  accounts existed in the new application schema.
+- Generated persistent new-project MFA-encryption/bootstrap secrets privately in
+  `.env` for the empty database. Existing local/Oracle key files were untouched.
+- Added a root `npm run build` forwarding to the existing frontend and companion
+  builds. It passed: frontend plus content, popup/vault-frame and background
+  bundles. Existing large-bundle warnings remain; there was no build error.
+- Started the actual application on loopback port 8112 using Neon and separate
+  runtime data under ignored `data/neon-runtime-check`. `/api/status` returned
+  HTTP 200 with `setup_required: true`; `/` returned HTTP 200. No user account
+  was automatically created.
+- Direct invocation of the deployed `hello` function returned HTTP 200 and the
+  expected generated response; Managed Auth's public JWKS returned HTTP 200 and
+  a keys array. These are infrastructure probes, not user-authentication tests.
+- Added a pytest collection guard setting `DATABASE_URL` empty before dotenv
+  loads, preventing legacy synthetic test fixtures from reaching the developer's
+  real cloud database. Opt-in PostgreSQL tests retain their loopback-only fixture.
+
+## Remaining service acceptance and cutover
+
+The Python app uses the existing Psycopg driver. Managed Auth has not replaced
+SentinelOps login; `hello` is still a generated placeholder, not a migrated
+workflow runner. Private Object Storage upload/download and Realtime subscription
+acceptance, user identity mapping and app integration remain unfinished. No
+blanket claim that all provisioned services are wired into product flows is made.
+Existing account IDs, owner/MFA/role controls and secret isolation must survive
+any deliberate managed-auth integration.
+
+Render deployment, final-origin extension/helper updates, old-data migration,
+actual recurring off-server backup and consolidated browser acceptance remain
+pending. The old Oracle VM, keys and retained archives are preserved; this new
+empty database is not evidence that old vaults were migrated or recovered.
