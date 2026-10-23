@@ -266,3 +266,15 @@ read-only check still found both empty; the installed-extension Fill action is
 awaiting the user's native-popup click. No website login was submitted. Cloud
 secure-save, TOTP and the two-account shared-vault removal test remain unverified
 in the installed browser; isolated CI cases do not substitute for those gates.
+
+Later observation: both practice login fields became nonempty, and the screenshot
+visibly shows username `practice` with a masked password. The browser-control
+DOM adapter substitutes `<redacted>` for both populated credential values.
+Consequently, comparisons against the demo username/password returned false but
+cannot establish a mismatch; that intermediate interpretation was withdrawn.
+No attempt was made to bypass masking or submit the website login. Whether
+SentinelOps or the browser's own manager performed this fill awaits the user's
+confirmation. Screenshot: `data/render-edge-autofill-populated-20261024.png`.
+The existing cloud test passphrase also unlocked Browser acceptance through the
+control-room UI, which displayed its single Practice cloud acceptance entry;
+the vault was explicitly locked afterward. This does not prove popup unlock.
