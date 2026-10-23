@@ -7,11 +7,12 @@ from pydantic import BaseModel,ConfigDict,Field,model_validator
 from .scanner import finding
 
 CHECKS={'firewall_domain','firewall_private','firewall_public','defender','system_disk'}
+MAC_CHECKS={'application_firewall','filevault','gatekeeper'}
 
 
 class Check(BaseModel):
     model_config=ConfigDict(extra='forbid')
-    id: Literal['firewall_domain','firewall_private','firewall_public','defender','system_disk']
+    id: Literal['firewall_domain','firewall_private','firewall_public','defender','system_disk','application_firewall','filevault','gatekeeper']
     state: Literal['enabled','disabled','passive','unassessed','unsupported']
     reason: Literal['','permission_denied','command_unavailable','timeout','provider_error','invalid_response','unknown_status','unsupported_platform']=''
 
@@ -24,14 +25,16 @@ class Check(BaseModel):
 
 class Report(BaseModel):
     model_config=ConfigDict(extra='forbid')
-    version: Literal[1]
+    version: Literal[1,2]
     platform: Literal['windows','linux','macos','other']
     generated_at: str=Field(max_length=40)
-    checks: list[Check]=Field(min_length=5,max_length=5)
+    checks: list[Check]=Field(min_length=3,max_length=5)
 
     @model_validator(mode='after')
     def complete(self):
-        if {item.id for item in self.checks}!=CHECKS or self.platform!='windows' and any(item.state!='unsupported' for item in self.checks):
+        mac=self.version==2 and self.platform=='macos'
+        valid=mac and len(self.checks)==3 and {item.id for item in self.checks}==MAC_CHECKS and all(item.state in {'enabled','disabled','unassessed'} for item in self.checks) or self.version==1 and len(self.checks)==5 and {item.id for item in self.checks}==CHECKS and (self.platform=='windows' or all(item.state=='unsupported' for item in self.checks))
+        if not valid:
             raise ValueError('Posture report requires all supported check identifiers')
         try:
             timestamp=datetime.fromisoformat(self.generated_at)
@@ -44,6 +47,9 @@ class Report(BaseModel):
 
 def assessment(report,paired=False):
     report=report if isinstance(report,Report) else Report.model_validate(report)
+    if report.platform=='macos' and report.version==2:
+        partial=any(check.state=='unassessed' for check in report.checks)
+        return {'findings':[],'posture':report.model_dump(),'observations':[],'error':'Some macOS protection checks could not be assessed.' if partial else None,'limits':'Fixed read-only macOS application-firewall, FileVault and Gatekeeper status. Check the recorded states, including disabled protections; zero scanner findings is not a healthy-device verdict. No firewall rules, disk recovery keys, malware, updates, external exposure or compliance were assessed. No configuration changed. Helper self-report, not independent attestation.'}
     items=[]
     for check in report.checks:
         if check.state=='disabled':

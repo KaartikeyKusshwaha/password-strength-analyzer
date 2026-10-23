@@ -10,10 +10,10 @@ from companion.helper_client import VERSION
 
 ROOT=Path(__file__).resolve().parents[1]
 
-def build():
+def build(output=None,work=None):
     if os.name!='nt':raise ValueError('Build the Windows helper on Windows.')
     if importlib.metadata.version('pyinstaller')!='6.22.3':raise ValueError('Use the pinned helper build requirements.')
-    output=ROOT/'companion/helper-dist';work=ROOT/'data/helper-build'
+    output=Path(output or ROOT/'companion/helper-dist').resolve();work=Path(work or ROOT/'data/helper-build').resolve()
     output.mkdir(parents=True,exist_ok=True);work.mkdir(parents=True,exist_ok=True)
     command=[sys.executable,'-m','PyInstaller','--onefile','--windowed','--noconfirm','--clean','--name','SentinelOpsDeviceHelper','--paths',str(ROOT),'--distpath',str(output),'--workpath',str(work/'work'),'--specpath',str(work)]
     license_file=Path(sys.base_prefix)/'LICENSE.txt'
@@ -23,7 +23,7 @@ def build():
     command+=['--add-data',str(license_file)+os.pathsep+'licenses/python','--add-data',str(pyinstaller_license)+os.pathsep+'licenses/pyinstaller',str(ROOT/'companion/helper_windows.py')]
     subprocess.run(command,cwd=ROOT,check=True)
     artifact=output/'SentinelOpsDeviceHelper.exe'
-    sources=['device_agent.py','helper_client.py','helper_windows.py','build_helper.py']
+    sources=['device_agent.py','helper_client.py','helper_windows.py','helper_desktop.py','macos_posture.py','build_helper.py']
     metadata={'version':VERSION,'sha256':hashlib.sha256(artifact.read_bytes()).hexdigest(),'bytes':artifact.stat().st_size,'platform':'windows-x64','signed':False,'builder':'PyInstaller 6.22.3','sources':{name:hashlib.sha256((ROOT/'companion'/name).read_bytes()).hexdigest() for name in sources}}
     (output/'helper-manifest.json').write_text(json.dumps(metadata,indent=2)+'\n',encoding='utf-8')
     return metadata

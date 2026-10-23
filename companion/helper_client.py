@@ -7,10 +7,10 @@ import secrets
 import time
 import urllib.request
 from pathlib import Path
-from companion.device_agent import NoRedirect,validate_connection
+from companion.device_agent import secure_opener,validate_connection
 
 CLOUD_ORIGIN='https://sentinelops.129-225-76-232.sslip.io'
-VERSION='0.1.0'
+VERSION='0.2.0'
 
 def protect(value,decrypt=False):
     if os.name!='nt':raise ValueError('Protected device storage requires Windows.')
@@ -58,7 +58,7 @@ def load_connection(path,protector=protect):
 def public_request(path,body):
     if not re.fullmatch(r'/api/device-pairing/(?:start|[a-f0-9]{24}/(?:poll|ack|cancel))',path):raise ValueError('Unsupported helper request.')
     request=urllib.request.Request(CLOUD_ORIGIN+path,data=json.dumps(body).encode(),method='POST',headers={'Content-Type':'application/json'})
-    with urllib.request.build_opener(NoRedirect()).open(request,timeout=12) as response:
+    with secure_opener().open(request,timeout=12) as response:
         raw=response.read(100001)
         if len(raw)>100000:raise ValueError('Pairing response exceeded limit.')
         return json.loads(raw)

@@ -19,3 +19,10 @@ it('keeps consent in the popup, requests only its approved target and renders pl
   await waitFor(()=>expect(screen.getByRole('button',{name:'Approve and check my security'})).toBeDisabled());
   expect(screen.getByText('Needs device helper. The hosting server is never scanned in place of your computer.')).toBeInTheDocument();
 });
+it('shows disabled Mac protection even when the scanner finding count is zero',async()=>{
+ const saved={securityConnection:{kind:'security',origin:'https://service.example',token:'fixture'},securityOperation:{id:'a'.repeat(24),origin:'https://service.example'}};
+ const browser={tabs:{query:vi.fn(async()=>[])},storage:{local:{get:vi.fn(async()=>saved),set:vi.fn(),remove:vi.fn()}}};
+ vi.stubGlobal('fetch',vi.fn(async url=>({ok:true,json:async()=>url.endsWith('/context')?{workspace:'Work',scan_hosts:[],devices:[],ai_available:false}:{id:'a'.repeat(24),status:'complete',finding_count:0,posture_checks:[{id:'filevault',title:'FileVault',state:'disabled',reason:'',guidance:'Review with the device owner.'}]}})));
+ render(<SecurityAssistant browser={browser}/>);fireEvent.click(screen.getByText('Check my security · device and project checks'));
+ expect(await screen.findByText('FileVault: disabled')).toBeInTheDocument();expect(screen.getByText(/Review disabled and unavailable checks/)).toBeInTheDocument();
+});

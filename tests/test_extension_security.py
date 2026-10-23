@@ -19,7 +19,7 @@ def connected(app,owner):
 def test_grants_are_separate_and_live_role_removal_blocks_access(system):
     app,owner,_=system;client,headers=connected(app,owner)
     response=client.get('/api/companion/security/context',headers=headers)
-    assert response.status_code==200 and set(response.json())=={'workspace','scan_hosts','devices','ai_available','local_device','device_pairing','helper'}
+    assert response.status_code==200 and set(response.json())=={'workspace','scan_hosts','devices','ai_available','local_device','device_pairing','helper','mac_helper'}
     assert client.get('/api/companion/vault',headers=headers).status_code==401
     assert client.get('/api/workspace',headers=headers).status_code==401
     assert client.get('/api/companion/security/context',headers={**headers,'Origin':'chrome-extension://'+'b'*32}).status_code==401

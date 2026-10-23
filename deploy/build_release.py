@@ -25,6 +25,12 @@ def build_release(root=ROOT, output=None):
     if any(path.exists() for path in helper_files):
         if not all(path.is_file() for path in helper_files):raise ValueError('Incomplete Windows helper build.')
         files+=helper_files
+    mac_root=root/'companion/helper-macos-dist'
+    if mac_root.exists():
+        from backend.helper_status import macos_status
+        metadata=macos_status(mac_root)
+        if not metadata['available']:raise ValueError('Incomplete or unverified macOS helper build.')
+        files+=[mac_root/'helper-manifest.json',mac_root/metadata['filename']]
     files += sorted(path for path in (root / 'frontend/dist/assets').glob('*') if path.suffix in {'.js', '.css', '.wasm'})
     if not (root / 'backend/app.py').is_file() or not (root / 'frontend/dist/assets').is_dir():
         raise ValueError('Build the application before packaging its deployment.')

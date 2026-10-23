@@ -1,0 +1,49 @@
+name: Native macOS helper verification
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/credential-security-lab]
+    paths:
+      - 'companion/helper_*.py'
+      - 'companion/macos_*.py'
+      - 'companion/device_agent.py'
+      - 'companion/build_helper_macos.py'
+      - 'companion/helper-macos-build-requirements.txt'
+      - 'backend/posture.py'
+      - 'tests/test_helper_macos.py'
+      - '.github/workflows/helper-native-macos.yml'
+permissions:
+  contents: read
+jobs:
+  native:
+    if: github.event.repository.private == false
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Install pinned test and native build dependencies
+        run: python -m pip install -r requirements-dev.txt -r companion/helper-macos-build-requirements.txt
+      - name: Protocol, storage and native disposable-Keychain verification
+        run: python -m pytest tests/test_helper_macos.py tests/test_helper_client.py tests/test_posture.py -q
+      - name: Build architecture-specific application
+        run: python -m companion.build_helper_macos
+      - name: Verify frozen app using disposable native Keychain only
+        run: |
+          python - <<'PY'
+          import json, os, subprocess
+          from pathlib import Path
+          app=Path('companion/helper-macos-dist/SentinelOpsDeviceHelper.app/Contents/MacOS/SentinelOpsDeviceHelper').resolve()
+          target=Path(os.environ['RUNNER_TEMP'])/'sentinelops-frozen-native-result.json'
+          subprocess.run([str(app),'--self-test',str(target)],check=True,timeout=60)
+          result=json.loads(target.read_text())
+          assert result['keychain_roundtrip'] and result['keychain_test_item_removed']
+          print(json.dumps(result))
+          print((app.parents[3]/'helper-manifest.json').read_text())
+          PY
+      # No caches or artifact upload: standard-runner public-repository compute
+      # only. Build verification is not a notarized release or GUI acceptance.

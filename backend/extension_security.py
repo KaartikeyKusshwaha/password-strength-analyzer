@@ -39,13 +39,19 @@ def register(app,store,settings,throttle,executor,validate_operation,queue_opera
             import json
             for device in devices:device['targets']=json.loads(device['targets'])
             name=c.execute('SELECT name FROM workspaces WHERE id=?',(session['workspace'],)).fetchone()[0]
-        return {'workspace':name,'scan_hosts':sorted(settings.scan_hosts),'devices':devices,'device_pairing':session.get('device_pairing',False),'helper':helper_status.status(),'ai_available':bool(settings.groq_key),'local_device':not settings.secure and settings.host in {'localhost','127.0.0.1'}}
+        return {'workspace':name,'scan_hosts':sorted(settings.scan_hosts),'devices':devices,'device_pairing':session.get('device_pairing',False),'helper':helper_status.status(),'mac_helper':helper_status.macos_status(),'ai_available':bool(settings.groq_key),'local_device':not settings.secure and settings.host in {'localhost','127.0.0.1'}}
 
     @app.get('/api/device-helper/windows')
     def helper_download():
         from fastapi.responses import FileResponse
         require(helper_status.status()['available'],'Windows helper build unavailable',404)
         return FileResponse(helper_status.ROOT/'SentinelOpsDeviceHelper.exe',filename='SentinelOpsDeviceHelper.exe',media_type='application/octet-stream')
+
+    @app.get('/api/device-helper/macos')
+    def macos_helper_download():
+        from fastapi.responses import FileResponse
+        status=helper_status.macos_status();require(status['available'],'macOS helper build unavailable',404)
+        return FileResponse(helper_status.ROOT.parent/'helper-macos-dist'/status['filename'],filename=status['filename'],media_type='application/zip')
 
     from . import device_pairing
     device_pairing.register(app,store,settings,cipher,throttle,security_auth)
@@ -92,6 +98,8 @@ def register(app,store,settings,throttle,executor,validate_operation,queue_opera
                 output['observations'].append(item)
                 if len(output['observations'])==5:break
             output['dependency_coverage']=scan.get('dependency_inventory') if scan else None
+            labels={'firewall_domain':'Domain firewall profile','firewall_private':'Private firewall profile','firewall_public':'Public firewall profile','defender':'Microsoft Defender','system_disk':'System-drive BitLocker','application_firewall':'macOS application firewall','filevault':'FileVault','gatekeeper':'Gatekeeper'}
+            output['posture_checks']=[{'id':item['id'],'title':labels[item['id']],'state':item['state'],'reason':item.get('reason',''),'guidance':'Review this disabled protection with the device owner before changing settings.' if item['state']=='disabled' else 'This status does not establish overall device security.'} for item in (scan or {}).get('posture',{}).get('checks',[]) if item.get('id') in labels]
         return output
 
     @app.post('/api/companion/security/operations/{identifier}/cancel')

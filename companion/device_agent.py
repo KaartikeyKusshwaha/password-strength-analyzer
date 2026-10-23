@@ -21,6 +21,8 @@ import urllib.error
 import os
 import platform
 import subprocess
+import ssl
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
@@ -92,6 +94,9 @@ def collect_updates(runner=update_command,system=None):
 
 def collect_posture(runner=posture_command,system=None):
     system=system or platform.system()
+    if system=='Darwin':
+        from companion.macos_posture import collect
+        return collect()
     report={'version':1,'platform':{'Windows':'windows','Linux':'linux','Darwin':'macos'}.get(system,'other'),'generated_at':datetime.now(timezone.utc).isoformat(),'checks':[]}
     if system!='Windows':
         report['checks']=[{'id':check,'state':'unsupported','reason':'unsupported_platform'} for check in POSTURE_CHECKS]
@@ -149,6 +154,15 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         return None  # Never forward a device bearer token through a redirect.
 
+def transport_context():
+    if platform.system()=='Darwin' and getattr(sys,'frozen',False):
+        import certifi
+        return ssl.create_default_context(cafile=certifi.where())
+    return ssl.create_default_context()
+
+def secure_opener():
+    return urllib.request.build_opener(NoRedirect(),urllib.request.HTTPSHandler(context=transport_context()))
+
 
 def connection_file(path):
     if Path(path).stat().st_size > 12000:
@@ -182,7 +196,7 @@ def validate_connection(value):
 
 def api_request(config, path, body):
     request = urllib.request.Request(config['server'] + path, data=json.dumps(body).encode(), method='POST', headers={'Authorization':'Bearer '+config['token'], 'Content-Type':'application/json'})
-    opener = urllib.request.build_opener(NoRedirect())
+    opener = secure_opener()
     with opener.open(request, timeout=12) as response:
         raw = response.read(100001)
         if len(raw) > 100000:
