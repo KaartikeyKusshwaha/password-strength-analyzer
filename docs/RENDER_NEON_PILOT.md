@@ -190,3 +190,15 @@ authenticated migration, encrypted archive recovery and off-server retention.
 The same run also rebuilt the Docker image and passed its non-root artifact and
 HTTP startup checks. Local PostgreSQL 15 coverage and this clean PostgreSQL 17
 coverage still do not prove live Neon/Render acceptance or a recurring backup.
+
+## Live origin update verification (24 October 2026)
+
+Commit `83b3a1a` deployed successfully on Render Free as app/companion 0.25.0.
+`npm run build` passed; connection tests: 8 passed; helper and provenance
+checks: 33 passed, one platform skip. The first pytest attempt hit Windows
+temporary-directory permissions; rerunning with a fresh project-local temp
+directory passed. HTTPS `/` and `/api/status` returned 200; anonymous `/api/me`
+and `/api/downloads/browser-companion` returned 401. Edge displayed owner
+setup. Hosted authenticated ZIP/save/fill acceptance awaits owner setup.
+Helper source defaults changed; stale prebuilt installers are not shipped
+by the Render image. No old account or vault data was imported.

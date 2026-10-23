@@ -130,7 +130,10 @@ blanket claim that all provisioned services are wired into product flows is made
 Existing account IDs, owner/MFA/role controls and secret isolation must survive
 any deliberate managed-auth integration.
 
-Render deployment, final-origin extension/helper updates, old-data migration,
-actual recurring off-server backup and consolidated browser acceptance remain
-pending. The old Oracle VM, keys and retained archives are preserved; this new
+Render Free deployment is live at https://sentinelops-pilot.onrender.com/
+(commit 83b3a1a, app/companion 0.25.0). Public frontend/status returned HTTP
+200 and anonymous account/download requests returned HTTP 401. Extension and
+helper source defaults point to this origin; existing pairings are preserved.
+Owner initialization, old-data migration, actual recurring off-server backup
+and consolidated browser acceptance remain pending. The old Oracle VM, keys and retained archives are preserved; this new
 empty database is not evidence that old vaults were migrated or recovered.
