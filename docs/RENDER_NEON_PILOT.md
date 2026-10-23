@@ -1,6 +1,10 @@
 # Render Free and Neon Free pilot
 
-This is the selected free pilot target. It is not deployed or production-ready.
+The Free pilot is live at https://sentinelops-pilot.onrender.com/ in Singapore,
+using Neon Free PostgreSQL. Initial deployment 194fc6b passed public HTTPS,
+frontend, setup-status and unauthenticated API rejection checks on 24 October
+2026. It is a new empty installation: owner setup, browser acceptance and
+hosted backup/restore remain pending. It is not production-ready.
 Oracle data, encryption keys, backups and the VM are retained until an actual
 migration and restore/cutover check succeed. Do not initialize over existing data.
 
@@ -53,8 +57,8 @@ migration and restore/cutover check succeed. Do not initialize over existing dat
    are verified below. Live Render/Neon startup and certificate-verified database
    connectivity still need their own checks; local tests do not establish them.
 6. Set the final cloud origin in the companion/helper build, publish a distinct
-   version, pair to the new host and perform FINAL_BROWSER_CHECK.md. Existing
-   builds still default to the old Oracle hostname; no new hostname is guessed.
+   version, pair to the new host and perform FINAL_BROWSER_CHECK.md. Source app/companion 0.25.0 default to the verified Render hostname;
+   existing Oracle pairings are preserved and must be explicitly reconnected.
 7. Verify a fresh PostgreSQL encrypted export and isolated restore before
    declaring cutover. Keep Oracle intact until rollback and data preservation
    are proven. Remove temporary diagnostic access separately from deleting data.

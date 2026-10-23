@@ -1,6 +1,6 @@
 import {serviceOrigin} from './policy';
 import {prepareConnection} from './connection';
-export const CLOUD_ORIGIN='https://sentinelops.129-225-76-232.sslip.io';
+export const CLOUD_ORIGIN='https://sentinelops-pilot.onrender.com';
 async function request(origin,path,proof,fetcher,extra={}){
   const response=await fetcher(origin+'/api/companion/connect/'+path,{method:'POST',credentials:'omit',redirect:'error',headers:{'Content-Type':'application/json'},body:JSON.stringify({proof,...extra}),signal:AbortSignal.timeout(10000)});
   if(!response.ok)throw new Error('The connection request failed or expired. Start again from the extension.');

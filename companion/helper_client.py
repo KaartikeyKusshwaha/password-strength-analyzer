@@ -9,7 +9,7 @@ import urllib.request
 from pathlib import Path
 from companion.device_agent import secure_opener,validate_connection
 
-CLOUD_ORIGIN='https://sentinelops.129-225-76-232.sslip.io'
+CLOUD_ORIGIN='https://sentinelops-pilot.onrender.com'
 VERSION='0.2.0'
 
 def protect(value,decrypt=False):

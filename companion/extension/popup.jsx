@@ -4,6 +4,7 @@ import AccessWorkflows from './AccessWorkflows';
 import SecurityAssistant from './SecurityAssistant';
 import CodeFill from './CodeFill';
 import CloudConnect from './CloudConnect';
+import {CLOUD_ORIGIN} from './cloud-connect';
 import VaultHealth from './VaultHealth';
 import AuthenticatorSetup from './AuthenticatorSetup';
 import LoginSaveOffers from './LoginSaveOffers';
@@ -141,7 +142,7 @@ export function Popup() {
       <AccountDiscovery active={active}/>
       <SecurityAssistant/>
       <LoginSaveOffers browser={chrome} origin={active?.origin}/>
-      <details><summary>Control room · vault administration and history</summary><p className="fine">Manage vaults, shared access, results history and account settings. Everyday checks and credential actions stay here.</p><button className="secondary" onClick={()=>chrome.tabs.create({url:(config?.origin||pendingConnection?.origin||'https://sentinelops.129-225-76-232.sslip.io')+'/#tool=passwords'})}>Open control room</button></details>
+      <details><summary>Control room · vault administration and history</summary><p className="fine">Manage vaults, shared access, results history and account settings. Everyday checks and credential actions stay here.</p><button className="secondary" onClick={()=>chrome.tabs.create({url:(config?.origin||pendingConnection?.origin||CLOUD_ORIGIN)+'/#tool=passwords'})}>Open control room</button></details>
       {connections.length > 0 && <label>Connected vault<select value={config ? connections.findIndex(item=>item.token===config.token) : ''} disabled={busy} onChange={async event=>{const next=connections[Number(event.target.value)];if(!next)return;lockVault();setVaultPolicy(null);await chrome.storage.local.set({connection:next});await chrome.storage.local.remove('pendingConnection');setPendingConnection(null);setConfig(next);setReconnectRequired(false);setError('');}}><option value="" disabled>Choose a connected vault</option>{connections.map((item,index)=><option key={index} value={index}>{item.vaultName || 'Vault name not verified'}{item.vaultKind==='shared'?' · shared':''} · {new URL(item.origin).host}</option>)}</select></label>}
       {error && (
         <p className="error" role="alert">
