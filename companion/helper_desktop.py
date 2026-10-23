@@ -99,4 +99,3 @@ class HelperApp:
             except Exception:self.events.put(('error','Local protected storage could not be removed. Revoke the cloud connection in the extension.'))
         threading.Thread(target=task,daemon=True).start()
     def run(self):self.root.mainloop()
-

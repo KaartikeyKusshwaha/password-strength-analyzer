@@ -27,7 +27,11 @@ def build(output=None,work=None):
     for package in ('pyobjc-core','pyobjc-framework-Security','pyobjc-framework-Cocoa','certifi'):
         distribution=importlib.metadata.distribution(package)
         licenses=[Path(distribution.locate_file(name)) for name in distribution.files or [] if name.name.lower() in {'license','license.txt','license.rst','copying'}]
-        if not licenses:raise ValueError('Dependency license is missing: '+package)
+        if not licenses:
+            fallback=ROOT/'companion/licenses'/(package+'-'+distribution.version+'-LICENSE.txt')
+            metadata=json.loads((ROOT/'companion/licenses/source-manifest.json').read_text(encoding='utf-8'))
+            if not fallback.is_file() or hashlib.sha256(fallback.read_bytes()).hexdigest()!=metadata.get(fallback.name,{}).get('license_sha256'):raise ValueError('Dependency license is missing: '+package)
+            licenses=[fallback]
         for license in licenses:command[3:3]=['--add-data',str(license)+':licenses/'+package]
     subprocess.run(command,cwd=ROOT,check=True)
     app=checked_bundle(output/APP)
