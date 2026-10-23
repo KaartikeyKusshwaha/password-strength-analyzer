@@ -382,3 +382,9 @@ request.instance.id=target.instance.id. No user-group grants, object access,
 broad instance management or guest sudo was added. Guest diagnostics still need
 actual output; IAM propagation may delay polling. Saved confirmation screenshots
 are ignored operator evidence under data/oracle-deployment, not public source.
+
+Versioned release checkpoint: backend, web package/lock and companion source now
+identify the next matched candidate as 0.24.0. The previously published 0.23.0
+companion and installed builds remain unchanged. This version bump does not
+publish, deploy, migrate data or establish browser acceptance. Prepare the
+isolated candidate from its committed source using RELEASE_CANDIDATES.md.
