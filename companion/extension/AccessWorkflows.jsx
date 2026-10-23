@@ -1,3 +1,4 @@
+import ProofPacks from './ProofPacks';
 import AccessReviews from './AccessReviews';
 import FreelancerInvite from './FreelancerInvite';
 import AccessLeases from './AccessLeases';
@@ -35,6 +36,7 @@ export default function AccessWorkflows({browser=chrome,request=accessRequest,va
       {map&&<CredentialDebt connection={connection} map={map} session={vaultSession} unlocked={vaultUnlocked} request={request} refresh={refresh} onApproved={onApproved} onVaultChanged={onVaultChanged}/>}
       <VaultOwnership connection={connection} session={vaultSession} selectedVault={selectedVault} unlocked={vaultUnlocked} request={request} onTransferred={onTransferred}/>
       {map&&<FreelancerInvite connection={connection} map={map} session={vaultSession} selectedVault={selectedVault} unlocked={vaultUnlocked} request={request} onChanged={refresh}/>}
+      {map&&<ProofPacks connection={connection} map={map} request={request}/>}
       {map&&<AccessReviews connection={connection} map={map} request={request}/>}
       {map&&<AccessLeases connection={connection} map={map} request={request} onChanged={refresh}/>}
       {map&&<ClientHandoffs connection={connection} map={map} runs={runs} request={request}/>}

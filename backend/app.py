@@ -364,7 +364,7 @@ def create_app(settings=None):
 
     @app.middleware("http")
     async def boundary(request, call_next):
-        companion = bool(re.fullmatch(r'/api/companion/(reminders/(?:context|revoke)|vault|actions(?:/context|/[a-f0-9]{24}/(?:claim|result|cancel))?|connect/(?:start|[a-f0-9]{24}/(?:poll|ack|cancel))|discovery/(?:context|revoke|observe|consents(?:/[a-f0-9]{24}/disable)?)|access/(?:reviews(?:/(?:enable|pause|run|[a-f0-9]{24}/(?:cancel|signoff)))?|context|revoke|invitations(?:/[a-f0-9]{24}/(?:apply|vaults/[a-f0-9]{24}))?|leases(?:/[a-f0-9]{24}/(?:approve|cancel))?|vaults/[a-f0-9]{24}/ownership(?:/accept|/[a-f0-9]{24}/cancel)?|handoffs(?:/[a-f0-9]{24}/(?:approve|link|signoff|cancel))?|debt(?:/bind|/[a-f0-9]{24}/(?:verify|retire|reopen))?|workflows(?:/[a-f0-9]{24}/(?:approve|cancel|report|vaults/[a-f0-9]{24}/rotation))?)|security/(?:context|revoke|inventory-preview|device-pairing/(?:details|approve)|operations(?:/[a-f0-9]{24}(?:/cancel)?)?))',request.url.path))
+        companion = bool(re.fullmatch(r'/api/companion/(reminders/(?:context|revoke)|vault|actions(?:/context|/[a-f0-9]{24}/(?:claim|result|cancel))?|connect/(?:start|[a-f0-9]{24}/(?:poll|ack|cancel))|discovery/(?:context|revoke|observe|consents(?:/[a-f0-9]{24}/disable)?)|access/(?:proof-packs(?:/(?:context|preview|[a-f0-9]{24}/(?:pdf|snapshot|share|revoke)))?|reviews(?:/(?:enable|pause|run|[a-f0-9]{24}/(?:cancel|signoff)))?|context|revoke|invitations(?:/[a-f0-9]{24}/(?:apply|vaults/[a-f0-9]{24}))?|leases(?:/[a-f0-9]{24}/(?:approve|cancel))?|vaults/[a-f0-9]{24}/ownership(?:/accept|/[a-f0-9]{24}/cancel)?|handoffs(?:/[a-f0-9]{24}/(?:approve|link|signoff|cancel))?|debt(?:/bind|/[a-f0-9]{24}/(?:verify|retire|reopen))?|workflows(?:/[a-f0-9]{24}/(?:approve|cancel|report|vaults/[a-f0-9]{24}/rotation))?)|security/(?:context|revoke|inventory-preview|device-pairing/(?:details|approve)|operations(?:/[a-f0-9]{24}(?:/cancel)?)?))',request.url.path))
         extension_origin = request.headers.get("origin", "")
         extension_origin_valid = bool(re.fullmatch(r"chrome-extension://[a-p]{32}", extension_origin))
         if companion and request.method == "OPTIONS":
@@ -913,6 +913,7 @@ def create_app(settings=None):
             must(verify_password(body.password.get_secret_value(), user["password"]) and consume_factor(c, user, body.code, cipher), "Password and unused factor required", 401)
             c.execute("UPDATE users SET mfa=NULL,mfa_draft=NULL,mfa_step=-1,recovery='[]' WHERE id=?", (user["id"],))
             c.execute("DELETE FROM entities WHERE workspace='system:extension-reminders' AND kind='reminder_connection' AND json_extract(data,'$.user')=?",(user["id"],))
+            c.execute("DELETE FROM entities WHERE kind='client_proof_links' AND json_extract(data,'$.created_by')=?",(user["id"],))
             c.execute("DELETE FROM entities WHERE workspace='system:extension-access' AND kind='access_connection' AND json_extract(data,'$.user')=?",(user["id"],))
             c.execute("DELETE FROM sessions WHERE user=?", (user["id"],))
             result = issue(c, response, user["id"], session["workspace"])
@@ -957,6 +958,7 @@ def create_app(settings=None):
             record_action_cancellations(c,c.execute("SELECT id,workspace,user FROM credential_actions WHERE kind='shared' AND workspace=? AND user=? AND status NOT IN ('complete','cancelled','expired')",(session['workspace'],identifier)).fetchall(),session['user'])
             c.execute("UPDATE credential_actions SET status='cancelled',lease_hash=NULL,lease_connection=NULL,lease_expires=NULL WHERE kind='shared' AND workspace=? AND user=? AND status NOT IN ('complete','cancelled','expired')",(session['workspace'],identifier))
             c.execute('DELETE FROM invites WHERE workspace=? AND email=?',(session['workspace'],member['email']))
+            c.execute("DELETE FROM entities WHERE workspace=? AND kind='client_proof_links' AND json_extract(data,'$.created_by')=?",(session['workspace'],identifier))
             c.execute('DELETE FROM members WHERE workspace=? AND user=?',(session['workspace'],identifier))
             for watch in Store.all(c,session['workspace'],'watches'):
                 if watch['created_by']==identifier and (watch['enabled'] or watch.get('active_run')):
@@ -1401,6 +1403,8 @@ def create_app(settings=None):
     access_invitations.register(app,store,app.state.access_auth,throttle,cipher,shared_companions)
     from . import access_reviews
     access_reviews.register(app,store,auth,app.state.access_auth,throttle,cipher,settings,executor)
+    from . import proof_packs
+    proof_packs.register(app,store,auth,app.state.access_auth,throttle,cipher,settings)
     from . import access_reminders
     access_reminders.register(app,store,auth,throttle)
 

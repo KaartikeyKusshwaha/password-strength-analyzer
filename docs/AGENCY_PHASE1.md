@@ -216,3 +216,33 @@ builds passed; the known dictionary chunk and Starlette warnings remain. No
 browser, installed build replacement, live credential mutation or deployment
 occurred. Client Proof Packs, remaining helper work and production/browser gates
 are still required.
+
+
+Client Proof Pack checkpoint (23 October): extension preview/generation now
+creates immutable, encrypted metadata snapshots with agency-name branding,
+PDF/JSON downloads and separately approved 1–30-day confidential share links.
+Reports include scoped grants, unverified account reports, app-MFA enrollment,
+real removal steps/timestamps, scheduled rechecks, shared-password debt, handoff
+receipts/changed-evidence warnings, selected check summaries and optional recorded
+staff-device posture. Vault secrets and raw scan evidence are excluded. Current
+source digests and fresh owner factors bind generation; current owner/MFA and
+exact link/token scope guard public reads. MFA reset/offboarding and restore
+invalidate sharing grants. Revocation cannot recall prior downloads. The public
+viewer removes fragment secrets and uses cookie-free, text-only rendering.
+Website Workflows provides read-only retained history. Release packaging includes
+only the three designated viewer assets. See CLIENT_PROOF_PACKS.md for bounds,
+retention, scope and the distinction from zero-knowledge vault encryption.
+
+Validation: 33 Proof Pack/handoff/backup/admin-MFA integration tests passed; final
+six Proof Pack tests passed after the projection allowlist tightened unknown
+severity values; five release-packaging tests passed. Full frontend: 413 passed
+across 95 files. An initial full run caught an ambiguous Client label between
+report and offboarding controls; the report label was made explicit and the
+final full run passed. Web, popup and worker builds passed; pip check found no
+broken requirements. Three synthetic report pages were rendered and visually
+checked with Poppler, then reopened/text-checked; no active annotations, raw
+secret fixture or visual defects were found. Known Starlette/chunk warnings
+remain. Generated test/PDF/build artifacts are in the safe-to-delete folder.
+No native browser test, installed-extension replacement or hosted deployment
+occurred. Remaining helper implementation/acceptance, release hardening and
+external validation/security gates are still required.

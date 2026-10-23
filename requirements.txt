@@ -7,3 +7,5 @@ zxcvbn==4.5.0
 cryptography==50.0.2
 webauthn==3.0.1
 cvss==3.6
+reportlab==5.1.0
+pillow==13.0.0

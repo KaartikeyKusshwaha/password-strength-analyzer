@@ -13,7 +13,9 @@ ROOT = Path(__file__).resolve().parents[1]
 def build_release(root=ROOT, output=None):
     root = Path(root).resolve()
     output = Path(output or root / 'data' / 'deploy' / 'sentinelops-release.tar.gz')
-    fixed = ['requirements.txt', 'run.py', 'companion/__init__.py', 'companion/device_agent.py',
+    fixed = ['requirements.txt', 'run.py', 'backend/public/proof.html',
+             'backend/public/proof-view.js', 'backend/public/proof-view.css',
+             'companion/__init__.py', 'companion/device_agent.py',
              'companion/extension/sentinelops-companion.zip', 'frontend/dist/index.html',
              'deploy/oracle/sentinelops.service', 'deploy/oracle/install.sh',
              'deploy/oracle/app.env.example', 'deploy/oracle/Caddyfile.example']

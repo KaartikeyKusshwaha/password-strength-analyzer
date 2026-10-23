@@ -9,7 +9,8 @@ from deploy.build_release import build_release
 
 
 def fixture_release(tmp_path, monkeypatch):
-    files = ['requirements.txt', 'run.py', 'backend/app.py', 'companion/__init__.py',
+    files = ['requirements.txt', 'run.py', 'backend/app.py', 'backend/public/proof.html',
+             'backend/public/proof-view.js', 'backend/public/proof-view.css', 'companion/__init__.py',
              'companion/device_agent.py', 'companion/extension/sentinelops-companion.zip',
              'frontend/dist/index.html', 'frontend/dist/assets/app.js',
              'deploy/oracle/sentinelops.service', 'deploy/oracle/install.sh',
@@ -33,6 +34,7 @@ def test_release_excludes_operator_data_and_records_actual_payload_hashes(tmp_pa
     assert build_release(root,output)==first
     with tarfile.open(fileobj=io.BytesIO(output.read_bytes()),mode='r:gz') as archive:
         names=archive.getnames()
+        assert {'backend/public/proof.html','backend/public/proof-view.js','backend/public/proof-view.css'}<=set(names)
         assert not any(name.startswith('data/') or name.endswith(('.env','.map','.pyc','private.json')) for name in names)
         manifest=json.load(archive.extractfile('release-manifest.json'))
         assert manifest['revision']=='a'*40
