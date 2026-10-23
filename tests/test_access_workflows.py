@@ -51,6 +51,7 @@ def test_unapproved_and_dry_run_plans_never_revoke(system):
         app.state.review_runner.run_access(plan['workspace'], plan['id'])
         value = current(client)
         assert value['status'] == 'dry_run_complete'
+        assert client.get('/api/access-workflows/'+plan['id']+'/report').json()['posture_snapshot'] is None
         assert all(step['status'] == 'simulated' for step in value['steps'])
         assert all(other.get(f'/api/team-vaults/{vault}').status_code == 200 for vault in vaults)
     finally:other.close()
@@ -70,6 +71,8 @@ def test_real_plan_removes_both_vaults_then_waits_for_client_rotation(system):
         app.state.review_runner.run_access(plan['workspace'], plan['id'])
         value = current(client)
         assert value['status'] == 'complete'
+        snapshot=client.get('/api/access-workflows/'+plan['id']+'/report').json()['posture_snapshot']
+        assert snapshot['devices']==[] and not snapshot['device_limit_reached']
         assert all(step['attempts'] == 1 for step in value['steps'])
         assert 'website' in value['coverage']
         assert PASSWORD not in str(value) and code not in str(value)

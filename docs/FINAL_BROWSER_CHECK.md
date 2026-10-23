@@ -37,6 +37,10 @@ Use disposable accounts/credentials and retain no secrets in screenshots/logs.
    Verify revoked tokens, inability to fetch new data, rotation to new keys and
    remaining-member access. Attempt decrypting a new payload with the old member
    key locally; retained copies of older data cannot be erased.
+   Open the evidence report: compare the captured device states to the removal
+   time. Re-run a device check and confirm it cannot replace the retained snapshot.
+   Preview and older workflows must show missing snapshot, never a healthy-device
+   claim. Proof Pack posture opt-out must omit removal-time device evidence too.
 5. Run the supported credential queue on disposable entries: stage, stop/resume,
    preserve old/new values, explicit website submission, report results and retire
    shared-password debt. A login attempt or local save is not website acceptance.

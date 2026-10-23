@@ -120,6 +120,9 @@ def advance_one(store,workspace,identifier,clock=time.time):
         if failure:
             c.execute('UPDATE workflow_steps SET outcome=? WHERE id=?',(failure,step['id']))
             c.execute("UPDATE workflows SET status='blocked',updated_at=? WHERE id=?",(now(),identifier));Store.event(c,workspace,actor,'access_workflow.'+failure,identifier);return False
+        if not plan['dry_run'] and step['action']=='revoke':
+            from .offboarding_posture import capture
+            capture(c,row,clock)
         c.execute('UPDATE workflow_steps SET status=?,attempts=attempts+1,outcome=?,completed_at=? WHERE id=?',('simulated' if plan['dry_run'] else 'complete',outcome,now(),step['id']))
         c.execute("UPDATE workflows SET status='running',updated_at=? WHERE id=?",(now(),identifier))
         Store.event(c,workspace,actor,'access_workflow.step_completed',step['id'])

@@ -87,3 +87,10 @@ Hosted rollout, native extension download/share acceptance and independent revie
 remain pending. Test snapshots contain synthetic staff and clients. PDF pages are
 rendered and inspected outside a browser before release; this is layout QA, not a
 live acceptance result or real agency validation.
+
+Removal-time posture is retained by the offboarding runner at its first real
+revoke step. With posture included, each offboarding record carries its immutable
+`posture_snapshot`, separately from the report's latest recorded `posture` list.
+Absent legacy/preview snapshots are explicit. Turning posture off omits both.
+The snapshot captures existing self-reports, never starts scans, and cannot prove
+return, wiping or independent device integrity. See ACCESS_WORKFLOWS.md.

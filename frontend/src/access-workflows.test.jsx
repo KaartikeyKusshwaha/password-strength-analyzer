@@ -51,3 +51,16 @@ it('restricts the client to workflow routes and rejects scanner or vault capabil
   await accessRequest(connection,'workflows',undefined,fetcher);
   expect(fetcher.mock.calls[0][1]).toMatchObject({credentials:'omit',redirect:'error',headers:{Authorization:'Bearer '+connection.token}});
 });
+
+it('distinguishes retained removal-time device observations from a live scan',async()=>{
+  const snapshot={captured_at:'2026-10-23T12:00:00Z',devices:[{device:'device',platform:'macos',freshness:'stale_or_unavailable',connection_expired:true,recorded_at:'2026-10-20T12:00:00Z',checks:[{id:'filevault',state:'disabled',reason:''}]}],device_limit_reached:true,limitations:'Recorded helper self-report; no new scan.'};
+  const request=vi.fn(async(_,path)=>path==='context'?map:path.endsWith('/report')?{audit:{valid:true},posture_snapshot:snapshot}:{workflows:[{...plan,status:'waiting_unlock',plan:{...plan.plan,dry_run:false}}]});
+  render(<AccessWorkflows browser={browser()} request={request}/>);
+  fireEvent.click(await screen.findByRole('button',{name:'View evidence report'}));
+  await screen.findByRole('heading',{name:'Device evidence at removal'});
+  expect(screen.getByText('macos · stale or unavailable')).toBeInTheDocument();
+  expect(screen.getByText(/More than 100 devices/)).toBeInTheDocument();
+  expect(screen.getByText(/Connection expired at capture/)).toBeInTheDocument();
+  expect(screen.getByText('filevault: disabled')).toBeInTheDocument();
+  expect(screen.getByText('Recorded helper self-report; no new scan.')).toBeInTheDocument();
+});

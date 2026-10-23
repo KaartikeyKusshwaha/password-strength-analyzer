@@ -99,9 +99,24 @@ Owner-scoped report APIs at `/api/access-workflows/{id}/report` and the matching
 extension route return current selected-vault access, step outcomes/timestamps,
 rechecks, relevant audit events and whole-workspace chain verification. The
 extension can inspect this report; the control room also exports JSON. Reports
-are not independently signed or security certifications. A white-label client
-PDF/share link, external connector evidence and device posture integration are
-still unfinished.
+are not independently signed or security certifications. Client PDF/share links
+are implemented separately in CLIENT_PROOF_PACKS.md. External connectors remain
+gated on agency validation.
+
+The first successful real revoke step retains a bounded removal-time posture
+snapshot in the same transaction as its effect and journal entry. It captures
+existing helper records for the outgoing person's paired devices in this exact
+workspace, not a new probe or added scanning permission. A resumed worker cannot
+overwrite it; preview, unapproved, blocked-before-effect and cancelled-before-effect
+runs create no snapshot. Older runs are not backfilled. Empty, stale, expired
+connection and unavailable states remain explicit. At most 100 devices and five
+validated state observations per device are retained; an overflow flag prevents
+claiming full coverage. Raw command output, device names and asset names are
+excluded. Capture does not prove device return, wiping or current protection.
+The latest inserted posture scan for each explicitly bound device asset is used.
+The extension evidence report shows the retained snapshot. Proof Packs include
+it only when the owner selects posture, separately from current recorded posture.
+Snapshots survive backups as inert evidence; restoration grants no scan authority.
 
 Shared-key rotation is now available within the extension workflow surface.
 Its rotation endpoints require BOTH the live workflow bearer and a separate,
@@ -115,12 +130,12 @@ used by interactive vault controls commits it, covering exactly the remaining
 roster. Repeated or changed-scope rotations are rejected. The extension locks
 its previous vault session afterward.
 
-Next implementation: discovery/debt,
-manual/external connector sources, handoffs, expiry and the rest of the master
-plan. External connector expansion remains behind the agency-validation gate.
+Discovery/debt, manual account reports, handoffs, expiry, weekly reviews and
+Proof Packs are implemented in later source checkpoints; see AGENCY_PHASE1.md.
+External connector expansion remains behind the agency-validation gate.
 All browser acceptance is deferred until implementation is finished, as the
 user requested.
 
-Final verification of this increment: backend 471 passed, one skipped; frontend
+Historical verification of the original increment: backend 471 passed, one skipped; frontend
 348 passed across 76 files. Web and content/popup/background extension builds
 passed. No live browser verification or production deployment was performed.

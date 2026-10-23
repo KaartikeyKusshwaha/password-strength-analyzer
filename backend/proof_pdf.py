@@ -25,7 +25,7 @@ def render(report):
     fonts();out=BytesIO();green=colors.HexColor('#245746');muted=colors.HexColor('#52655e')
     base=ParagraphStyle('body',fontName='ProofSans',fontSize=8.5,leading=12,textColor=colors.HexColor('#20352d'),spaceAfter=6,wordWrap='CJK')
     small=ParagraphStyle('small',parent=base,fontSize=7,leading=10,textColor=muted)
-    heading=ParagraphStyle('heading',parent=base,fontName='ProofSansBold',fontSize=14,leading=19,spaceBefore=16,spaceAfter=8,textColor=green)
+    heading=ParagraphStyle('heading',parent=base,fontName='ProofSansBold',fontSize=14,leading=19,spaceBefore=16,spaceAfter=8,textColor=green,keepWithNext=True)
     title=ParagraphStyle('title',parent=heading,fontSize=27,leading=34,spaceBefore=4)
     supported=pdfmetrics.getFont('ProofSans').face.charToGlyph
     def text(value):
@@ -56,6 +56,19 @@ def render(report):
     section('Offboarding log','Preview runs do not remove access. Completed server removal does not erase copied credentials; sharing-key rotation and website-password changes are separate.')
     table(['Person / run','Mode / status','Created / updated'],[[people.get(r['person'],r['person'])+'\n'+r['id'],('Preview' if r['dry_run'] else 'Real removal')+' / '+r['status'],r['created_at']+'\n'+r['updated_at']] for r in report['offboarding']],[204,135,172])
     table(['Vault / action','Result / run','Completed at'],[[vaults.get(r['vault'],r['vault'])+'\n'+r['action'],r['status']+' / '+str(r['outcome'] or 'Not recorded')+'\n'+r['workflow'],r['completed_at']] for r in report['steps']],[230,133,148])
+    if report['posture_included']:
+        section('Device evidence retained at removal','Existing helper observations captured with the first real removal, not a new scan. Missing snapshots do not establish device protection. Current recorded posture is listed separately below.')
+        for run in report['offboarding']:
+            snapshot=run.get('posture_snapshot')
+            story.append(p('Run '+run['id'],small))
+            if not snapshot:
+                story.append(p('No retained removal-time snapshot.',small));continue
+            story.extend([p('Captured '+snapshot['captured_at'],small),p(snapshot['limitations'],small)])
+            if snapshot['device_limit_reached']:story.append(p('INCOMPLETE: more than 100 devices were registered.',small))
+            if not snapshot['devices']:story.append(p('No paired device evidence was available at removal.',small))
+            for device in snapshot['devices']:
+                story.append(p(device['platform']+' / '+device['freshness']+' / recorded '+str(device['recorded_at'] or 'never')+(' / connection expired' if device['connection_expired'] else ''),small))
+                table(['Check','Recorded state','Reason'],[[r['id'],r['state'],r['reason'] or '-'] for r in device['checks']],[192,147,172])
     section('Scheduled removal rechecks','Pending checks are not verification. These check selected SentinelOps vault access, not external website sessions.')
     table(['Run / interval','State','Due / checked'],[[r['workflow']+'\n'+r['label'],r['status'],datetime.fromtimestamp(r['due'],timezone.utc).isoformat()+'\n'+str(r['checked_at'] or 'Not checked')] for r in report['rechecks']],[192,147,172])
     section('Shared-password debt','State is owner-reported and does not independently establish password rotation or delegated access.')

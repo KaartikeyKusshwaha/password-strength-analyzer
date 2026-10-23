@@ -36,6 +36,7 @@ def tick(store,clock=time.time):
 
 
 def report(c,row):
+    from .offboarding_posture import retained
     plan=json.loads(row['plan']);vaults=[]
     for item in plan['vaults']:
         vault=c.execute('SELECT id,name,epoch,rotation_required FROM team_vaults WHERE id=? AND workspace=?',(item['vault'],row['workspace'])).fetchone()
@@ -46,5 +47,5 @@ def report(c,row):
     audit=[dict(item) for item in c.execute('SELECT seq,at,actor,action,target,digest FROM audit WHERE workspace=? ORDER BY seq',(row['workspace'],)) if item['target'] in targets or item['target'].startswith(row['id']+':')]
     chain=Store.audit(c,row['workspace'])
     integrity={key:chain[key] for key in ('valid','head')}
-    return {'format':'sentinelops-vault-offboarding-v1','generated_at':now(),'workflow':row['id'],'client':row['client'],'person':row['person'],'status':row['status'],'dry_run':plan['dry_run'],'vaults':vaults,'steps':steps,'rechecks':sorted([item for item in Store.all(c,row['workspace'],'access_rechecks') if item['workflow']==row['id']],key=lambda item:item['due']),'events':audit,'audit':integrity,
+    return {'format':'sentinelops-vault-offboarding-v1','generated_at':now(),'workflow':row['id'],'client':row['client'],'person':row['person'],'status':row['status'],'dry_run':plan['dry_run'],'vaults':vaults,'steps':steps,'rechecks':sorted([item for item in Store.all(c,row['workspace'],'access_rechecks') if item['workflow']==row['id']],key=lambda item:item['due']),'events':audit,'audit':integrity,'posture_snapshot':retained(c,row),
             'limitations':'Evidence of selected SentinelOps vault memberships only. No assertion about website sessions, cached credentials, password changes, external MFA or device posture. Hash-chain integrity is not independent signing; a database administrator can rewrite the chain.'}

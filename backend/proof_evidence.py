@@ -21,6 +21,9 @@ def collect(c,workspace,client_id,options):
     steps=[]
     for row in workflows:
         row['dry_run']=json.loads(row.pop('plan'))['dry_run']
+        if options.include_posture:
+            from .offboarding_posture import KIND
+            row['posture_snapshot']=Store.get(c,workspace,KIND,row['id'])
         steps.extend({**step,'workflow':row['id']} for step in bounded(c,'SELECT id,vault,action,status,outcome,completed_at FROM workflow_steps WHERE workflow=? ORDER BY position',(row['id'],),60))
     require(len(steps)<=1500,'Too many offboarding steps for one report; no partial history was accepted.')
     people_ids={r['person'] for r in access+reports+workflows};people=[]

@@ -270,3 +270,34 @@ hash-verified licenses from matching source archives. No binary was uploaded or
 deployed. Intel Mac build, normal login-Keychain prompts, Windows/macOS install,
 live pairing and browser acceptance remain unverified. Mac builds are ad-hoc,
 not Developer ID-signed/notarized. Installed builds and live data are unchanged.
+
+Removal-time device evidence checkpoint (23 October): the first successful real
+vault removal now retains the outgoing member's existing paired-device posture
+in the same transaction as revocation and the step journal. The existing Runner
+and scheduler are unchanged. Crash rollback removes both the effect and snapshot;
+resumption cannot replace captured evidence with a later scan. No new probe or
+scan consent is inferred. Preview, pending and legacy runs have no snapshot.
+Only workspace-local device/asset bindings and validated fixed check states are
+included, with stale/unavailable/expired states and a 100-device overflow warning.
+Raw output and device/asset labels are excluded. Extension evidence shows the
+snapshot; Proof Pack posture opt-in includes it separately from later recorded
+states in JSON, the public viewer and PDF. Posture opt-out excludes it. Historical
+records are not backfilled and device return/wipe remain human attestations.
+
+Initial regression: 23 workflow/posture/Proof Pack backend tests passed; ten
+focused extension/report-view tests passed and popup production build passed.
+The updated synthetic three-page PDF was rendered and reopened; removal-time
+FileVault disabled and later enabled states remain distinct with no active
+annotations. Visual review found an orphan heading; headings now stay with their
+following paragraph. Final integrated regression and post-fix PDF checks are
+recorded below. No live browser, helper installation or cloud deployment occurred.
+
+Final validation: 52 integrated backend tests passed, followed by 12 final
+posture/Proof Pack tests after the PDF heading fix. Ten focused extension/viewer
+tests passed; popup production build and changed-source syntax checks passed.
+All three final PDF pages were rendered and visually inspected, then reopened
+with pypdf: expected distinct removal/current protection states and no active
+annotations. Known Starlette deprecation and dictionary chunk warnings remain.
+Generated verification artifacts are consolidated in
+SentinelOps-Safe-To-Delete-20261022/verification-offboarding-posture-20261023.
+This checkpoint does not replace the deferred browser or independent audit gates.
