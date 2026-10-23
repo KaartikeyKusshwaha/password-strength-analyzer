@@ -183,3 +183,22 @@ companion pairing or autofill is claimed at this checkpoint. Evidence:
 `data/render-browser-acceptance-vault-ready.png` (private operator screenshot).
 The test browser is the in-app browser; installed Edge companion acceptance
 remains separate. The current Render source remains c62da24, app/companion0.25.0.
+
+
+### Render personal vault save/lock/reload — 24 October 2026
+
+The user initialized Browser acceptance and explicitly approved storing the
+public practice.expandtesting.com demo login in that vault and testing fill
+without website submission. Through the actual in-app browser control-room UI,
+unlocked the vault with its existing disposable test passphrase, saved Practice
+cloud acceptance and observed its entry with no error. Explicit Lock hid the
+entry and displayed the unlock form. Full page reload followed by a fresh
+unlock restored the entry with no error. Screenshot:
+`data/render-demo-login-reopened.png`.
+
+This verifies a control-room encrypted save, lock concealment and cloud-backed
+retrieval/decryption after reload. It does not establish installed-extension
+secure-save, autofill, TOTP or shared-vault acceptance. No practice website login
+was submitted. Opened a fresh Edge cloud tab and signed in using the authorized
+test account; it reached One more check. The current authenticator entry was
+handed to the user. Edge companion pairing/fill remains pending that sign-in.
