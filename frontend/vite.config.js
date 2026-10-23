@@ -5,5 +5,5 @@ export default defineConfig({
   resolve: { dedupe: ['react','react-dom','@zxcvbn-ts/core','@zxcvbn-ts/language-common','@zxcvbn-ts/language-en'] },
   server: { proxy: { "/api": "http://127.0.0.1:8110" } },
   // Bound simultaneous 64-MiB KDF tests and jsdom processes on development machines.
-  test: { environment: "jsdom", setupFiles: ["./src/test-setup.js"], maxWorkers: 4 },
+  test: { include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}'], environment: "jsdom", setupFiles: ["./src/test-setup.js"], maxWorkers: 4 },
 });
