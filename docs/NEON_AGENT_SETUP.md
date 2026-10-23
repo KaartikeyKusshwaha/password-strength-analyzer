@@ -58,6 +58,20 @@ page; the agent did not approve it. The CLI then reported:
 Authentication timed out after 60 seconds
 ```
 
+The user subsequently completed another CLI login in Brave. That attempt
+reported `Auth complete (profile DEFAULT)` and exited successfully. The next
+read-only project/plan requests still returned the internal authorization error.
+An explicit `neon projects list -o json` then identified the access problem:
+
+```text
+not an organization member; org_id:"org-damp-queen-47948020"
+```
+
+The principal identifier is omitted here. No replacement organization/project
+was created. Access requires an account belonging to the specified organization,
+an owner-authorized membership grant, or corrected IDs supplied by the user.
+Another login with the same account is not a demonstrated fix.
+
 No Neon service apply/deploy, schema mutation, data migration, paid upgrade or
 environment pull was performed. `npm run build` at the project root and live
 end-to-end tests of the requested services remain pending actual integration;
@@ -66,7 +80,8 @@ container/PostgreSQL tests are separate evidence, not proof of Neon services.
 
 ## Next action
 
-Run `neon login` and promptly complete its browser authorization with the account
+Resolve the organization membership or supplied IDs first. If changing accounts,
+run `neon login` and promptly complete its browser authorization with the account
 that can access the specified project. Then retry the read-only plan, confirm
 the project's region and no-cost availability of the remaining services before
 any apply. Keep the existing Psycopg driver for the Python backend. Do not
