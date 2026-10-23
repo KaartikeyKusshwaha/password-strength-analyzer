@@ -401,3 +401,15 @@ Validation: 57 helper/release/provenance/package tests passed with two platform
 skips; final download-route/extension-security/packaging integration passed 24.
 The same-size tamper test returns HTTP 404 instead of serving a changed helper;
 post-validation replacement is rejected for both Windows and macOS packages.
+
+Windows download preparation: rebuilt unsigned helper 0.2.0 from all six current
+recorded helper source files using pinned PyInstaller 6.22.3. Frozen self-test
+passed a real current-user DPAPI round trip and operator import; the six source
+digests and binary digest were independently checked. Replaced only the ignored
+packaged-download EXE/manifest, retaining the previous 0.1.0 generated pair in
+the consolidated safe-to-delete verification folder. No installed application,
+connection, user vault or key changed. New binary SHA-256:
+84678b3d23112543f7cbd14cbf3c01665c4f1ccb4c7db7089bab8eca4209c1f7.
+This does not pass GUI install/pair/uninstall, signing or independent audit gates.
+A fresh matched candidate must include this new download; older candidates are
+superseded for deployment.

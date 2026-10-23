@@ -74,5 +74,6 @@ actual SHA-256 against bounded, unlinked metadata as well as size/platform.
 Deployment packaging rechecks the exact helper payload bytes against metadata
 for both Windows and macOS. Changed bytes make the download unavailable or
 packaging fail; a checksum is not code signing, an independent security review
-or proof of a source-matching rebuild. Installed helper 0.1.0 remains the older
-pilot artifact until a deliberate current-source replacement is prepared.
+or proof of a source-matching rebuild. The packaged download is now the current-source 0.2.0 pilot. This does not
+install or pair it on any user device.
+
