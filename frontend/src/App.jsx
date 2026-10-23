@@ -1998,10 +1998,9 @@ export default function App() {
 
                 </div>
                 <p className="fine">
-                  Pilot architecture: one Python process and SQLite. This build
-                  includes opt-in dependency watches while the server runs and
-                  scoped paired-device checks. Inbox sync, SSO, billing and full
-                  endpoint detection/response are not implemented.
+                  Scheduled checks run while the pilot service is awake. Free
+                  hosting can pause when idle, so reminders and access-expiry
+                  checks may be delayed. Device checks require a connected helper.
                 </p>
               </section>
             </div>
