@@ -159,3 +159,26 @@ registered task action and current-user access, rather than just direct CLI
 execution. The first **timed** daily run is due at 04:00 IST on 24 October and
 has not yet been observed. It must be checked before claiming unattended daily
 coverage. Existing archives are never replaced or automatically deleted.
+
+
+## First real owner-account recovery drill — 24 October 2026
+
+After user owner setup, a fresh Neon export at 2026-10-23T19:53:21Z contained
+one user, one workspace and one live session (no personal/shared vaults yet).
+Archive SHA-256:
+`f706d4457c24ed1ac0a1cf242b07036b82fa13a4707b8f6c2d0188342b0c6116`.
+Isolated SQLite restore passed integrity and exact account-ID/email/password-hash,
+MFA-value and membership preservation comparisons. A separate local PostgreSQL
+restore imported 22 rows at schema 15, preserved those same account/membership
+fields, retained a valid audit chain, revoked the saved session and cleared the
+pending MFA draft. No private account values were printed. The live source was
+not modified and the local PostgreSQL drill server was stopped afterward.
+
+The first PostgreSQL comparison incorrectly used SELECT * for members, including
+its adapter-only ordering column; the corrected comparison used the declared
+application columns and passed. This was a drill-assertion issue, not evidence
+of lost membership or a production change.
+
+This archive predates MFA confirmation. Subsequent browser inspection confirmed
+Authenticator protection Enabled, but enrolled-MFA and saved-vault recovery need
+a later snapshot/drill. The first timed 04:00 task run remains unobserved.

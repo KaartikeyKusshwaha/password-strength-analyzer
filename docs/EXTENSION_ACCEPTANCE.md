@@ -165,3 +165,21 @@ fields populated with the expected visible username; the masked password's
 exact value and successful website authentication remain unverified. No Login
 submission was made. Screenshot: data/oracle-deployment/cloud-autofill-visible.png.
 Do not read or expose the masked password to work around tool redaction.
+
+
+### Render owner initialization and administrator MFA — 24 October 2026
+
+User-created owner account and SentinelOps Test Lab workspace are visible on
+the new Render/Neon installation. Read-only Settings inspection confirmed
+Authenticator protection **Enabled**, eight recovery codes remaining and MFA
+disable unavailable while the account holds an owner role. No code/seed was
+used by the agent. This is app MFA setup evidence, not companion TOTP acceptance.
+
+Through ordinary vault UI, created the empty **Browser acceptance** personal
+vault space, default three-minute lock and existing browser save/fill policy.
+It has no encrypted envelope yet. Master-passphrase entry, confirmation and
+Create vault submission were handed to the user; no vault unlock, payload save,
+companion pairing or autofill is claimed at this checkpoint. Evidence:
+`data/render-browser-acceptance-vault-ready.png` (private operator screenshot).
+The test browser is the in-app browser; installed Edge companion acceptance
+remains separate. The current Render source remains c62da24, app/companion0.25.0.
