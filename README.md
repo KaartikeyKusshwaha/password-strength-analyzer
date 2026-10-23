@@ -2,7 +2,7 @@
 
 An access control tower for agencies: know who can touch each client, remove access in one approved run, and report the outcome to the client. This is the product direction; the client access map and durable offboarding workflow are not yet shipped. Existing encrypted vaults and extension workflows form the foundation.
 
-**Hosted app 0.22.0 / [companion 0.23.0 prerelease](https://github.com/KaartikeyKusshwaha/password-strength-analyzer/releases/tag/companion-v0.23.0).** The last verified Oracle companion download is 0.22.1; its update is pending SSH reachability. Use disposable credentials until the security and acceptance gates in [the agency master plan](docs/AGENCY_MASTER_PLAN.md) pass. See [actual release and browser evidence](docs/EXTENSION_ACCEPTANCE.md); implementation is not a claim of production readiness.
+**Source app/companion 0.24.0 / [published companion 0.23.0 prerelease](https://github.com/KaartikeyKusshwaha/password-strength-analyzer/releases/tag/companion-v0.23.0).** The old Oracle pilot is currently unavailable; its last verified versions were app 0.22.0 and companion download 0.22.1. [Render Free + Neon Free migration](docs/RENDER_NEON_PILOT.md) is prepared but not deployed. Use disposable credentials until the security and acceptance gates in [the agency master plan](docs/AGENCY_MASTER_PLAN.md) pass. See [actual release and browser evidence](docs/EXTENSION_ACCEPTANCE.md); implementation is not a claim of production readiness.
 
 ## Extension-first access workflows
 
@@ -95,11 +95,11 @@ Open http://127.0.0.1:8110/. On first launch, obtain the bootstrap token locally
 
 Create the vault yourself and choose its master passphrase locally. The app sign-in password and a vault’s master passphrase are separate. An app password reset cannot unlock an encrypted vault.
 
-SQLite remains the **local development** store. [Encrypted operator backups and isolated restore tooling](docs/BACKUP_RECOVERY.md) are available. Postgres migration, production deployment/backup operations, independent client/sharing audit, mobile clients, native passkey acceptance and extension-store publication are unfinished production gates. Shared vaults are a development preview with explicit limitations in the threat model.
+SQLite remains the **local development** store. [Encrypted operator backups and isolated restore tooling](docs/BACKUP_RECOVERY.md) are available. The [PostgreSQL adapter, authenticated migration/backup tools and Free Render container configuration](docs/RENDER_NEON_PILOT.md) are implemented and locally tested; clean Linux container startup is verified. Live Neon migration, hosted backup/restore and deployment acceptance remain pending. Independent client/sharing audit, mobile clients and extension-store publication remain unfinished production gates. Shared vaults are a development preview with explicit limitations in the threat model.
 
 [Off-server pilot backup preparation](docs/OFFSERVER_BACKUPS.md) adds authenticated encrypted SSH pulls to the operator PC and a verification-first daily Windows task. It is not active until live transfer and recurring execution are verified; no paid storage or automatic retention deletion is introduced.
 
-For a persistent Python/SQLite pilot, [Oracle VM deployment files](deploy/oracle/README.md) provide a no-Docker systemd/HTTPS setup and a release bundle that excludes local data and secrets. Actual VM deployment and public browser acceptance still require verification.
+The selected free pilot target is [Render Free with Neon Free PostgreSQL](docs/RENDER_NEON_PILOT.md). Render sleeps, so timely unattended expiry/removal/review execution is not guaranteed on this free pilot. Existing [Oracle VM deployment files](deploy/oracle/README.md), source data and rollback backups are retained; no destructive cleanup is part of migration. Backend, web and the new-origin companion must ship together after live data and restore validation.
 
 ## Browser companion
 
