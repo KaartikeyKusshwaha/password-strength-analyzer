@@ -202,3 +202,27 @@ secure-save, autofill, TOTP or shared-vault acceptance. No practice website logi
 was submitted. Opened a fresh Edge cloud tab and signed in using the authorized
 test account; it reached One more check. The current authenticator entry was
 handed to the user. Edge companion pairing/fill remains pending that sign-in.
+
+
+### Authenticated Render companion download — 24 October 2026
+
+Downloaded the actual companion through the signed-in in-app Connections link,
+without extracting/replaying a session cookie. ZIP version 0.25.0, 13 files,
+SHA-256 `7e7520e65023aa68573572576cb75cdfb2bcca831632efe4b913b73d9f4d9ec7`.
+Manifest has storage/activeTab/alarms permissions; bundled JavaScript contains
+the Render pilot origin and no old Oracle origin. This is the hosted Linux
+artifact, not the earlier Windows local ZIP; its independently recorded checksum
+is not assumed equal across builders. Download does not prove installed behavior.
+
+The user's Edge MFA sign-in completed and the Browser acceptance cloud vault is
+visible there, locked. A fresh Edge practice login tab is open with empty fields.
+Starting native companion comparison-code pairing was handed to the user because
+the popup is outside browser controls. No new vault connection or scan grant has
+yet been approved or inferred.
+
+Connections also offered a Windows helper link when its build is absent in the
+Render image. Source fix 3ed486d adds validated helper availability to the
+session-authenticated companion metadata and hides the missing download/install
+steps. Available builds display version and SHA-256. Focused validation passed
+23 backend helper/security tests, two frontend cases and production web build.
+This source fix is not yet deployed; native binaries remain undistributed.
