@@ -47,3 +47,16 @@ https://developer.apple.com/documentation/technotes/tn3137-on-mac-keychains
 https://pyobjc.readthedocs.io/en/latest/apinotes/Security.html
 GitHub standard public runner billing:
 https://docs.github.com/en/billing/concepts/product-billing/github-actions
+
+Native run 39942415747 at commit 11c9b36 passed disposable-Keychain tests,
+ARM64 app build and frozen-app storage/TLS self-test. No artifact was uploaded
+or deployed. Initial run 39942145315 passed storage tests but failed building
+because two upstream wheels omit licenses; verified matching-source license
+copies are now bundled. Intel native build and normal desktop acceptance are
+still unverified.
+
+Final source run 39942791505 at 72b0e076 passed the ARM64 build, 29 native
+tests (one Windows-only skip), and frozen disposable-Keychain/TLS self-test:
+https://github.com/KaartikeyKusshwaha/password-strength-analyzer/actions/runs/39942791505
+This revision also embeds Mac observations in the single-file device download.
+No published binary, Intel build or normal desktop acceptance is implied.

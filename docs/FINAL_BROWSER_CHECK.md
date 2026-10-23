@@ -48,7 +48,10 @@ Use disposable accounts/credentials and retain no secrets in screenshots/logs.
 8. Execute final implemented freelancer/review/proof-pack paths with shortened
    test clocks in the isolated test deployment, then restore real timing. Verify
    approvals, expiries, alerts and reports without scanning external systems.
-9. Install/pair the device helper through the extension on an owned test device.
+9. Install/pair the Windows helper through the extension on an owned test device.
+   Repeat on macOS with the architecture-matching app, login-Keychain storage
+   prompt, supported protection states, no cached Windows Update permission,
+   stop/forget and uninstall. Native CI is not this user acceptance test.
    Check posture and allowed local checks, deny unapproved targets and revoke the
    pairing. Verify unsupported/helper-missing states are explicit.
 10. Test recovery and a disposable restore; pre-restore grants and approvals must

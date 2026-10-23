@@ -246,3 +246,27 @@ remain. Generated test/PDF/build artifacts are in the safe-to-delete folder.
 No native browser test, installed-extension replacement or hosted deployment
 occurred. Remaining helper implementation/acceptance, release hardening and
 external validation/security gates are still required.
+
+Device-helper checkpoint (23 October): Windows and macOS now share the visible
+pairing UI. macOS stores the narrow device connection in Keychain and reports
+fixed firewall, FileVault and Gatekeeper observations; unavailable states stay
+unassessed. The downloaded single-file device operator contains these checks
+without requiring package imports. Windows retains DPAPI and cached-update
+checks. Extension results show disabled protection even with no scanner finding.
+Mac downloads require an installed hash-verified package; no unpublished binary
+is advertised. Neither platform adds unattended installation or autostart.
+
+Validation: full frontend 414 passed across 95 files; final single-file/helper/
+posture regression 29 passed with one platform skip; adapter/release regression
+12 passed; follow-on Proof Pack/device-update regression 22 passed. Popup build
+passed. A disposable Windows frozen build passed its DPAPI/import smoke test;
+this binary preceded the final single-file refactor and is not a shipped release.
+Native ARM64 CI at final source 72b0e076a5094ad65d67cf5c7035bc0934619b5a
+passed 29 tests (Windows DPAPI skipped), app build and frozen disposable-Keychain
+round-trip/removal plus certificate/hostname-verification self-test:
+https://github.com/KaartikeyKusshwaha/password-strength-analyzer/actions/runs/39942791505
+The earlier build failure from omitted upstream licenses was fixed by bundling
+hash-verified licenses from matching source archives. No binary was uploaded or
+deployed. Intel Mac build, normal login-Keychain prompts, Windows/macOS install,
+live pairing and browser acceptance remain unverified. Mac builds are ad-hoc,
+not Developer ID-signed/notarized. Installed builds and live data are unchanged.

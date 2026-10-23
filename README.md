@@ -180,3 +180,5 @@ The legacy command-line learning tool remains in `password_analyzer.py`. It is n
 Weekly access-review source implementation: [scope, planning and owner sign-off](docs/WEEKLY_ACCESS_REVIEWS.md). Native acceptance and hosted rollout remain pending.
 
 Client Proof Packs: [PDF, confidential sharing and scope limits](docs/CLIENT_PROOF_PACKS.md). Source implementation; hosted rollout and browser acceptance remain pending.
+
+Device helper platform support: [macOS source, native build and remaining acceptance](docs/MACOS_HELPER.md). No trusted signing/notarization or native installation acceptance is claimed.
