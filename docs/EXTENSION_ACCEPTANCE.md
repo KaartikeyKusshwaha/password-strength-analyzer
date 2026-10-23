@@ -278,3 +278,11 @@ confirmation. Screenshot: `data/render-edge-autofill-populated-20261024.png`.
 The existing cloud test passphrase also unlocked Browser acceptance through the
 control-room UI, which displayed its single Practice cloud acceptance entry;
 the vault was explicitly locked afterward. This does not prove popup unlock.
+
+The user subsequently confirmed explicitly: “Yes, I clicked SentinelOps Fill
+this login.” Together with the before/after empty-to-populated fields and the
+visible `practice` username, this verifies a user-initiated installed Edge fill
+from the connected Render test vault. The password stayed masked and the website
+Login button was not submitted, so this is a form-fill acceptance result, not a
+website authentication success or a byte-for-byte password comparison. Secure-save,
+TOTP and multi-account sharing/revocation remain separate unverified live gates.
