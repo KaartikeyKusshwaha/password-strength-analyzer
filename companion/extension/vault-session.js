@@ -35,6 +35,14 @@ export class SaveSession {
       if (response.status === 403) throw new Error('This vault does not permit this browser action. Review its access and browser policy in the dashboard.');
       if (!response.ok) throw new Error('Could not synchronize the encrypted vault. Keep SentinelOps running and try again.');
       const value=await response.json();this.active(generation);return value;
+    }catch(error){
+      this.active(generation);
+      if(error.name==='TimeoutError'||error.name==='AbortError'||error instanceof TypeError){
+        const host=new URL(this.config.origin).host;
+        const next=body?'The request may have reached the server. Lock and unlock this vault to refresh its contents before retrying.':'Open this server in your browser and wait for it to load, then retry. If you moved servers, choose the vault on the new server or Connect another vault.';
+        throw Object.assign(new Error(`Could not reach ${host}. ${next}`),{code:'CONNECTION_UNREACHABLE'});
+      }
+      throw error;
     }finally{this.pending.delete(controller);}
   }
   async unlock(master,verifiedOwnerFingerprint='',selected=null) {

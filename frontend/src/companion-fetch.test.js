@@ -31,3 +31,32 @@ it('does not bind an injected transport to the vault session',async()=>{
   await expect(session.request()).rejects.toThrow('expired or was revoked');
   expect(session.pending.size).toBe(0);
 });
+
+it('identifies the selected server on timeout without silently changing connections',async()=>{
+  const transport=vi.fn(async()=>{throw new DOMException('signal timed out','TimeoutError');});
+  const session=new SaveSession({},transport);
+  session.config={origin:'https://old-server.example',token:'private-token'};
+  await expect(session.request()).rejects.toThrow('Could not reach old-server.example');
+  await expect(session.request()).rejects.toThrow('Connect another vault');
+  expect(session.config.origin).toBe('https://old-server.example');
+  expect(session.pending.size).toBe(0);
+});
+
+it('does not retry an ambiguous vault write after a network timeout',async()=>{
+  const transport=vi.fn(async()=>{throw new DOMException('signal timed out','TimeoutError');});
+  const session=new SaveSession({},transport);
+  session.config={origin:'https://cloud.example',token:'private-token'};
+  await expect(session.request({revision:1,envelope:{}})).rejects.toThrow('may have reached the server');
+  expect(transport).toHaveBeenCalledTimes(1);
+  expect(session.pending.size).toBe(0);
+});
+
+it('preserves vault-lock cancellation instead of reporting a server outage',async()=>{
+  let reject;
+  const session=new SaveSession({},()=>new Promise((_,fail)=>{reject=fail;}));
+  session.config={origin:'https://cloud.example',token:'private-token'};
+  const pending=session.request();session.lock();
+  reject(new DOMException('aborted','AbortError'));
+  await expect(pending).rejects.toThrow('Vault locked');
+  expect(session.pending.size).toBe(0);
+});
