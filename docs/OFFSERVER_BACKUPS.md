@@ -182,3 +182,26 @@ of lost membership or a production change.
 This archive predates MFA confirmation. Subsequent browser inspection confirmed
 Authenticator protection Enabled, but enrolled-MFA and saved-vault recovery need
 a later snapshot/drill. The first timed 04:00 task run remains unobserved.
+
+
+## Enrolled MFA and saved-vault recovery drill — 24 October 2026
+
+A fresh real Neon export at 2026-10-23T20:25:37Z (01:55:37 IST on 24 October)
+contained one owner/workspace/membership, one personal vault and enrolled MFA.
+Archive SHA-256:
+`fb65b691ae7795393383466886c89e40d37233229ea64808be779e3479d8f561`.
+The user-approved public practice login was already saved in the source vault.
+
+Restored into a new isolated SQLite directory and a fresh local PostgreSQL
+schema (31 imported rows). Exact protected-field comparisons passed for account
+ID/email/password hash, encrypted MFA/recovery records, membership and personal
+vault ciphertext. SQLite integrity and PostgreSQL audit validation passed;
+restored session/companion/device/invitation/challenge tables were empty. The
+public fixture password was absent from the authenticated database bytes.
+No protected values were printed; the live source was not changed. Stopped the
+local drill database afterward. Evidence:
+`data/neon-vault-mfa-restore-20261024.receipt.json`.
+
+This proves ciphertext and account-protection preservation, not successful
+restored-browser decryption, real shared-vault recovery, old Oracle migration,
+independent audit or the first timed 04:00 backup. Those gates remain open.
