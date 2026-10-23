@@ -48,9 +48,10 @@ migration and restore/cutover check succeed. Do not initialize over existing dat
 4. Apply the empty schema to a dedicated database and import into that empty
    target in one validated transaction. Compare counts, payload digests, audit
    chains and constraint behavior. Do not use live customer credentials in tests.
-5. Set private runtime secrets in Render, build the tested Git revision and
-   verify the container/API startup. Docker and live Render deployment have not
-   yet been exercised; local PostgreSQL tests do not establish those results.
+5. Set private runtime secrets in Render and deploy the tested Git revision.
+   Linux container build, non-root artifact access and disposable HTTP startup
+   are verified below. Live Render/Neon startup and certificate-verified database
+   connectivity still need their own checks; local tests do not establish them.
 6. Set the final cloud origin in the companion/helper build, publish a distinct
    version, pair to the new host and perform FINAL_BROWSER_CHECK.md. Existing
    builds still default to the old Oracle hostname; no new hostname is guessed.
@@ -142,3 +143,13 @@ rejected at startup. Four additional existing agency workflow cases passed on
 PostgreSQL: independent handoff sign-off, signed extension ownership transfer,
 weekly consent/planning/sign-off and freelancer expiry/removal/rotation/rechecks.
 Final schema/store translation follow-up passed 20 tests.
+
+Container verification succeeded on revision `8474895` in GitHub Actions run
+[39980442245](https://github.com/KaartikeyKusshwaha/password-strength-analyzer/actions/runs/39980442245).
+This built the actual Dockerfile from a clean checkout, installed dependencies
+with npm integrity checking enabled, packaged the extension and verified non-root
+file access plus API/frontend HTTP startup against a disposable local database.
+The registry audit covered all 234 lockfile entries; historical accidental
+version/range substitutions for React Refresh, decimal.js, jsdom and fsevents
+were corrected against official metadata. No dependency integrity bypass or
+runtime root-user workaround was used. Deployment and Neon TLS remain unverified.
