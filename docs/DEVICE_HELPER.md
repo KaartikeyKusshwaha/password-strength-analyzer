@@ -77,3 +77,29 @@ packaging fail; a checksum is not code signing, an independent security review
 or proof of a source-matching rebuild. The packaged download is now the current-source 0.2.0 pilot. This does not
 install or pair it on any user device.
 
+
+
+## Render-origin build and stale-helper guard — 24 October 2026
+
+The Windows helper was rebuilt with the Render pilot default
+`https://sentinelops-pilot.onrender.com`. Its local frozen `--self-test` passed
+DPAPI encryption/decryption and device-operator import without installing or
+pairing a device. Artifact version 0.2.0, 12,768,274 bytes, SHA-256
+`0b6252d559a0fa1372fc83669c1b188dd721e7dbfeac61b1c40b5a1f4fcb286e`.
+It is **unsigned**, not a store-distributed or independently audited release.
+
+Helper availability and deployment packaging now require the manifest's exact
+platform source inventory to match the shipped sources, including the cloud
+address, build scripts and pinned helper build requirements. Source hashes
+normalize CRLF/LF so native Windows builds can be compared on Linux hosts.
+Missing, stale or extra source-inventory entries make the build unavailable;
+checksum verification of the binary remains required. Builders compare source
+inventories before and after compilation to reject a changing checkout.
+This detects accidental stale builds; it is not a publisher signature or proof
+against a compromised builder fabricating a manifest.
+
+Focused helper/protocol/release checks passed: 58 tests, one native-macOS skip.
+The final required-source packaging check passed nine tests. The Render Docker
+image still excludes native helper binaries; no cloud helper download or native
+installation/pairing acceptance is claimed. The new guard is source work until
+the backend update is deployed. Native macOS rebuilding remains a CI task.

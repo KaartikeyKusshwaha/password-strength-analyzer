@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 from backend.helper_status import status
+from companion.helper_artifacts import source_inventory
 from test_platform import system
 
 
@@ -11,7 +12,7 @@ def helper(tmp_path):
     artifact=tmp_path/'SentinelOpsDeviceHelper.exe'
     payload=b'disposable helper fixture'*50000
     artifact.write_bytes(payload)
-    metadata=dict(version='0.2.0',platform='windows-x64',sha256=hashlib.sha256(payload).hexdigest(),bytes=len(payload),signed=False)
+    metadata=dict(sources=source_inventory('windows-x64'),version='0.2.0',platform='windows-x64',sha256=hashlib.sha256(payload).hexdigest(),bytes=len(payload),signed=False)
     (tmp_path/'helper-manifest.json').write_text(json.dumps(metadata))
     return artifact,metadata
 
@@ -62,3 +63,34 @@ def test_download_route_refuses_changed_helper(system,tmp_path,monkeypatch):
     artifact.write_bytes(b'x'*metadata['bytes'])
     denied=owner.get('/api/device-helper/windows')
     assert denied.status_code==404 and denied.json()['detail']=='Windows helper build unavailable'
+
+
+@pytest.mark.parametrize('platform',['windows-x64','macos-arm64','macos-x86_64'])
+def test_helper_becomes_unavailable_after_cloud_origin_source_changes(tmp_path,platform):
+    from companion.helper_artifacts import SOURCE_ROOT
+    from backend.helper_status import macos_status
+    sources=tmp_path/'sources';sources.mkdir()
+    inventory=source_inventory(platform)
+    for name in inventory:(sources/name).write_bytes((SOURCE_ROOT/name).read_bytes())
+    payload=b'disposable executable fixture'*50000
+    name='SentinelOpsDeviceHelper.exe' if platform=='windows-x64' else 'SentinelOpsDeviceHelper-'+platform+'.zip'
+    (tmp_path/name).write_bytes(payload)
+    metadata=dict(version='0.2.0',platform=platform,sha256=hashlib.sha256(payload).hexdigest(),bytes=len(payload),signed=False,sources=inventory)
+    if platform!='windows-x64':metadata['notarized']=False
+    (tmp_path/'helper-manifest.json').write_text(json.dumps(metadata))
+    check=status if platform=='windows-x64' else macos_status
+    assert check(tmp_path,source_root=sources)['available']
+    for name in inventory:
+        path=sources/name
+        path.write_bytes(path.read_bytes().replace(b'\r\n',b'\n').replace(b'\n',b'\r\n'))
+    assert check(tmp_path,source_root=sources)['available']
+    (sources/'helper_client.py').write_text('CLOUD_ORIGIN="https://new.example.test"')
+    assert check(tmp_path,source_root=sources)=={'available':False}
+
+
+@pytest.mark.parametrize('sources',[None,{}, {'../outside.py':'a'*64}])
+def test_missing_or_forged_source_inventory_is_not_a_current_build(tmp_path,sources):
+    _,metadata=helper(tmp_path)
+    metadata['sources']=sources
+    (tmp_path/'helper-manifest.json').write_text(json.dumps(metadata))
+    assert status(tmp_path)=={'available':False}

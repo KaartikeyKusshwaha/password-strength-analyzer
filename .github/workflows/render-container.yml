@@ -11,6 +11,13 @@ on:
       - 'frontend/**'
       - 'companion/extension/**'
       - 'companion/package_extension.py'
+      - 'companion/helper_*.py'
+      - 'companion/build_helper*.py'
+      - 'companion/*build-requirements.txt'
+      - 'deploy/build_release.py'
+      - 'tests/test_helper_status.py'
+      - 'tests/test_deploy_release.py'
+      - 'tests/test_build_provenance.py'
       - 'deploy/postgres*.py'
       - 'tests/test_postgres*.py'
       - '.github/workflows/render-container.yml'
@@ -59,6 +66,8 @@ jobs:
           PY
       - name: Verify real PostgreSQL workflows, migrations and backup recovery
         run: python -m pytest tests/test_postgres_schema.py tests/test_postgres_store.py tests/test_postgres_app.py tests/test_postgres_backups.py tests/test_postgres_backup_pull.py tests/test_backups.py tests/test_offserver_backup.py -q
+      - name: Verify helper source binding and release stale-build guards
+        run: python -m pytest tests/test_helper_status.py tests/test_deploy_release.py tests/test_build_provenance.py -q
   container:
     if: github.event.repository.private == false
     runs-on: ubuntu-24.04

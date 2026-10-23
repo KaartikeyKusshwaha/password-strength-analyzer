@@ -7,6 +7,7 @@ import subprocess
 import sys
 from pathlib import Path
 from companion.helper_client import VERSION
+from companion.helper_artifacts import source_inventory
 from companion.helper_macos import APP,BUNDLE,checked_bundle
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -33,12 +34,13 @@ def build(output=None,work=None):
             if not fallback.is_file() or hashlib.sha256(fallback.read_bytes()).hexdigest()!=metadata.get(fallback.name,{}).get('license_sha256'):raise ValueError('Dependency license is missing: '+package)
             licenses=[fallback]
         for license in licenses:command[3:3]=['--add-data',str(license)+':licenses/'+package]
+    source_before=source_inventory('macos-'+arch)
     subprocess.run(command,cwd=ROOT,check=True)
+    if source_inventory('macos-'+arch)!=source_before:raise ValueError('Helper source changed during build; rebuild before publishing.')
     app=checked_bundle(output/APP)
     artifact=output/('SentinelOpsDeviceHelper-macos-'+arch+'.zip')
     subprocess.run(['/usr/bin/ditto','-c','-k','--sequesterRsrc','--keepParent',str(app),str(artifact)],stdin=subprocess.DEVNULL,check=True,timeout=120)
-    sources=['device_agent.py','helper_client.py','helper_desktop.py','helper_macos.py','macos_keychain.py','macos_posture.py','build_helper_macos.py']
-    metadata={'version':VERSION,'platform':'macos-'+arch,'sha256':hashlib.sha256(artifact.read_bytes()).hexdigest(),'bytes':artifact.stat().st_size,'signed':False,'signature':'PyInstaller ad-hoc only; no trusted Developer ID','notarized':False,'builder':'PyInstaller 6.22.3','sources':{name:hashlib.sha256((ROOT/'companion'/name).read_bytes()).hexdigest() for name in sources}}
+    metadata={'version':VERSION,'platform':'macos-'+arch,'sha256':hashlib.sha256(artifact.read_bytes()).hexdigest(),'bytes':artifact.stat().st_size,'signed':False,'signature':'PyInstaller ad-hoc only; no trusted Developer ID','notarized':False,'builder':'PyInstaller 6.22.3','sources':source_before}
     (output/'helper-manifest.json').write_text(json.dumps(metadata,indent=2)+'\n',encoding='utf-8')
     return metadata
 

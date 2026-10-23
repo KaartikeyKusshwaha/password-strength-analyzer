@@ -70,3 +70,11 @@ No artifact was uploaded, signed for distribution or deployed. Normal desktop
 installation, login-Keychain prompts and browser pairing remain unverified on
 both architectures. This closes native Intel build verification, not release
 signing or user acceptance.
+
+
+The shared 24 October source-inventory guard now rejects helper artifacts whose
+recorded code/build requirements differ from the server sources. Native builds
+use LF-normalized hashes and refuse changes during compilation. Existing Mac
+artifacts must be rebuilt; a checksum-valid artifact without the new inventory
+is unavailable. This does not supply Developer ID signing, notarization or
+installation/pairing acceptance. See DEVICE_HELPER.md for the stale-build scope.

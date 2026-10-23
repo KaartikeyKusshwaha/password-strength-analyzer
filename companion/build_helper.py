@@ -7,6 +7,7 @@ from pathlib import Path
 import subprocess
 import sys
 from companion.helper_client import VERSION
+from companion.helper_artifacts import source_inventory
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -21,10 +22,11 @@ def build(output=None,work=None):
     pyinstaller_license=Path(importlib.metadata.distribution('pyinstaller').locate_file('pyinstaller-6.22.3.dist-info/licenses/COPYING.txt'))
     if not pyinstaller_license.is_file():raise ValueError('PyInstaller license must be included.')
     command+=['--add-data',str(license_file)+os.pathsep+'licenses/python','--add-data',str(pyinstaller_license)+os.pathsep+'licenses/pyinstaller',str(ROOT/'companion/helper_windows.py')]
+    source_before=source_inventory('windows-x64')
     subprocess.run(command,cwd=ROOT,check=True)
+    if source_inventory('windows-x64')!=source_before:raise ValueError('Helper source changed during build; rebuild before publishing.')
     artifact=output/'SentinelOpsDeviceHelper.exe'
-    sources=['device_agent.py','helper_client.py','helper_windows.py','helper_desktop.py','macos_posture.py','build_helper.py']
-    metadata={'version':VERSION,'sha256':hashlib.sha256(artifact.read_bytes()).hexdigest(),'bytes':artifact.stat().st_size,'platform':'windows-x64','signed':False,'builder':'PyInstaller 6.22.3','sources':{name:hashlib.sha256((ROOT/'companion'/name).read_bytes()).hexdigest() for name in sources}}
+    metadata={'version':VERSION,'sha256':hashlib.sha256(artifact.read_bytes()).hexdigest(),'bytes':artifact.stat().st_size,'platform':'windows-x64','signed':False,'builder':'PyInstaller 6.22.3','sources':source_before}
     (output/'helper-manifest.json').write_text(json.dumps(metadata,indent=2)+'\n',encoding='utf-8')
     return metadata
 

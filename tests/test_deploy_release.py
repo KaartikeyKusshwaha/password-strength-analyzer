@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 from deploy.build_release import build_release
+from companion.helper_artifacts import source_inventory,WINDOWS,MACOS
 from deploy.build_provenance import source_digest,stamp
 
 
@@ -22,6 +23,9 @@ def fixture_release(tmp_path, monkeypatch):
         path = tmp_path / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text('public fixture', encoding='utf-8')
+    for name in set(WINDOWS+MACOS):
+        path=tmp_path/'companion'/name
+        if not path.exists():path.write_text('public helper source fixture',encoding='utf-8')
     monkeypatch.setattr('deploy.build_provenance.subprocess.check_output', lambda *args, **kwargs: 'a'*40)
     stamp(tmp_path,tmp_path,source_digest(tmp_path))
     return tmp_path
@@ -91,7 +95,7 @@ def test_incomplete_helper_build_is_never_published(tmp_path,monkeypatch):
     with pytest.raises(ValueError,match='unverified Windows helper'):build_release(root,root/'release.tar.gz')
     payload=b'fixture-not-real-executable'*50000
     (helper/'SentinelOpsDeviceHelper.exe').write_bytes(payload)
-    metadata=dict(version='0.2.0',platform='windows-x64',sha256=hashlib.sha256(payload).hexdigest(),bytes=len(payload),signed=False)
+    metadata=dict(sources=source_inventory('windows-x64',root/'companion'),version='0.2.0',platform='windows-x64',sha256=hashlib.sha256(payload).hexdigest(),bytes=len(payload),signed=False)
     (helper/'helper-manifest.json').write_text(json.dumps(metadata))
     output=root/'release.tar.gz';build_release(root,output)
     with tarfile.open(output,'r:gz') as archive:
@@ -108,7 +112,7 @@ def test_macos_helper_requires_matching_package_hash_and_is_allowlisted(tmp_path
     name='SentinelOpsDeviceHelper-macos-arm64.zip';payload=b'fixture-not-real-package'*50000
     (helper/name).write_bytes(payload)
     (helper/'private.json').write_text('never package this')
-    metadata=dict(version='0.2.0',platform='macos-arm64',sha256=hashlib.sha256(payload).hexdigest(),bytes=len(payload),signed=False,notarized=False)
+    metadata=dict(sources=source_inventory('macos-arm64',root/'companion'),version='0.2.0',platform='macos-arm64',sha256=hashlib.sha256(payload).hexdigest(),bytes=len(payload),signed=False,notarized=False)
     (helper/'helper-manifest.json').write_text(json.dumps(metadata))
     output=root/'release.tar.gz';build_release(root,output)
     with tarfile.open(output,'r:gz') as archive:
@@ -125,11 +129,24 @@ def test_helper_changed_after_status_check_does_not_replace_archive(tmp_path,mon
     helper=root/('companion/helper-dist' if windows else 'companion/helper-macos-dist');helper.mkdir()
     name='SentinelOpsDeviceHelper.exe' if windows else 'SentinelOpsDeviceHelper-'+platform+'.zip'
     artifact=helper/name;payload=b'disposable helper fixture'*50000;artifact.write_bytes(payload)
-    metadata=dict(version='0.2.0',platform=platform,sha256=hashlib.sha256(payload).hexdigest(),bytes=len(payload),signed=False)
+    metadata=dict(sources=source_inventory(platform,root/'companion'),version='0.2.0',platform=platform,sha256=hashlib.sha256(payload).hexdigest(),bytes=len(payload),signed=False)
     if not windows:metadata['notarized']=False
     (helper/'helper-manifest.json').write_text(json.dumps(metadata))
     output=root/'release.tar.gz';build_release(root,output);before=output.read_bytes()
     original=Path.read_bytes
     monkeypatch.setattr(Path,'read_bytes',lambda path:b'x'*len(payload) if path==artifact else original(path))
     with pytest.raises(ValueError,match='changed during release'):build_release(root,output)
+    assert output.read_bytes()==before
+
+
+def test_old_origin_helper_cannot_be_released_with_new_source(tmp_path,monkeypatch):
+    root=fixture_release(tmp_path,monkeypatch)
+    helper=root/'companion/helper-dist';helper.mkdir()
+    payload=b'disposable helper fixture'*50000
+    (helper/'SentinelOpsDeviceHelper.exe').write_bytes(payload)
+    metadata=dict(version='0.2.0',platform='windows-x64',sha256=hashlib.sha256(payload).hexdigest(),bytes=len(payload),signed=False,sources=source_inventory('windows-x64',root/'companion'))
+    (helper/'helper-manifest.json').write_text(json.dumps(metadata))
+    output=root/'release.tar.gz';build_release(root,output);before=output.read_bytes()
+    (root/'companion/helper_client.py').write_text('CLOUD_ORIGIN="https://new.example.test"')
+    with pytest.raises(ValueError,match='unverified Windows helper'):build_release(root,output)
     assert output.read_bytes()==before

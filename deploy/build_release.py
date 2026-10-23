@@ -26,16 +26,19 @@ def build_release(root=ROOT, output=None, *, build_root=None):
              'deploy/oracle/sentinelops-backup.service', 'deploy/oracle/sentinelops-backup.timer']
     files = [(build_root if name.startswith(('frontend/dist/','companion/extension/sentinelops-companion.zip')) else root) / name for name in fixed]
     files += sorted((root / 'backend').glob('*.py'))
+    # Runtime download checks compare helper manifests with these shipped sources.
+    from companion.helper_artifacts import WINDOWS,MACOS
+    files += [root/'companion'/name for name in set(WINDOWS+MACOS)]
     helper_files=[root/'companion/helper-dist'/name for name in ('SentinelOpsDeviceHelper.exe','helper-manifest.json')]
     if any(path.exists() for path in helper_files):
         if not all(path.is_file() for path in helper_files):raise ValueError('Incomplete Windows helper build.')
         from backend.helper_status import status
-        if not status(helper_files[0].parent)['available']:raise ValueError('Incomplete or unverified Windows helper build.')
+        if not status(helper_files[0].parent,source_root=root/'companion')['available']:raise ValueError('Incomplete or unverified Windows helper build.')
         files+=helper_files
     mac_root=root/'companion/helper-macos-dist'
     if mac_root.exists():
         from backend.helper_status import macos_status
-        metadata=macos_status(mac_root)
+        metadata=macos_status(mac_root,source_root=root/'companion')
         if not metadata['available']:raise ValueError('Incomplete or unverified macOS helper build.')
         files+=[mac_root/'helper-manifest.json',mac_root/metadata['filename']]
     files += sorted(path for path in (build_root / 'frontend/dist/assets').glob('*') if path.suffix in {'.js', '.css', '.wasm'})
