@@ -226,3 +226,18 @@ session-authenticated companion metadata and hides the missing download/install
 steps. Available builds display version and SHA-256. Focused validation passed
 23 backend helper/security tests, two frontend cases and production web build.
 This source fix is not yet deployed; native binaries remain undistributed.
+
+
+### Helper availability fix deployed — 24 October 2026
+
+Render deployment `dep-dbds3qrncjis73dajevg` at source `3ad19c8` completed Live
+in 59.9 seconds. After reloading the authenticated in-app Connections page,
+the session remained valid, downloadable companion remained 0.25.0, the missing
+Windows download link was absent, and the explicit deployment-unavailable/helper
+requirement message was visible. Screenshot:
+`data/render-helper-unavailable-confirmed.png`.
+CI run 40018301276 passed five built-extension browser cases, 73 PostgreSQL and
+backup checks (one platform skip), 42 helper/release checks and container startup.
+Local helper/security tests passed 23, frontend availability cases two, web build
+passed. This fixes missing-download guidance; it does not distribute a helper.
+Installed Edge cloud comparison-code pairing still awaits the native-popup step.
