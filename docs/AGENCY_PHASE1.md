@@ -357,3 +357,28 @@ and 'No response received yet'. The agent's status warns about command-consumpti
 permissions. This is not evidence that the diagnostic script ran or that guest
 firewall is the cause. No IAM grant, firewall disable, reboot or credential
 change was performed. Further guest diagnostics are required before deployment.
+
+Full regression checkpoint (23 October): all 592 backend tests passed with two
+platform-dependent skips; all 415 frontend tests passed. The full suites finished
+on current application source with no test failures. Known Starlette deprecation
+warning remains. These are local automated results, not real browser, signed
+helper, external audit or hosted-release acceptance. Current full-run logs and
+synthetic fixtures are in verification-final-regression-20261023 under the
+safe-to-delete folder. The b070414 native workflow now verifies ARM64 and Intel
+on standard public-repository runners without artifact upload; native run
+39952823001 has passed ARM64 and Intel is still in progress at this checkpoint.
+
+Native matrix completion: run 39952823001 at b070414 passed on ARM64 and Intel
+x86_64. Each completed 29 tests/one Windows-only skip, architecture-matching app
+build and frozen disposable-Keychain/TLS self-test. No binary artifact upload,
+release signing, notarization, installation or live browser pairing is claimed.
+The normal desktop acceptance and deployment gates remain open.
+
+Oracle permission follow-up: after explicit action-time user approval, created
+SentinelOpsPilotRunCommand in Default with a matching rule for only the existing
+pilot instance, then SentinelOpsPilotOwnCommandExecution. The rendered Active
+policy's sole statement uses instance-agent-command-execution-family and
+request.instance.id=target.instance.id. No user-group grants, object access,
+broad instance management or guest sudo was added. Guest diagnostics still need
+actual output; IAM propagation may delay polling. Saved confirmation screenshots
+are ignored operator evidence under data/oracle-deployment, not public source.

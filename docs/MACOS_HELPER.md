@@ -60,3 +60,13 @@ tests (one Windows-only skip), and frozen disposable-Keychain/TLS self-test:
 https://github.com/KaartikeyKusshwaha/password-strength-analyzer/actions/runs/39942791505
 This revision also embeds Mac observations in the single-file device download.
 No published binary, Intel build or normal desktop acceptance is implied.
+
+Native matrix run 39952823001 at b070414 completed successfully on both ARM64
+(macos-latest) and Intel x86_64 (macos-15-intel). Each ran 29 passing tests with
+the Windows DPAPI case skipped, built its architecture-specific application,
+and passed the frozen disposable-Keychain round-trip/removal and TLS self-test.
+https://github.com/KaartikeyKusshwaha/password-strength-analyzer/actions/runs/39952823001
+No artifact was uploaded, signed for distribution or deployed. Normal desktop
+installation, login-Keychain prompts and browser pairing remain unverified on
+both architectures. This closes native Intel build verification, not release
+signing or user acceptance.
