@@ -122,3 +122,40 @@ and exporter shell syntax are checked. No scheduled task is registered and no
 server exporter/key is installed by these tests. Live SSH currently times out;
 real off-server transfer, recurring execution and hosted restore acceptance are
 still required. Do not describe this as an active backup service until verified.
+
+
+## Neon Free pilot backup — 24 October 2026
+
+The reachable source is now Neon, using `deploy/postgres_backup_pull.py` and
+full TLS certificate/hostname validation. Oracle SSH and old archives remain
+untouched. Private connection/MFA/backup keys are separate from the encrypted
+archive directory and excluded from Git; their NTFS ACL grants only the current
+operator account. No keys are printed in receipts or command arguments.
+
+A real Neon export authenticated successfully at 2026-10-23T18:53:07Z (24 October
+in India), schema 15, SHA-256
+`5cc2283e95c76e0945bb011ca708e729cd35d5d730f38c8e8c9f5e0e78efa3ac`.
+It restored into an isolated SQLite directory (integrity `ok`) and a fresh local
+PostgreSQL schema, preserving the 15 migration markers and clearing bearer
+state. The drill database was stopped afterward; the live source was never
+imported into or changed. The snapshot contained **zero users and zero vaults**:
+this proves the new installation's archive transport/schema recovery only,
+not recovery of populated accounts or the old Oracle vaults.
+
+The installer completed a second real authenticated export before registering
+`SentinelOps Neon encrypted off-server backup`, daily at 04:00 local time,
+interactive current user, limited token, start when available, ten-minute limit
+and no overlapping runs. No Windows password, paid service or retention deletion
+is configured. Actual scheduled execution must be recorded separately; task
+registration alone does not prove recurring coverage. This PC must be on and
+signed in with connectivity and sufficient storage.
+
+
+A manually started execution through **Windows Task Scheduler** completed on
+24 October at 00:25:54 IST: task state `Ready`, `LastTaskResult: 0`, and a new
+authenticated receipt/archive
+`20261023T185554Z-1448681d69153982.sentinelbackup` appeared. This verifies the
+registered task action and current-user access, rather than just direct CLI
+execution. The first **timed** daily run is due at 04:00 IST on 24 October and
+has not yet been observed. It must be checked before claiming unattended daily
+coverage. Existing archives are never replaced or automatically deleted.

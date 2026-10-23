@@ -17,7 +17,10 @@ Use disposable accounts/credentials and retain no secrets in screenshots/logs.
   acceptance pass. External connector development is
   gated by three agency pain reports in the master plan; interviews are pending.
 - Verify encrypted backup/restore and deployment health, HTTPS and free-resource
-  limits. Oracle SSH was unavailable at the last preflight; deployment is pending.
+  limits. Render Free + Neon Free is live at app/companion 0.25.0 (83b3a1a).
+  A fresh empty-installation Neon export and isolated SQLite/PostgreSQL restore
+  passed; populated vault recovery and the next timed backup remain pending.
+  Oracle SSH remains unavailable; old data is preserved.
 - Use two separate browser profiles, two real disposable accounts, MFA, one
   client and two shared vaults. Keep only these tabs and the practice login page.
 - Confirm the final extension package once; keep comparison codes and passwords

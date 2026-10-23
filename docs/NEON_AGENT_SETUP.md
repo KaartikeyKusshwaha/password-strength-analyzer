@@ -137,3 +137,14 @@ helper source defaults point to this origin; existing pairings are preserved.
 Owner initialization, old-data migration, actual recurring off-server backup
 and consolidated browser acceptance remain pending. The old Oracle VM, keys and retained archives are preserved; this new
 empty database is not evidence that old vaults were migrated or recovered.
+
+
+## Off-server backup follow-up — 24 October 2026
+
+Created private operator inputs for the new Neon installation, took an actual
+authenticated encrypted export, restored into isolated SQLite and local
+PostgreSQL, and registered the 04:00 current-user Windows backup task after its
+required successful initial export. This was an empty-installation snapshot
+(zero users/vaults), not proof of old-account recovery. See
+[off-server backup evidence](OFFSERVER_BACKUPS.md). The next timed run and a
+populated-account restore remain separate gates. Oracle data was untouched.
