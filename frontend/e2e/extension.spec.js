@@ -57,7 +57,7 @@ test('built service worker and popup load without an account',async({installed})
   const id=new URL(worker.url()).host;
   await page.goto(`chrome-extension://${id}/popup.html`);
   await expect(page.getByText('SentinelOps',{exact:true})).toBeVisible();
-  await expect(page.getByText('Pair your private vault',{exact:true})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'Connect your cloud vault',exact:true})).toBeVisible();
 });
 
 test('real content-script messaging fills one exact-origin login without submitting',async({installed})=>{
