@@ -328,3 +328,32 @@ A fresh pinned live SSH preflight timed out. Live transfer, recurring scheduled
 execution, server configuration and hosted restore acceptance remain unverified.
 No new resource/account, charge, browser interaction, deployment or live-key
 mutation occurred. Synthetic fixtures/logs stay under the safe-to-delete folder.
+
+Matched-build release checkpoint (23 October): deployment packaging now requires
+source/output provenance. A new preparation command builds web, content, popup
+and worker into a new disposable candidate directory, validates the companion,
+then packages current backend sources with only those matched outputs. Source,
+revision, output or inventory changes reject packaging; failed candidates do not
+target installed builds. The record is a local stale-build guard, not a signed
+publisher attestation. Commit and deliberately bump versions before shipping;
+source candidates must not overwrite previously published version bytes.
+
+Validation: 29 release/provenance/extension tests passed, one OS-privileged symlink
+case skipped (separate simulated symlink rejection passed). A real isolated web/
+content/popup/worker build and validated 90-file deployment archive succeeded.
+The installed companion ZIP retains its previously published 0.23.0 checksum;
+no installed build, database, key or live process was replaced. Known dictionary
+chunk warnings remain. Candidate/logs/fixtures are consolidated under
+verification-release-provenance-20261023 in the safe-to-delete folder.
+
+Oracle diagnostic checkpoint: Edge access resumed. VM running/public IP unchanged,
+no attached network security groups. The subnet's single SSH rule used an older
+operator IP. After explicit user approval, replaced its source with the current
+single IPv4 /32, preserving TCP 22 and all unrelated rules. Oracle's rendered rule
+table verified the saved value. Public HTTPS remains reachable, but repeated
+pinned SSH/TCP-22 checks still time out. A bounded read-only Run Command request
+checks ssh service/listener, UFW and INPUT rules; Oracle shows Visible/Accepted
+and 'No response received yet'. The agent's status warns about command-consumption
+permissions. This is not evidence that the diagnostic script ran or that guest
+firewall is the cause. No IAM grant, firewall disable, reboot or credential
+change was performed. Further guest diagnostics are required before deployment.

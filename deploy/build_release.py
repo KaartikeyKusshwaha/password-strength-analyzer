@@ -3,15 +3,18 @@ import gzip
 import hashlib
 import io
 import json
-import subprocess
 import tarfile
 from pathlib import Path
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:sys.path.insert(0,str(ROOT))
+from deploy.build_provenance import verify
 
 
-def build_release(root=ROOT, output=None):
+def build_release(root=ROOT, output=None, *, build_root=None):
     root = Path(root).resolve()
+    build_root=Path(build_root or root).resolve()
     output = Path(output or root / 'data' / 'deploy' / 'sentinelops-release.tar.gz')
     fixed = ['requirements.txt', 'run.py', 'backend/public/proof.html',
              'backend/public/proof-view.js', 'backend/public/proof-view.css',
@@ -21,7 +24,7 @@ def build_release(root=ROOT, output=None):
              'deploy/oracle/app.env.example', 'deploy/oracle/Caddyfile.example',
              'deploy/oracle/backup.sh', 'deploy/oracle/backup-export.sh',
              'deploy/oracle/sentinelops-backup.service', 'deploy/oracle/sentinelops-backup.timer']
-    files = [root / name for name in fixed]
+    files = [(build_root if name.startswith(('frontend/dist/','companion/extension/sentinelops-companion.zip')) else root) / name for name in fixed]
     files += sorted((root / 'backend').glob('*.py'))
     helper_files=[root/'companion/helper-dist'/name for name in ('SentinelOpsDeviceHelper.exe','helper-manifest.json')]
     if any(path.exists() for path in helper_files):
@@ -33,14 +36,15 @@ def build_release(root=ROOT, output=None):
         metadata=macos_status(mac_root)
         if not metadata['available']:raise ValueError('Incomplete or unverified macOS helper build.')
         files+=[mac_root/'helper-manifest.json',mac_root/metadata['filename']]
-    files += sorted(path for path in (root / 'frontend/dist/assets').glob('*') if path.suffix in {'.js', '.css', '.wasm'})
-    if not (root / 'backend/app.py').is_file() or not (root / 'frontend/dist/assets').is_dir():
+    files += sorted(path for path in (build_root / 'frontend/dist/assets').glob('*') if path.suffix in {'.js', '.css', '.wasm'})
+    if not (root / 'backend/app.py').is_file() or not (build_root / 'frontend/dist/assets').is_dir():
         raise ValueError('Build the application before packaging its deployment.')
     payload = {}
     for file in files:
-        if not file.is_file() or file.is_symlink() or not file.resolve().is_relative_to(root):
+        base=build_root if file.is_relative_to(build_root) and (file.is_relative_to(build_root/'frontend/dist') or file==build_root/'companion/extension/sentinelops-companion.zip') else root
+        if not file.is_file() or file.is_symlink() or not file.resolve().is_relative_to(base):
             raise ValueError('Required deployment file is missing or linked outside the project.')
-        name = file.relative_to(root).as_posix()
+        name = file.relative_to(base).as_posix()
         content = file.read_bytes()
         # Windows checkout settings must not make shell/configuration files fail on Linux.
         if name.startswith('deploy/oracle/'):
@@ -48,11 +52,14 @@ def build_release(root=ROOT, output=None):
         payload[name] = content
     if not any(name.startswith('frontend/dist/assets/') for name in payload):
         raise ValueError('No frontend assets found.')
-    try:
-        revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
-    except (OSError, subprocess.CalledProcessError):
-        raise ValueError('A Git revision is required for deployment provenance.') from None
-    manifest = {'revision':revision, 'files':{name:hashlib.sha256(content).hexdigest() for name,content in sorted(payload.items())}}
+    provenance=verify(root,build_root)
+    # Compare the bytes already read into this archive, not just a second view of
+    # the output files, so concurrent output changes cannot produce a mixed pack.
+    if any(hashlib.sha256(payload.get(name,b'')).hexdigest()!=checksum for name,checksum in provenance['outputs'].items()):
+        raise ValueError('Build outputs changed during release packaging.')
+    revision=provenance['revision']
+    payload['build-provenance.json']=(json.dumps(provenance,sort_keys=True,indent=2)+'\n').encode()
+    manifest = {'revision':revision, 'source_digest':provenance['source_digest'], 'files':{name:hashlib.sha256(content).hexdigest() for name,content in sorted(payload.items())}}
     payload['release-manifest.json'] = (json.dumps(manifest, indent=2)+'\n').encode()
     output.parent.mkdir(parents=True, exist_ok=True)
     buffer = io.BytesIO()

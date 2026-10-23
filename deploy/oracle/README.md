@@ -20,9 +20,12 @@ public VM address before requesting HTTPS. No domain purchase is included.
 
 ## Build locally, stage, inspect, then install
 
-1. Run the React and companion build/package commands from the main README.
-2. Run `.venv\Scripts\python.exe deploy/build_release.py` from the repository root.
-   This writes `data/deploy/sentinelops-release.tar.gz` and prints its SHA-256.
+1. Install the pinned frontend dependencies using the committed lockfile.
+2. Run `.venv\Scripts\python.exe deploy/prepare_release.py --destination C:\PrivateBuilds\SentinelOps-candidate`
+   from the repository root, using a new directory under an existing parent.
+   This builds the frontend and companion together and writes the matched archive
+   under that candidate directory. See ../../docs/RELEASE_CANDIDATES.md. Direct
+   packaging rejects stale or missing build-provenance records.
    The selected payload includes Python modules, built frontend, packaged
    companion and deployment templates. It excludes local .env, SQLite databases,
    keys, browser/device connections, tests and working data.

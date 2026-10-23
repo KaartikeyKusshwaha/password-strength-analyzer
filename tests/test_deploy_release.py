@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 from deploy.build_release import build_release
+from deploy.build_provenance import source_digest,stamp
 
 
 def fixture_release(tmp_path, monkeypatch):
@@ -21,7 +22,8 @@ def fixture_release(tmp_path, monkeypatch):
         path = tmp_path / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text('public fixture', encoding='utf-8')
-    monkeypatch.setattr('deploy.build_release.subprocess.check_output', lambda *args, **kwargs: 'a'*40)
+    monkeypatch.setattr('deploy.build_provenance.subprocess.check_output', lambda *args, **kwargs: 'a'*40)
+    stamp(tmp_path,tmp_path,source_digest(tmp_path))
     return tmp_path
 
 
@@ -70,6 +72,8 @@ def test_windows_checkout_exports_linux_shell_and_service_line_endings(tmp_path,
     service=b'[Service]\r\nUser=sentinelops\r\n'
     (root/'deploy/oracle/install.sh').write_bytes(script)
     (root/'deploy/oracle/sentinelops.service').write_bytes(service)
+    (root/'build-provenance.json').unlink()
+    stamp(root,root,source_digest(root))
     output=root/'release.tar.gz'
     build_release(root,output)
     with tarfile.open(output,'r:gz') as archive:
