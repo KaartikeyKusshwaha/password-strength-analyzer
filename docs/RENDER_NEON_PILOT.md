@@ -177,3 +177,12 @@ restore of a retained PostgreSQL archive, failure without receipt, safe input
 configuration and sanitized CLI errors. The extended Windows task installer
 passed PowerShell parser validation; actual task registration/next-run delivery
 remain gated on the live Neon connection and initial successful backup.
+
+Clean-runner cross-version verification succeeded at `684f07c` in
+[run 39984582857](https://github.com/KaartikeyKusshwaha/password-strength-analyzer/actions/runs/39984582857):
+73 tests passed against disposable PostgreSQL 17 on Linux/Python 3.12, with one
+Windows Git-SSH executable check skipped. This includes agency workflows,
+authenticated migration, encrypted archive recovery and off-server retention.
+The same run also rebuilt the Docker image and passed its non-root artifact and
+HTTP startup checks. Local PostgreSQL 15 coverage and this clean PostgreSQL 17
+coverage still do not prove live Neon/Render acceptance or a recurring backup.
