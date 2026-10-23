@@ -117,7 +117,7 @@ def test_malformed_localized_failed_or_timed_out_tools_never_become_enabled():
     with pytest.raises(ValueError):macos_posture.command('filevault; rm -rf anything')
     report=macos_posture.collect(lambda tool:{'state':'disabled'} if tool=='filevault' else {'error':'permission_denied'})
     assert report['version']==2 and len(report['checks'])==3 and 'raw' not in json.dumps(report)
-    with patch('companion.macos_posture.collect',return_value=report),patch.object(device_agent,'posture_command') as windows:
+    with patch.object(device_agent,'collect_macos_posture',return_value=report),patch.object(device_agent,'posture_command') as windows:
         assert device_agent.collect_posture(system='Darwin')==report;windows.assert_not_called()
 
 def test_macos_schema_and_paired_result_reach_extension_as_states_not_windows_findings(system):
