@@ -111,24 +111,28 @@ def pull(config, *, transport=transfer, clock=time.time):
         stage = Path(temporary)/'snapshot.part'
         private_write(stage,b'')
         transport(config,stage)
-        manifest,_,_,archive_digest = read_backup(stage,config['backup_key_file'])
-        try:
-            created = datetime.fromisoformat(manifest['created_at'])
-            if not created.tzinfo or not -300 <= clock()-created.timestamp() <= 86400:
-                raise ValueError()
-        except (ValueError,TypeError):
-            raise BackupError('Snapshot timestamp is missing, future-dated or stale.') from None
-        name = created.astimezone(timezone.utc).strftime('%Y%m%dT%H%M%SZ')+'-'+archive_digest[:16]+'.sentinelbackup'
-        target = destination/name
-        # Exclusive destination creation; never replace an earlier archive/link.
-        private_write(target,stage.read_bytes())
-        # Authentication includes database integrity, schema, MFA key and audit.
-        result={'archive':name,'sha256':archive_digest,'schema':manifest['schema'],
-                'created_at':manifest['created_at'],'verified_at':datetime.fromtimestamp(clock(),timezone.utc).isoformat(),
-                'verification':'Authenticated archive, SQLite/schema/MFA-key/audit validation; not a restore drill.'}
-        private_write(destination/(name+'.receipt.json'),(json.dumps(result,sort_keys=True)+'\n').encode())
-        return result
+        return retain_verified(stage,config['backup_key_file'],destination,clock=clock)
 
+
+def retain_verified(stage,key_file,destination,*,clock=time.time):
+    """Publish only authenticated, fresh ciphertext with an exclusive receipt."""
+    manifest,_,_,archive_digest = read_backup(stage,key_file)
+    try:
+        created = datetime.fromisoformat(manifest['created_at'])
+        if not created.tzinfo or not -300 <= clock()-created.timestamp() <= 86400:
+            raise ValueError()
+    except (ValueError,TypeError):
+        raise BackupError('Snapshot timestamp is missing, future-dated or stale.') from None
+    name = created.astimezone(timezone.utc).strftime('%Y%m%dT%H%M%SZ')+'-'+archive_digest[:16]+'.sentinelbackup'
+    target = destination/name
+    # Exclusive destination creation; never replace an earlier archive/link.
+    private_write(target,stage.read_bytes())
+    # Authentication includes database integrity, schema, MFA key and audit.
+    result={'archive':name,'sha256':archive_digest,'schema':manifest['schema'],
+            'created_at':manifest['created_at'],'verified_at':datetime.fromtimestamp(clock(),timezone.utc).isoformat(),
+            'verification':'Authenticated archive, SQLite/schema/MFA-key/audit validation; not a restore drill.'}
+    private_write(destination/(name+'.receipt.json'),(json.dumps(result,sort_keys=True)+'\n').encode())
+    return result
 
 def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)

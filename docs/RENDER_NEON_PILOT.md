@@ -88,6 +88,24 @@ no database contents or credentials are printed. Both directions have size/row
 bounds. Archives remain readable by the existing isolated SQLite restore tool.
 These commands are operator-only; no database-download web route is added.
 
+For PC-held recurring backups, `deploy/postgres_backup_pull.py --config <file>`
+reads only these four absolute local paths from a private JSON configuration:
+`database_url_file`, `server_key_file`, `backup_key_file`, `destination`.
+The first three must be separate regular files outside the destination. They
+contain the certificate-verified PostgreSQL URL, matching persistent MFA key
+and generated backup key, respectively; their contents never enter command
+arguments or receipts. Use a private directory with access restricted to the
+operator. The destination stores authenticated encrypted archives and receipts
+only. Failed connection/export/authentication does not create a success receipt.
+
+`deploy/Install-BackupTask.ps1 -Python <python.exe> -Config <private-config>
+-Backend postgres -TaskName 'SentinelOps Neon encrypted off-server backup'`
+first requires an actual successful backup, then registers a daily 04:00 local
+interactive-user job. It never replaces an existing task. This PC must be on,
+signed in and network-connected; missed work runs when available. No retention
+deletion occurs. The source database can wake for backup without keeping the
+Render web service awake. No live Neon job has been registered or proven yet.
+
 The `Render pilot container verification` workflow builds the actual Dockerfile
 on a public-repository Linux runner without deployment secrets. It checks the
 packaged extension, non-root runtime and isolated disposable SQLite HTTP startup;
@@ -153,3 +171,9 @@ The registry audit covered all 234 lockfile entries; historical accidental
 version/range substitutions for React Refresh, decimal.js, jsdom and fsevents
 were corrected against official metadata. No dependency integrity bypass or
 runtime root-user workaround was used. Deployment and Neon TLS remain unverified.
+
+Off-server follow-up: 23 PostgreSQL/SSH backup tests passed, including isolated
+restore of a retained PostgreSQL archive, failure without receipt, safe input
+configuration and sanitized CLI errors. The extended Windows task installer
+passed PowerShell parser validation; actual task registration/next-run delivery
+remain gated on the live Neon connection and initial successful backup.

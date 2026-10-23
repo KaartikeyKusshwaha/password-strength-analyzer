@@ -64,7 +64,11 @@ Use disposable accounts/credentials and retain no secrets in screenshots/logs.
 11. Separately verify an actual encrypted off-server pull, fresh archive receipt,
     isolated restore and the next scheduled PC run. Confirm failed SSH/authentication
     gives a failed task result and creates no success receipt. This operational
-    check needs the VM reachable; a mock transfer or task registration is insufficient.
+    check needs the configured source reachable (Oracle SSH or Neon PostgreSQL);
+    a local synthetic transfer or task registration is insufficient. For Neon,
+    use the PostgreSQL backup path and separately verify certificate-validated
+    connectivity and the matching persistent MFA key. Existing Oracle backups
+    stay retained until the live migration and restore have succeeded.
 
 Record each result as pass/fail/blocked with commit, profile, time and redacted
 evidence. Any failure is fixed and its affected cases repeated; a single session
