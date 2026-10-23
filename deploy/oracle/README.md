@@ -65,8 +65,11 @@ the timer. Keep a protected copy of that key off the VM. The fresh installer
 does not enable these optional units automatically.
 
 Snapshots remain on the VM until an operator copies them elsewhere. A timer
-alone does not protect against VM/disk loss. No automatic deletion or offsite
-transfer is configured; monitor storage and arrange retention deliberately.
+alone does not protect against VM/disk loss. The release now includes the
+optional fixed `backup-export.sh` command; ../../docs/OFFSERVER_BACKUPS.md covers
+the authenticated PC pull and verification-first daily Windows task. Neither is
+activated by the fresh installer. No automatic retention deletion is configured;
+monitor storage and arrange retention deliberately.
 Database migration, recurring offsite retention and independent security review
 remain deployment gates. Update/rollback is also a separate
 procedure requiring a pre-update backup; rerunning this fresh installer refuses

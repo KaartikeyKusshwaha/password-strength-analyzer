@@ -18,7 +18,9 @@ def build_release(root=ROOT, output=None):
              'companion/__init__.py', 'companion/device_agent.py',
              'companion/extension/sentinelops-companion.zip', 'frontend/dist/index.html',
              'deploy/oracle/sentinelops.service', 'deploy/oracle/install.sh',
-             'deploy/oracle/app.env.example', 'deploy/oracle/Caddyfile.example']
+             'deploy/oracle/app.env.example', 'deploy/oracle/Caddyfile.example',
+             'deploy/oracle/backup.sh', 'deploy/oracle/backup-export.sh',
+             'deploy/oracle/sentinelops-backup.service', 'deploy/oracle/sentinelops-backup.timer']
     files = [root / name for name in fixed]
     files += sorted((root / 'backend').glob('*.py'))
     helper_files=[root/'companion/helper-dist'/name for name in ('SentinelOpsDeviceHelper.exe','helper-manifest.json')]

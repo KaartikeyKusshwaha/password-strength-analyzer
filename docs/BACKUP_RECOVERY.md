@@ -1,6 +1,6 @@
 # SQLite operator backup and recovery
 
-The offline tool `python -m backend.backups` supports schema-8, schema-9 and schema-10
+The offline tool `python -m backend.backups` supports schema versions 8 through 15
 SQLite application databases. It uses SQLite's online backup API to include committed WAL
 pages while the app runs. It encrypts the database and server MFA-encryption
 key together with AES-256-GCM, a fresh 96-bit nonce and a version-bound header.
@@ -59,7 +59,7 @@ archive paths are extracted. Plaintext staging exists briefly on disk; normal
 cleanup is not secure erasure and a machine crash can leave staging behind.
 Use an encrypted disk, private parent directory and inspect it after failures.
 
-A schema-8 or schema-9 archive is validated in its original form, then upgraded to schema 10
+An older supported archive is validated in its original form, then upgraded to schema 15
 only in the new destination. The encrypted manifest must match the actual
 database version. Schema-9 backups additionally require both passkey tables,
 their expected layout and global credential-ID uniqueness constraint. Missing,
@@ -95,7 +95,9 @@ changes since that date before promotion. The tool does not merge newer data,
 prove freshness, supply independent rollback protection, rotate shared-vault
 keys, deploy the restored service, or switch the live DATA_DIR automatically.
 The independent crypto/security review and production database/deployment gates
-remain open. No recurring backup scheduler or offsite transfer is configured.
+remain open. OFFSERVER_BACKUPS.md documents the prepared encrypted SSH pull and
+daily Windows task. These tools are not active off-server coverage until an
+actual authenticated pull and recurring execution have been verified.
 
 On 20 October 2026 an actual schema-8 encrypted backup was restored into an
 isolated ignored data directory and migrated to schema 9. Account protection,

@@ -14,7 +14,9 @@ def fixture_release(tmp_path, monkeypatch):
              'companion/device_agent.py', 'companion/extension/sentinelops-companion.zip',
              'frontend/dist/index.html', 'frontend/dist/assets/app.js',
              'deploy/oracle/sentinelops.service', 'deploy/oracle/install.sh',
-             'deploy/oracle/app.env.example', 'deploy/oracle/Caddyfile.example']
+             'deploy/oracle/app.env.example', 'deploy/oracle/Caddyfile.example',
+             'deploy/oracle/backup.sh', 'deploy/oracle/backup-export.sh',
+             'deploy/oracle/sentinelops-backup.service', 'deploy/oracle/sentinelops-backup.timer']
     for name in files:
         path = tmp_path / name
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -35,6 +37,7 @@ def test_release_excludes_operator_data_and_records_actual_payload_hashes(tmp_pa
     with tarfile.open(fileobj=io.BytesIO(output.read_bytes()),mode='r:gz') as archive:
         names=archive.getnames()
         assert {'backend/public/proof.html','backend/public/proof-view.js','backend/public/proof-view.css'}<=set(names)
+        assert {'deploy/oracle/backup.sh','deploy/oracle/backup-export.sh','deploy/oracle/sentinelops-backup.service','deploy/oracle/sentinelops-backup.timer'}<=set(names)
         assert not any(name.startswith('data/') or name.endswith(('.env','.map','.pyc','private.json')) for name in names)
         manifest=json.load(archive.extractfile('release-manifest.json'))
         assert manifest['revision']=='a'*40

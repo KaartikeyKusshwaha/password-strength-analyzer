@@ -301,3 +301,30 @@ annotations. Known Starlette deprecation and dictionary chunk warnings remain.
 Generated verification artifacts are consolidated in
 SentinelOps-Safe-To-Delete-20261022/verification-offboarding-posture-20261023.
 This checkpoint does not replace the deferred browser or independent audit gates.
+
+Off-server backup preparation checkpoint (23 October): a fixed no-argument
+root-owned exporter streams an encrypted online snapshot over pinned SSH. The
+operator-PC pull ignores ambient SSH config/agents/forwarding, uses a verified
+known-hosts file, enforces transfer time/size/disk-space bounds, authenticates
+AES-GCM and checks SQLite/schema/MFA-key/audit integrity before retaining a fresh
+archive and receipt. Existing archives are never replaced or deleted. Keys must
+remain outside the archive folder. The Windows task installer requires a real
+successful pull before daily registration; it uses the signed-in user's limited
+interactive token, prevents overlap and stores no Windows password. A PC that is
+off or signed out provides no scheduled coverage. No task or remote exporter was
+activated. The release allowlist now includes all optional backup templates;
+previous archives omitted these files. See OFFSERVER_BACKUPS.md.
+
+Validation: initial 20 tests passed; native Git Windows SSH -G inspection then
+caught a quoting issue not covered by mocks. Explicit single-quoted forward-slash
+known-host paths and a real executable regression fixed it. Final backup/restore/
+release regression: 33 passed; final focused suite: 16 passed, including real
+binary child-process output and oversized-transfer rejection. Synthetic accepted
+archives restored in isolation with sessions revoked and audit validation. Wrong
+key/tampered/stale/future archives and partial/hung transfers create no success
+receipt. PowerShell task and Bash exporter syntax passed; unexpected exporter
+arguments were rejected before side effects. Known Starlette warning remains.
+A fresh pinned live SSH preflight timed out. Live transfer, recurring scheduled
+execution, server configuration and hosted restore acceptance remain unverified.
+No new resource/account, charge, browser interaction, deployment or live-key
+mutation occurred. Synthetic fixtures/logs stay under the safe-to-delete folder.

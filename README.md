@@ -97,6 +97,8 @@ Create the vault yourself and choose its master passphrase locally. The app sign
 
 SQLite remains the **local development** store. [Encrypted operator backups and isolated restore tooling](docs/BACKUP_RECOVERY.md) are available. Postgres migration, production deployment/backup operations, independent client/sharing audit, mobile clients, native passkey acceptance and extension-store publication are unfinished production gates. Shared vaults are a development preview with explicit limitations in the threat model.
 
+[Off-server pilot backup preparation](docs/OFFSERVER_BACKUPS.md) adds authenticated encrypted SSH pulls to the operator PC and a verification-first daily Windows task. It is not active until live transfer and recurring execution are verified; no paid storage or automatic retention deletion is introduced.
+
 For a persistent Python/SQLite pilot, [Oracle VM deployment files](deploy/oracle/README.md) provide a no-Docker systemd/HTTPS setup and a release bundle that excludes local data and secrets. Actual VM deployment and public browser acceptance still require verification.
 
 ## Browser companion

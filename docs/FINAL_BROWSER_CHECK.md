@@ -61,6 +61,10 @@ Use disposable accounts/credentials and retain no secrets in screenshots/logs.
 10. Test recovery and a disposable restore; pre-restore grants and approvals must
     remain invalid. Check the normal four/five-item control-room navigation,
     disabled `/advanced`, no email/phishing remnants and mobile-width layouts.
+11. Separately verify an actual encrypted off-server pull, fresh archive receipt,
+    isolated restore and the next scheduled PC run. Confirm failed SSH/authentication
+    gives a failed task result and creates no success receipt. This operational
+    check needs the VM reachable; a mock transfer or task registration is insufficient.
 
 Record each result as pass/fail/blocked with commit, profile, time and redacted
 evidence. Any failure is fixed and its affected cases repeated; a single session
