@@ -388,3 +388,16 @@ identify the next matched candidate as 0.24.0. The previously published 0.23.0
 companion and installed builds remain unchanged. This version bump does not
 publish, deploy, migrate data or establish browser acceptance. Prepare the
 isolated candidate from its committed source using RELEASE_CANDIDATES.md.
+
+Helper integrity follow-up: Windows helper availability now hashes the actual
+binary and rejects mismatched platform, malformed metadata, linked inputs and
+oversized manifests. Release packaging validates the Windows helper before
+including it and compares the exact archived Windows/macOS bytes with their
+recorded hashes again after reading, preserving any prior archive on mismatch.
+This detects changed bytes; a matching manifest is not a trusted publisher
+signature or proof that a helper matches current source. Existing installed
+helper artifacts were not rebuilt or replaced by this check.
+Validation: 57 helper/release/provenance/package tests passed with two platform
+skips; final download-route/extension-security/packaging integration passed 24.
+The same-size tamper test returns HTTP 404 instead of serving a changed helper;
+post-validation replacement is rejected for both Windows and macOS packages.

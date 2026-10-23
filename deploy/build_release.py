@@ -29,6 +29,8 @@ def build_release(root=ROOT, output=None, *, build_root=None):
     helper_files=[root/'companion/helper-dist'/name for name in ('SentinelOpsDeviceHelper.exe','helper-manifest.json')]
     if any(path.exists() for path in helper_files):
         if not all(path.is_file() for path in helper_files):raise ValueError('Incomplete Windows helper build.')
+        from backend.helper_status import status
+        if not status(helper_files[0].parent)['available']:raise ValueError('Incomplete or unverified Windows helper build.')
         files+=helper_files
     mac_root=root/'companion/helper-macos-dist'
     if mac_root.exists():
@@ -50,6 +52,16 @@ def build_release(root=ROOT, output=None, *, build_root=None):
         if name.startswith('deploy/oracle/'):
             content = content.replace(b'\r\n', b'\n')
         payload[name] = content
+    # Recheck the bytes already read, so a helper replaced after its status check
+    # cannot be packaged with a checksum belonging to a different binary.
+    for platform_root,artifact_name in (('companion/helper-dist','SentinelOpsDeviceHelper.exe'),('companion/helper-macos-dist',None)):
+        metadata_bytes=payload.get(platform_root+'/helper-manifest.json')
+        if metadata_bytes is None:continue
+        metadata=json.loads(metadata_bytes)
+        name=artifact_name or 'SentinelOpsDeviceHelper-'+metadata['platform']+'.zip'
+        artifact=payload.get(platform_root+'/'+name,b'')
+        if len(artifact)!=metadata['bytes'] or hashlib.sha256(artifact).hexdigest()!=metadata['sha256']:
+            raise ValueError('Helper build changed during release packaging.')
     if not any(name.startswith('frontend/dist/assets/') for name in payload):
         raise ValueError('No frontend assets found.')
     provenance=verify(root,build_root)

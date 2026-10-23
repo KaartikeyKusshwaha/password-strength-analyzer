@@ -88,10 +88,19 @@ def test_incomplete_helper_build_is_never_published(tmp_path,monkeypatch):
     (helper/'SentinelOpsDeviceHelper.exe').write_bytes(b'build fixture')
     with pytest.raises(ValueError,match='Incomplete Windows helper'):build_release(root,root/'release.tar.gz')
     (helper/'helper-manifest.json').write_text('{}',encoding='utf-8')
+    with pytest.raises(ValueError,match='unverified Windows helper'):build_release(root,root/'release.tar.gz')
+    payload=b'fixture-not-real-executable'*50000
+    (helper/'SentinelOpsDeviceHelper.exe').write_bytes(payload)
+    metadata=dict(version='0.2.0',platform='windows-x64',sha256=hashlib.sha256(payload).hexdigest(),bytes=len(payload),signed=False)
+    (helper/'helper-manifest.json').write_text(json.dumps(metadata))
     output=root/'release.tar.gz';build_release(root,output)
     with tarfile.open(output,'r:gz') as archive:
         assert 'companion/helper-dist/SentinelOpsDeviceHelper.exe' in archive.getnames()
         assert 'companion/helper-dist/helper-manifest.json' in archive.getnames()
+    before=output.read_bytes()
+    (helper/'SentinelOpsDeviceHelper.exe').write_bytes(b'x'*len(payload))
+    with pytest.raises(ValueError,match='unverified Windows helper'):build_release(root,output)
+    assert output.read_bytes()==before
 
 def test_macos_helper_requires_matching_package_hash_and_is_allowlisted(tmp_path,monkeypatch):
     root=fixture_release(tmp_path,monkeypatch);helper=root/'companion/helper-macos-dist';helper.mkdir()
@@ -107,3 +116,20 @@ def test_macos_helper_requires_matching_package_hash_and_is_allowlisted(tmp_path
         assert 'companion/helper-macos-dist/private.json' not in archive.getnames()
     (helper/name).write_bytes(b'x'*len(payload))
     with pytest.raises(ValueError,match='macOS helper'):build_release(root,output)
+
+
+@pytest.mark.parametrize('platform',['windows-x64','macos-arm64'])
+def test_helper_changed_after_status_check_does_not_replace_archive(tmp_path,monkeypatch,platform):
+    root=fixture_release(tmp_path,monkeypatch)
+    windows=platform=='windows-x64'
+    helper=root/('companion/helper-dist' if windows else 'companion/helper-macos-dist');helper.mkdir()
+    name='SentinelOpsDeviceHelper.exe' if windows else 'SentinelOpsDeviceHelper-'+platform+'.zip'
+    artifact=helper/name;payload=b'disposable helper fixture'*50000;artifact.write_bytes(payload)
+    metadata=dict(version='0.2.0',platform=platform,sha256=hashlib.sha256(payload).hexdigest(),bytes=len(payload),signed=False)
+    if not windows:metadata['notarized']=False
+    (helper/'helper-manifest.json').write_text(json.dumps(metadata))
+    output=root/'release.tar.gz';build_release(root,output);before=output.read_bytes()
+    original=Path.read_bytes
+    monkeypatch.setattr(Path,'read_bytes',lambda path:b'x'*len(payload) if path==artifact else original(path))
+    with pytest.raises(ValueError,match='changed during release'):build_release(root,output)
+    assert output.read_bytes()==before
