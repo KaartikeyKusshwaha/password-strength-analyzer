@@ -41,11 +41,12 @@ load_dotenv(ROOT / ".env")
 
 
 class Settings:
-    def __init__(self, data_dir=None, origin=None, groq_key=None, model=None, scan_hosts=None, admin_mfa_required=True):
+    def __init__(self, data_dir=None, origin=None, groq_key=None, model=None, scan_hosts=None, admin_mfa_required=True, database_url=None):
         if type(admin_mfa_required) is not bool:raise ValueError('admin_mfa_required must be boolean')
         self.admin_mfa_required=admin_mfa_required
+        self.database_url=os.getenv('DATABASE_URL','') if database_url is None else database_url
         self.data_dir = Path(data_dir or os.getenv("DATA_DIR", ROOT / "data"))
-        self.origin = (origin or os.getenv("APP_ORIGIN", "http://127.0.0.1:8110")).rstrip("/")
+        self.origin = (origin or os.getenv("APP_ORIGIN") or os.getenv('RENDER_EXTERNAL_URL') or "http://127.0.0.1:8110").rstrip("/")
         parsed = urlsplit(self.origin)
         if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.path or parsed.query or parsed.fragment or parsed.username:
             raise ValueError("APP_ORIGIN must be an HTTP(S) origin without path or credentials.")
@@ -313,17 +314,28 @@ def must(value, message="Record not found", code=404):
 def create_app(settings=None):
     settings = settings or Settings()
     settings.data_dir.mkdir(parents=True, exist_ok=True)
-    store = Store(settings.data_dir / "sentinelops.db")
+    if settings.database_url:
+        from .postgres import PostgresStore
+        # Hosted storage must not generate a new MFA key on each ephemeral
+        # container restart. Deployment supplies the same protected secret.
+        encryption_key=os.getenv('APP_ENCRYPTION_KEY','')
+        if not encryption_key:raise ValueError('PostgreSQL requires a persistent APP_ENCRYPTION_KEY deployment secret.')
+        cipher=Fernet(encryption_key.encode('ascii'))
+        store=PostgresStore(settings.database_url)
+    else:
+        store = Store(settings.data_dir / "sentinelops.db")
     key_path = settings.data_dir / ".encryption-key"
-    if not key_path.exists():
+    if not settings.database_url and not key_path.exists():
         key_path.write_bytes(Fernet.generate_key())
         key_path.chmod(0o600)
-    cipher = Fernet(key_path.read_bytes().strip())
+    if not settings.database_url:cipher = Fernet(key_path.read_bytes().strip())
     bootstrap_path = settings.data_dir / ".bootstrap-token"
     with store.connect() as c:
         first_run = not c.execute("SELECT 1 FROM users LIMIT 1").fetchone()
     if first_run and not bootstrap_path.exists():
-        bootstrap_path.write_text(secrets.token_urlsafe(32), encoding="utf-8")
+        bootstrap_token=os.getenv('BOOTSTRAP_TOKEN','') if settings.database_url else secrets.token_urlsafe(32)
+        if not 32<=len(bootstrap_token)<=128:raise ValueError('New PostgreSQL installation requires a private BOOTSTRAP_TOKEN deployment secret.')
+        bootstrap_path.write_text(bootstrap_token, encoding="utf-8")
         bootstrap_path.chmod(0o600)
     dummy_password = hash_password(secrets.token_urlsafe(24))
     executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="sentinel-agent")

@@ -10,7 +10,7 @@ from deploy.build_provenance import source_digest,stamp
 
 
 def fixture_release(tmp_path, monkeypatch):
-    files = ['requirements.txt', 'run.py', 'backend/app.py', 'backend/public/proof.html',
+    files = ['requirements.txt', 'run.py', 'backend/app.py', 'backend/postgres_layout.json', 'backend/public/proof.html',
              'backend/public/proof-view.js', 'backend/public/proof-view.css', 'companion/__init__.py',
              'companion/device_agent.py', 'companion/extension/sentinelops-companion.zip',
              'frontend/dist/index.html', 'frontend/dist/assets/app.js',

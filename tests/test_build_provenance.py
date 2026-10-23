@@ -11,7 +11,7 @@ from deploy.prepare_release import prepare
 from test_deploy_release import fixture_release
 
 
-@pytest.mark.parametrize('changed',['backend/app.py','frontend/src/new.jsx','frontend/index.html','companion/extension/public/manifest.json','deploy/oracle/install.sh'])
+@pytest.mark.parametrize('changed',['backend/app.py','backend/postgres_layout.json','Dockerfile','render.yaml','.dockerignore','frontend/src/new.jsx','frontend/index.html','companion/extension/public/manifest.json','deploy/oracle/install.sh'])
 def test_changed_source_prevents_stale_release_without_replacing_archive(tmp_path,monkeypatch,changed):
     root=fixture_release(tmp_path,monkeypatch);output=root/'release.tar.gz'
     build_release(root,output);original=output.read_bytes()

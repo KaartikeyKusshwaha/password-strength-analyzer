@@ -17,7 +17,7 @@ def hashed(path, root):
 def source_digest(root):
     root=Path(root)
     files=set()
-    for name in ('requirements.txt','run.py','frontend/index.html','frontend/package.json','frontend/package-lock.json','frontend/vite.config.js'):
+    for name in ('requirements.txt','run.py','backend/postgres_layout.json','Dockerfile','render.yaml','.dockerignore','frontend/index.html','frontend/package.json','frontend/package-lock.json','frontend/vite.config.js'):
         path=root/name
         if path.exists():files.add(path)
     for name in ('backend','frontend/src','companion','deploy'):

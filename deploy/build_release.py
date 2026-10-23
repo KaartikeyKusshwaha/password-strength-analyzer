@@ -16,7 +16,7 @@ def build_release(root=ROOT, output=None, *, build_root=None):
     root = Path(root).resolve()
     build_root=Path(build_root or root).resolve()
     output = Path(output or root / 'data' / 'deploy' / 'sentinelops-release.tar.gz')
-    fixed = ['requirements.txt', 'run.py', 'backend/public/proof.html',
+    fixed = ['requirements.txt', 'run.py', 'backend/postgres_layout.json', 'backend/public/proof.html',
              'backend/public/proof-view.js', 'backend/public/proof-view.css',
              'companion/__init__.py', 'companion/device_agent.py',
              'companion/extension/sentinelops-companion.zip', 'frontend/dist/index.html',
