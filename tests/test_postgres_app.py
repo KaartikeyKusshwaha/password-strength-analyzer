@@ -8,6 +8,10 @@ from test_postgres_store import store_for
 import test_access_workflows as workflows
 import test_client_access as client_access
 import test_proof_packs as proof_packs
+import test_handoffs as handoffs
+import test_extension_ownership as extension_ownership
+import test_access_reviews as access_reviews
+import test_access_leases as access_leases
 
 
 @pytest.fixture
@@ -50,6 +54,19 @@ def test_existing_proof_pack_generation_on_postgres(pg_system,tmp_path):
     proof_packs.test_client_snapshot_pdf_real_removals_posture_redaction_and_private_then_shared(pg_system,tmp_path)
 
 
+@pytest.mark.parametrize('case',[
+    handoffs.test_handoff_requires_real_removal_rotation_and_independent_fresh_signoff,
+    extension_ownership.test_extension_transfer_uses_signed_protocol_and_completes_real_handoff,
+    access_reviews.test_weekly_pipeline_requires_consent_drafts_then_fresh_signoff_and_no_access_effects,
+],ids=lambda case:case.__name__)
+def test_existing_extension_workflows_on_postgres(pg_system,case):
+    case(pg_system)
+
+
+def test_freelancer_expiry_removal_rotation_and_rechecks_on_postgres(pg_system,monkeypatch):
+    access_leases.test_thirty_day_policy_reminds_once_revokes_rotates_and_rechecks(pg_system,monkeypatch)
+
+
 def test_hosted_startup_requires_persistent_key_before_database_access(tmp_path,monkeypatch):
     monkeypatch.delenv('APP_ENCRYPTION_KEY',raising=False)
     with pytest.raises(ValueError,match='APP_ENCRYPTION_KEY'):
@@ -82,3 +99,9 @@ def test_missing_postgres_table_is_not_recreated_on_start(postgres_schema):
     c,_,_,schema=postgres_schema
     c.execute('DROP TABLE handoff_records')
     with pytest.raises(ValueError,match='incomplete or incompatible'):store_for(schema)
+
+
+def test_missing_postgres_permission_constraint_is_rejected(postgres_schema):
+    c,_,_,schema=postgres_schema
+    c.execute('ALTER TABLE devices DROP CONSTRAINT devices__allow_updates__boolean')
+    with pytest.raises(ValueError,match='permission constraints'):store_for(schema)

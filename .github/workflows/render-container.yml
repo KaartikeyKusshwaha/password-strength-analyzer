@@ -1,0 +1,56 @@
+name: Render pilot container verification
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/credential-security-lab]
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - requirements.txt
+      - 'backend/**'
+      - 'frontend/**'
+      - 'companion/extension/**'
+      - 'companion/package_extension.py'
+      - '.github/workflows/render-container.yml'
+permissions:
+  contents: read
+jobs:
+  container:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Build the deployment Dockerfile without secrets
+        run: docker build --tag sentinelops-pilot-check .
+      - name: Check packaged extension and non-root runtime
+        run: |
+          test "$(docker run --rm --entrypoint id sentinelops-pilot-check -u)" != 0
+          docker run --rm --entrypoint python sentinelops-pilot-check -c 'import json,zipfile; from pathlib import Path; archive=zipfile.ZipFile("companion/extension/sentinelops-companion.zip"); assert json.loads(archive.read("manifest.json"))["version"]==json.loads(Path("companion/extension/public/manifest.json").read_text())["version"]; assert Path("frontend/dist/index.html").is_file(); import backend.postgres_backups; print("Container files and archive verified.")'
+      - name: Start an isolated disposable app and verify HTTP startup
+        run: |
+          docker run --detach --name sentinelops-pilot-check --publish 127.0.0.1:18110:8110 sentinelops-pilot-check
+          python - <<'PY'
+          import json,time,urllib.request
+          for attempt in range(45):
+              try:
+                  with urllib.request.urlopen('http://127.0.0.1:18110/api/status',timeout=2) as response:
+                      status=json.load(response)
+                  assert status['setup_required'] is True
+                  with urllib.request.urlopen('http://127.0.0.1:18110/',timeout=2) as response:
+                      assert response.status==200 and b'<html' in response.read().lower()
+                  print('Disposable container HTTP startup and frontend verified.')
+                  break
+              except (OSError,TimeoutError):
+                  time.sleep(1)
+          else:
+              raise SystemExit('Container startup failed.')
+          PY
+      - name: Failure diagnostics
+        if: failure()
+        run: docker logs sentinelops-pilot-check || true
+      - name: Remove disposable container
+        if: always()
+        run: docker rm --force sentinelops-pilot-check || true

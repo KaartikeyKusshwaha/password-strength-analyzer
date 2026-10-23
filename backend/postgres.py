@@ -14,11 +14,11 @@ import sqlite3
 from .store import Store,SCHEMA_VERSION
 
 NUMERIC_PATHS={'due','expires','next_due','last_checked','enabled','plan.expires_at','document.expires_at'}
-JSON_PATTERN=re.compile(r"json_extract\(\s*([a-z_][a-z_0-9]*\.)?data\s*,\s*'\$\.([a-z_0-9.]+)'\s*\)",re.I)
+JSON_PATTERN=re.compile(r"json_extract\(\s*((?:[a-z_][a-z_0-9]*\.)?(?:data|plan))\s*,\s*'\$\.([a-z_0-9.]+)'\s*\)",re.I)
 
 
 def json_expression(match):
-    column=(match[1] or '')+'data'
+    column=match[1]
     path=match[2]
     fields=path.split('.')
     expression='('+column+'::jsonb #>> \'{'+','.join(fields)+'}\')'
@@ -114,6 +114,10 @@ class PostgresStore(Store):
                 rows=c.execute('SELECT column_name FROM information_schema.columns WHERE table_schema=? AND table_name=? ORDER BY ordinal_position',(schema,table)).fetchall()
                 actual=[r[0] for r in rows if r[0]!='_sentinel_order']
                 if actual!=expected:raise ValueError('PostgreSQL schema is incomplete or incompatible.')
+            checks=c.execute("SELECT pg_get_constraintdef(oid) AS definition,convalidated FROM pg_constraint WHERE conrelid=?::regclass AND contype='c'",(schema+'.devices',)).fetchall()
+            definitions={re.sub(r'[\s()\"]|::bigint','',row['definition']) for row in checks if row['convalidated']}
+            if any('CHECK'+column+'=ANYARRAY[0,1]' not in definitions for column in ('allow_updates','updates_enabled')):
+                raise ValueError('PostgreSQL device permission constraints are incomplete or incompatible.')
 
     @contextmanager
     def connect(self,write=False):

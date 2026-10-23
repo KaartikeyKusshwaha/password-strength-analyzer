@@ -43,6 +43,11 @@ def prepare(schema='sentinelops'):
                     if required:field+=' NOT NULL'
                     fields.append(field)
                 if primary:fields.append('PRIMARY KEY ('+','.join(map(quoted,primary))+')')
+                checks=re.findall(r'\bCHECK\s*\(\s*([a-z_][a-z0-9_]*)\s+IN\s*\(\s*0\s*,\s*1\s*\)\s*\)',source,re.I)
+                if len(checks)!=len(re.findall(r'\bCHECK\b',source,re.I)):
+                    raise ValueError('Check constraint needs an explicit PostgreSQL migration.')
+                for column in checks:
+                    fields.append('CONSTRAINT '+quoted(name+'__'+column+'__boolean')+' CHECK ('+quoted(column)+' IN (0,1))')
                 # SQLite insertion order is used for deterministic evidence and
                 # membership ordering. Keep it explicit rather than using ctid.
                 if name in {'entities','members'}:fields.append('"_sentinel_order" BIGINT GENERATED ALWAYS AS IDENTITY')

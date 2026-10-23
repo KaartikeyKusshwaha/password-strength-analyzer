@@ -87,6 +87,11 @@ no database contents or credentials are printed. Both directions have size/row
 bounds. Archives remain readable by the existing isolated SQLite restore tool.
 These commands are operator-only; no database-download web route is added.
 
+The `Render pilot container verification` workflow builds the actual Dockerfile
+on a public-repository Linux runner without deployment secrets. It checks the
+packaged extension, non-root runtime and isolated disposable SQLite HTTP startup;
+it does not deploy, create cloud resources or establish Neon/TLS acceptance.
+
 ## Free-tier behavior
 
 Render Free sleeps after 15 idle minutes and can restart. The next extension or
@@ -130,3 +135,10 @@ Archive follow-up: 40 backup/PostgreSQL round-trip/provenance/release tests
 passed, including PostgreSQL-to-PostgreSQL isolated restore, binary credential
 preservation, identity continuation, nonempty-target rejection, mismatched-key
 rejection, exclusive archive creation and simulated mid-import rollback.
+
+Permission-constraint follow-up: 35 PostgreSQL core/archive tests passed. Device
+update boolean checks are preserved during schema export and missing checks are
+rejected at startup. Four additional existing agency workflow cases passed on
+PostgreSQL: independent handoff sign-off, signed extension ownership transfer,
+weekly consent/planning/sign-off and freelancer expiry/removal/rotation/rechecks.
+Final schema/store translation follow-up passed 20 tests.

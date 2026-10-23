@@ -77,3 +77,11 @@ def test_real_postgres_revocation_and_audit_rollback_together(postgres_schema):
             raise RuntimeError('simulated failure')
     assert c.execute('SELECT count(*) FROM team_grants').fetchone()[0]==1
     assert c.execute('SELECT count(*) FROM audit').fetchone()[0]==0
+
+
+def test_device_update_permissions_keep_boolean_constraints(postgres_schema):
+    c,_,pg,_=postgres_schema
+    c.execute('INSERT INTO devices(id,token,workspace,"user",label,targets,expires) VALUES(%s,%s,%s,%s,%s,%s,%s)',('device','token','workspace','owner','Device','[]',1.0))
+    for column in ('allow_updates','updates_enabled'):
+        with pytest.raises(pg.errors.CheckViolation):
+            c.execute(pg.sql.SQL('UPDATE devices SET {}=2').format(pg.sql.Identifier(column)))
