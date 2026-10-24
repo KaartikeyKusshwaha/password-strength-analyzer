@@ -1,0 +1,116 @@
+// Actual browser crypto and actual API, two registered disposable accounts.
+// No operator profiles, cloud credentials, model calls or public site requests.
+import {test,expect} from '@playwright/test';
+import {readFileSync} from 'node:fs';
+import {join} from 'node:path';
+import {createHmac} from 'node:crypto';
+const origin='http://127.0.0.1:18222';
+const password='Disposable-Only!harbor-river-orbit-79';
+const master='Disposable!Cedar8-Beacon#Sharing64';
+function totp(secret){
+  const alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';let bits='';
+  for(const c of secret.replace(/=+$/,''))bits+=alphabet.indexOf(c).toString(2).padStart(5,'0');
+  const key=Buffer.from(bits.match(/.{8}/g).map(v=>parseInt(v,2)));
+  const step=Buffer.alloc(8);step.writeBigUInt64BE(BigInt(Math.floor(Date.now()/30000)));
+  const hash=createHmac('sha1',key).update(step).digest(),offset=hash[19]&15;
+  return ((hash.readUInt32BE(offset)&0x7fffffff)%1000000).toString().padStart(6,'0');
+}
+async function get(context,path){const response=await context.request.get(origin+'/api'+path);expect(response.ok(),path).toBe(true);return response.json();}
+async function post(context,path,body){
+  const me=await context.request.get(origin+'/api/me');
+  const headers={Origin:origin,...(me.ok()?{'X-CSRF-Token':(await me.json()).csrf}:{})};
+  const response=await context.request.post(origin+'/api'+path,{data:body,headers});
+  // Error text may contain fixture data but never operator credentials.
+  expect(response.ok(),path+' '+(response.ok()?'':await response.text())).toBe(true);return response.json();
+}
+async function sharedPage(page){await page.goto(origin);await page.getByRole('button',{name:'Vaults',exact:true}).click();await page.getByRole('button',{name:'Shared workspace vaults',exact:true}).click();}
+async function unlock(page){
+  if(await page.getByRole('button',{name:'Lock shared vaults',exact:true}).isVisible())return;
+  await page.getByLabel('Sharing passphrase',{exact:true}).fill(master);
+  const confirm=page.getByLabel('Confirm sharing passphrase',{exact:true});
+  if(await confirm.isVisible()){await confirm.fill(master);await page.getByRole('button',{name:'Create encrypted identity',exact:true}).click();}
+  else await page.getByRole('button',{name:'Unlock sharing identity',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Lock shared vaults',exact:true})).toBeVisible();
+}
+test('two real accounts share two vaults; approved offboarding rotates keys and rejects cached member keys',async({browser})=>{
+  const owner=await browser.newContext(),member=await browser.newContext();
+  try{
+    for(const context of [owner,member])await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
+    const bootstrap=readFileSync(join(process.env.SENTINELOPS_E2E_DATA,'.bootstrap-token'),'utf8').trim();
+    await post(owner,'/setup',{email:'owner@browser.example.test',password,token:bootstrap,workspace_name:'Browser acceptance agency'});
+    const enrollment=await post(owner,'/mfa/setup',{password});
+    const factors=await post(owner,'/mfa/enable',{code:totp(enrollment.secret)});
+    const invite=await post(owner,'/invites',{email:'member@browser.example.test',role:'reviewer'});
+    await post(member,'/join',{email:'member@browser.example.test',password,token:invite.token});
+    const ownerPage=await owner.newPage(),memberPage=await member.newPage();
+    await sharedPage(ownerPage);await unlock(ownerPage);
+    await sharedPage(memberPage);await unlock(memberPage);
+    const own=await get(owner,'/me'),other=await get(member,'/me');
+    const ownerIdentity=(await get(owner,'/sharing/identity')).identity;
+    const memberIdentity=(await get(member,'/sharing/identity')).identity;
+    const cache=await member.newPage();await cache.goto(origin);
+    const vaults=[];
+    for(let index=1;index<=2;index++){
+      const name='Acceptance client vault '+index;
+      await unlock(ownerPage);
+      await ownerPage.getByLabel('New shared vault name').fill(name);
+      await ownerPage.getByRole('button',{name:'Create shared vault',exact:true}).click();
+      await ownerPage.getByRole('button',{name:'Verify and open shared vault',exact:true}).click();
+      await ownerPage.getByLabel('Account label',{exact:true}).fill('Disposable credential '+index);
+      await ownerPage.getByLabel('Website origin',{exact:true}).fill('https://example.test');
+      await ownerPage.getByLabel('Username',{exact:true}).fill('public-fixture');
+      await ownerPage.getByLabel('Password',{exact:true}).fill('Disposable-before-removal!'+index);
+      await ownerPage.getByRole('button',{name:'Encrypt and save account',exact:true}).click();
+      await expect(ownerPage.getByText('Encrypted changes saved.',{exact:true})).toBeVisible();
+      await ownerPage.getByLabel('Teammate',{exact:true}).selectOption(other.id);
+      await ownerPage.getByLabel('Recipient fingerprint verified through another channel',{exact:true}).fill(memberIdentity.fingerprint);
+      await ownerPage.getByRole('button',{name:'Send encrypted invitation',exact:true}).click();
+      await memberPage.reload();await memberPage.getByRole('button',{name:'Shared workspace vaults',exact:true}).click();await unlock(memberPage);
+      await memberPage.getByRole('button',{name:name+' · viewer · invitation',exact:true}).click();
+      await memberPage.getByLabel('Verified owner fingerprint',{exact:true}).fill(ownerIdentity.fingerprint);
+      await memberPage.getByRole('button',{name:'Verify and accept invitation',exact:true}).click();
+      await memberPage.getByLabel('Verified owner fingerprint',{exact:true}).fill(ownerIdentity.fingerprint);
+      await memberPage.getByRole('button',{name:'Verify and open shared vault',exact:true}).click();
+      await expect(memberPage.getByText('Disposable credential '+index,{exact:true})).toBeVisible();
+      const id=(await get(owner,'/team-vaults')).vaults.find(v=>v.name===name).id;vaults.push({id,name});
+      const team=await get(member,'/team-vaults/'+id);
+      const result=await cache.evaluate(async({team,record,user,master,trusted})=>{
+        const crypto=await import('/src/sharing-crypto.js');
+        const identity=await crypto.unlockSharingIdentity(user,record,master);
+        const opened=await crypto.openTeamVault(team,identity,trusted);
+        window.acceptanceCachedHandles ||= {};
+        window.acceptanceCachedHandles[team.id]=opened.handle;
+        return opened.entries.length;
+      },{team,record:memberIdentity,user:other.id,master,trusted:ownerIdentity.fingerprint});
+      expect(result).toBe(1);
+    }
+    const client=await post(owner,'/clients',{name:'Browser acceptance client'});
+    for(const {id} of vaults)await post(owner,`/clients/${client.id}/vaults`,{vault_id:id});
+    const plan=await post(owner,'/access-workflows',{client_id:client.id,person_id:other.id,dry_run:false});
+    await post(owner,`/access-workflows/${plan.id}/approve`,{approved:true,plan_digest:plan.plan_digest,password,code:factors.recovery_codes[0]});
+    const status=async()=>(await get(owner,'/access-workflows')).workflows.find(run=>run.id===plan.id).status;
+    await expect.poll(status,{timeout:30000}).toBe('waiting_unlock');
+    for(const {id,name} of vaults){
+      expect((await member.request.get(origin+'/api/team-vaults/'+id)).status()).toBe(404);
+      await ownerPage.reload();await ownerPage.getByRole('button',{name:'Shared workspace vaults',exact:true}).click();await unlock(ownerPage);
+      await ownerPage.getByRole('button',{name:name+' · owner · rotation needed',exact:true}).click();
+      await ownerPage.getByRole('button',{name:'Verify and open shared vault',exact:true}).click();
+      await ownerPage.getByRole('button',{name:'Rotate vault key for remaining members',exact:true}).click();
+      await expect(ownerPage.getByText(/New vault key distributed only/)).toBeVisible();
+      const team=await get(owner,'/team-vaults/'+id);expect(team.epoch).toBe(2);
+      const denied=await cache.evaluate(async({id,payload})=>{
+        const handle=window.acceptanceCachedHandles[id];let rejected=0;
+        for(const value of [payload,{...payload,epoch:1}]){try{await handle.decrypt(value);}catch{rejected++;}}
+        return rejected;
+      },{id,payload:team.payload});expect(denied).toBe(2);
+      await ownerPage.getByRole('button',{name:'Verify and open shared vault',exact:true}).click();
+      await expect(ownerPage.getByText('Disposable credential '+(vaults.findIndex(v=>v.id===id)+1),{exact:true})).toBeVisible();
+    }
+    await expect.poll(status,{timeout:30000}).toBe('complete');
+    const report=await get(owner,`/access-workflows/${plan.id}/report`);
+    expect(report.audit.valid).toBe(true);
+    expect(JSON.stringify(report)).not.toContain(master);
+    expect(JSON.stringify(report)).not.toContain('Disposable-before-removal');
+    expect(own.workspace).toBe(other.workspace);
+  }finally{await member.close();await owner.close();}
+});

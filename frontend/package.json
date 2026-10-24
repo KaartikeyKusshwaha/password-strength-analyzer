@@ -8,7 +8,8 @@
     "build": "vite build",
     "test": "vitest run",
     "build:companion": "vite build --config ../companion/extension/vite.content.config.js && vite build --config ../companion/extension/vite.popup.config.js && vite build --config ../companion/extension/vite.background.config.js",
-    "test:extension": "playwright test --config playwright.extension.config.js"
+    "test:extension": "playwright test --config playwright.extension.config.js",
+    "test:acceptance": "playwright test --config playwright.acceptance.config.js"
   },
   "dependencies": {
     "@zxcvbn-ts/core": "4.2.0",
