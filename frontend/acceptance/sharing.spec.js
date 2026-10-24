@@ -72,7 +72,7 @@ test('two real accounts share two vaults; approved offboarding rotates keys and 
       await expect(memberPage.getByText('Invitation accepted. Verify and open the vault to read its encrypted contents.',{exact:true})).toBeVisible();
       await memberPage.getByLabel('Verified owner fingerprint',{exact:true}).fill(ownerIdentity.fingerprint);
       await memberPage.getByRole('button',{name:'Verify and open shared vault',exact:true}).click();
-      await expect(memberPage.getByText('Disposable credential '+index,{exact:true})).toBeVisible();
+      await expect(memberPage.locator('article.entry-card').getByText('Disposable credential '+index,{exact:true})).toBeVisible();
       const id=(await get(owner,'/team-vaults')).vaults.find(v=>v.name===name).id;vaults.push({id,name});
       const team=await get(member,'/team-vaults/'+id);
       const result=await cache.evaluate(async({team,record,user,master,trusted})=>{
@@ -112,7 +112,7 @@ test('two real accounts share two vaults; approved offboarding rotates keys and 
         return rejected;
       },{id,payload:team.payload});expect(denied).toBe(3);
       await ownerPage.getByRole('button',{name:'Verify and open shared vault',exact:true}).click();
-      await expect(ownerPage.getByText('Disposable credential '+(vaults.findIndex(v=>v.id===id)+1),{exact:true})).toBeVisible();
+      await expect(ownerPage.locator('article.entry-card').getByText('Disposable credential '+(vaults.findIndex(v=>v.id===id)+1),{exact:true})).toBeVisible();
     }
     await expect.poll(status,{timeout:45000}).toBe('complete');
     const report=await get(owner,`/access-workflows/${plan.id}/report`);
