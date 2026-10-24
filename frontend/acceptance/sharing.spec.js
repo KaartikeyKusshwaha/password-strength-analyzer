@@ -156,6 +156,8 @@ test('two real accounts share two vaults; approved offboarding rotates keys and 
       await request('/ack');return {origin,token:result.token,kind:'access'};
     },{origin,proof,id:start.id});
     await worker.evaluate(({access,connection,connections})=>chrome.storage.local.set({accessConnection:access,connection,connections}),{access,connection:ownerConnections[0],connections:ownerConnections});
+    const workflowMutations=[];
+    companion.context.on('request',request=>{const path=new URL(request.url()).pathname;if(request.method()==='POST'&&/^\/api\/companion\/access\/workflows\//.test(path))workflowMutations.push(path);});
     const operator=await companion.context.newPage();
     await operator.goto(`chrome-extension://${new URL(worker.url()).host}/popup.html`);
     const home=operator.getByRole('region',{name:'Client access workflows'});
@@ -210,6 +212,27 @@ test('two real accounts share two vaults; approved offboarding rotates keys and 
     expect(JSON.stringify(report)).not.toContain(master);
     expect(JSON.stringify(report)).not.toContain('Disposable-before-removal');
     expect(own.workspace).toBe(other.workspace);
+    expect(workflowMutations.filter(path=>path.endsWith('/approve'))).toHaveLength(1);
+    expect(workflowMutations.filter(path=>path.endsWith('/rotation'))).toHaveLength(2);
+    const reporting=await companion.context.newPage();
+    await reporting.goto(`chrome-extension://${new URL(worker.url()).host}/popup.html`);
+    const agency=reporting.getByRole('region',{name:'Client access workflows'});
+    await agency.getByLabel('What needs doing?',{exact:true}).selectOption('proof');
+    await agency.getByLabel('Report client',{exact:true}).selectOption(client.id);
+    await agency.getByLabel('Agency / report brand',{exact:true}).fill('Disposable agency proof');
+    await agency.getByRole('button',{name:'Preview exact snapshot',exact:true}).click();
+    await expect(agency.getByRole('heading',{name:'Review before generation',exact:true})).toBeVisible();
+    await agency.getByLabel('Current account password',{exact:true}).fill(password);
+    await agency.getByLabel('Unused MFA or recovery code',{exact:true}).fill(factors.recovery_codes[3]);
+    await agency.getByLabel('I reviewed this exact client metadata and selected associations. Generate a private, immutable report; nothing is shared yet.',{exact:true}).check();
+    await agency.getByRole('button',{name:'Generate private Proof Pack',exact:true}).click();
+    await expect(agency.getByText('Immutable Proof Pack generated. It is private until you separately approve a share link.',{exact:true})).toBeVisible();
+    const downloaded=reporting.waitForEvent('download');
+    await agency.getByRole('button',{name:'Download client PDF',exact:true}).click();
+    const pdf=readFileSync(await (await downloaded).path());
+    expect(pdf.subarray(0,5).toString()).toBe('%PDF-');
+    expect(pdf.length).toBeGreaterThan(1000);
+    await reporting.close();
     // Inspect both database and journal/WAL files in the fresh installation,
     // not just the API response, for these known disposable plaintexts.
     let inspected=0;
