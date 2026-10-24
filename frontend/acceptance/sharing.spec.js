@@ -69,6 +69,7 @@ test('two real accounts share two vaults; approved offboarding rotates keys and 
       await memberPage.getByRole('button',{name:name+' · viewer · invitation',exact:true}).click();
       await memberPage.getByLabel('Verified owner fingerprint',{exact:true}).fill(ownerIdentity.fingerprint);
       await memberPage.getByRole('button',{name:'Verify and accept invitation',exact:true}).click();
+      await expect(memberPage.getByText('Invitation accepted. Verify and open the vault to read its encrypted contents.',{exact:true})).toBeVisible();
       await memberPage.getByLabel('Verified owner fingerprint',{exact:true}).fill(ownerIdentity.fingerprint);
       await memberPage.getByRole('button',{name:'Verify and open shared vault',exact:true}).click();
       await expect(memberPage.getByText('Disposable credential '+index,{exact:true})).toBeVisible();
@@ -119,5 +120,10 @@ test('two real accounts share two vaults; approved offboarding rotates keys and 
     expect(JSON.stringify(report)).not.toContain(master);
     expect(JSON.stringify(report)).not.toContain('Disposable-before-removal');
     expect(own.workspace).toBe(other.workspace);
+  }catch(error){
+    for(const context of [owner,member])for(const page of context.pages()){
+      if(!page.isClosed())console.error('Disposable fixture UI alerts:',await page.getByRole('alert').allTextContents().catch(()=>[]));
+    }
+    throw error;
   }finally{await Promise.allSettled([member.close(),owner.close()]);}
 });
