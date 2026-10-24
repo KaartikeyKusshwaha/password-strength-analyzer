@@ -66,6 +66,11 @@ is prepared but has not passed. Backend, web and extension must ship together.
   remaining-owner access, cached old-key rejection and database plaintext checks.
   [Scope and reproduction](docs/TWO_ACCOUNT_BROWSER_TEST.md). No operator browser
   or cloud account is used; hosted acceptance remains separate.
+- CI [40103269347](https://github.com/KaartikeyKusshwaha/password-strength-analyzer/actions/runs/40103269347)
+  verifies the real extension-to-service flow: encrypted save, reopen/TOTP,
+  popup plan approval, automatic rotation after unlock, revoked-member refusal
+  and private client PDF delivery. It uses fresh Chromium profiles and the
+  real local application, with no mock API or operator credentials.
 - Google/GitHub connectors are gated on agency validation in the master plan.
   Customer interviews, independent security review, store release and signed
   helper distribution are not complete.

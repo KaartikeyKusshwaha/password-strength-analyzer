@@ -14,14 +14,22 @@ Account registration and MFA enrollment use the real HTTP endpoints. Two
 separate Chromium contexts hold the resulting sessions. Sharing identities,
 two shared vaults, encrypted entries, signed invitations, fingerprint checks,
 invitation acceptance and key rotation use the actual client UI and cryptography.
-The test prepares and approves one real two-vault workflow through the API and
-waits for the existing server worker; it does not patch the runner or fake its
-completion. A third disposable persistent Chromium profile loads the actual
+The current test prepares and approves one real two-vault workflow through the
+built extension UI and waits for the existing server worker; it does not patch
+the runner or fake its completion. A third disposable persistent Chromium profile loads the actual
 built MV3 companion. Real API-created, single-vault member connections are
 installed only in that profile; no host permissions or manifests are altered.
 The popup unlocks both vaults with fingerprint verification, saves encrypted
 logins, adds a disposable authenticator and reopens to generate its code. The
 code is checked against an independently calculated HMAC-SHA1 TOTP.
+
+The owner workflow connection uses the actual extension-origin comparison-code
+protocol with authenticated account approval. Separate exact-vault owner tokens
+remain necessary. The test unlocks each affected owner vault, waits for the
+extension's automatic rotation completion and never clicks a rotation button.
+It counts exactly one workflow approval and two rotation writes. It then selects
+Proof Pack in the extension, previews the real snapshot, approves generation
+with a fresh recovery factor and downloads the generated PDF.
 
 A separate member page uses the real sharing module with disposable test
 passphrases to retain the old handles before removal. After rotation it attempts
@@ -66,3 +74,12 @@ commit c1105ee: **1 passed in 33.0 seconds**. All four jobs passed, including
 the extension, PostgreSQL/agency and container layers. This adds real encrypted
 popup saving, reopen/TOTP and revoked-token/UI checks to the earlier scenario.
 No runtime application changes were necessary.
+
+The extension-led version passed in
+[CI 40103269347](https://github.com/KaartikeyKusshwaha/password-strength-analyzer/actions/runs/40103269347),
+commit 7055acb: **1 passed in 19.4 seconds**. Preparation and approval use the
+real popup, both rotations continue automatically after the exact owner vault
+unlocks, and the test observes exactly one approval POST and two rotation POSTs.
+The extension previews/generates the real private client Proof Pack, downloads
+it and verifies its PDF header and nonempty size. The previous saving, TOTP,
+revocation, cached-key rejection and storage confidentiality assertions remain.

@@ -49,6 +49,10 @@ connections and settings. Scanner and password-manager controls are secondary.
   No test secrets appeared in extension storage or database/journal files.
   The full scenario passed in 33.0 seconds; every CI job passed. This covers
   the local companion/service integration without certifying hosted Edge use.
+- CI 40103269347 at 7055acb covers the full extension-led flow in 19.4 seconds:
+  actual plan preparation/approval in the popup, exactly one approval and two
+  automatic rotations after unlock, then real private Proof Pack generation and
+  PDF download. Previous save/TOTP/revocation and encryption assertions remain.
 - Prior cloud browser evidence proves owner/MFA setup, vault unlock and
   user-confirmed exact-origin autofill. The live client map loads without error;
   the current pilot workspace has no configured clients.

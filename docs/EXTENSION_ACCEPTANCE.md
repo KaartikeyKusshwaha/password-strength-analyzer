@@ -404,3 +404,21 @@ These are actual extension-to-service requests and client-side encryption,
 not routed mock responses. The scope is disposable Chromium + local SQLite,
 not Render/Neon or the operator's installed Edge profile. Hosted secure-save,
 TOTP, revocation and recovery acceptance remain unverified there.
+
+### Extension-led agency execution and PDF — 24 October 2026
+
+CI 40103269347 at 7055acb passed the full real-service browser scenario in
+19.4 seconds. Workflow connection uses the real extension-origin proof and
+comparison-code protocol with authenticated owner consent. The built popup
+prepares and approves the real two-vault plan, then rotates each key
+automatically when its exact owner vault unlocks. No rotation button is clicked.
+Request counting proves one approval and two rotation POSTs. The run completes;
+the member's tokens and unlock are rejected, cached old keys cannot decrypt
+the new payloads, and the owner can reopen both vaults.
+
+The same popup selects Proof Pack, previews its real client snapshot, approves
+private generation with a fresh factor and downloads a nonempty PDF. Earlier
+encrypted saving, TOTP correctness and extension/database confidentiality checks
+remain in this passing scenario. This is local Chromium/SQLite acceptance,
+not hosted Render/Neon or native helper acceptance. Runtime stays at 66f1931;
+these increments extend tests and evidence without changing the deployed app.
