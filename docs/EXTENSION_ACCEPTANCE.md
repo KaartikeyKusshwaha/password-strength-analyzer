@@ -311,3 +311,15 @@ The observed events include the earlier control-room encrypted save and two
 browser connections, but no companion save. Installed-extension secure-save
 remains pending, not inferred from the repaired service log. This deployment
 also packages companion 0.25.1; no paid service or permission expansion occurred.
+
+### Installed cloud unlock screenshot — 24 October 2026, 17:47 IST
+
+User-supplied screenshots `Screenshot 2026-10-24 174709.png` and
+`Screenshot 2026-10-24 174741.png` show companion 0.25.1, the selected
+`Browser acceptance · sentinelops-pilot.onrender.com` connection, and
+`Unlocked · this popup only`. This supplies direct visual evidence of installed
+cloud vault unlock, beyond the earlier API-contact record. The third screenshot
+shows the current website is the SentinelOps app itself, with no saved login
+for that exact origin; the public practice entry belongs to a different origin.
+That message is expected and does not establish data loss or failed pairing.
+Cloud secure-save and TOTP remain pending separate installed-browser tests.
