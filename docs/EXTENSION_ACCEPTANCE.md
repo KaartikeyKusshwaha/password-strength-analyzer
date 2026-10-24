@@ -286,3 +286,28 @@ from the connected Render test vault. The password stayed masked and the website
 Login button was not submitted, so this is a form-fill acceptance result, not a
 website authentication success or a byte-for-byte password comparison. Secure-save,
 TOTP and multi-account sharing/revocation remain separate unverified live gates.
+
+### Hosted vault activity repaired — 24 October 2026
+
+After a fresh owner/MFA sign-in, opening the live vault activity panel produced
+an unexpected-response error. The PostgreSQL translator supported positional
+binds but left named SQLite binds untranslated, even quoting the `:user` bind
+name as an identifier. Commit 4f10b16 adds driver-bound named placeholders while
+preserving quoted literals and PostgreSQL casts. The regression failed before
+the fix and passed afterward. Local validation passed 17 tests; four real-PG
+cases skipped without the isolated fixture. The initial local activity run hit
+an inaccessible Windows pytest temp directory; a fresh dedicated test directory
+resolved that setup problem without modifying application data.
+
+CI run 40080397334 passed 77 PostgreSQL checks (one skipped), including real
+personal/shared activity isolation and keyset pagination, 42 helper/release
+checks, five extension cases and container startup. Render Free deployment
+`dep-dbe79jom7kps73ct5d80` of 4f10b16 completed Live in 49.2 seconds. The existing
+authenticated app session survived reload. The same activity panel then loaded
+real initialization, save and browser-connection events without the error.
+Screenshot: `data/render-vault-activity-fixed-4f10b16.png`.
+
+The observed events include the earlier control-room encrypted save and two
+browser connections, but no companion save. Installed-extension secure-save
+remains pending, not inferred from the repaired service log. This deployment
+also packages companion 0.25.1; no paid service or permission expansion occurred.
