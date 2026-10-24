@@ -38,9 +38,9 @@ async function openCompanion(companion,connection,connections,trusted){
   const page=await companion.context.newPage();
   await page.goto(`chrome-extension://${new URL(companion.worker.url()).host}/popup.html`);
   await page.getByLabel('Sharing passphrase',{exact:true}).fill(master);
-  await page.getByLabel('Verified owner fingerprint',{exact:true}).fill(trusted);
+  if(!connection.ownerIsSelf)await page.getByLabel('Verified owner fingerprint',{exact:true}).fill(trusted);
   await page.getByRole('button',{name:'Unlock',exact:true}).click();
-  await expect(page.getByText('Unlocked · this popup only',{exact:true})).toBeVisible();
+  if(!connection.ownerIsSelf)await expect(page.getByText('Unlocked · this popup only',{exact:true})).toBeVisible();
   return page;
 }
 test('two real accounts share two vaults; approved offboarding rotates keys and rejects cached member keys',async({browser})=>{
@@ -136,10 +136,43 @@ test('two real accounts share two vaults; approved offboarding rotates keys and 
     }
     const client=await post(owner,'/clients',{name:'Browser acceptance client'});
     for(const {id} of vaults)await post(owner,`/clients/${client.id}/vaults`,{vault_id:id});
-    const plan=await post(owner,'/access-workflows',{client_id:client.id,person_id:other.id,dry_run:false});
-    await post(owner,`/access-workflows/${plan.id}/approve`,{approved:true,plan_digest:plan.plan_digest,password,code:factors.recovery_codes[0]});
+    const ownerConnections=[];
+    for(let index=0;index<vaults.length;index++){
+      const vault=vaults[index],pair=await post(owner,'/companions',{kind:'shared',vault_id:vault.id,label:'Isolated owner '+index,password,code:factors.recovery_codes[index+1]});
+      ownerConnections.push({origin,token:pair.token,vaultId:vault.id,vaultName:vault.name,vaultKind:'shared',ownerFingerprint:ownerIdentity.fingerprint,ownerIsSelf:true});
+    }
+    // Use the actual extension-origin comparison-code protocol. The test owns
+    // these disposable accounts; no production grant or approval is bypassed.
+    const proof='DisposableConnectionProof'.repeat(3);
+    const start=await worker.evaluate(async({origin,proof})=>{
+      const response=await fetch(origin+'/api/companion/connect/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({proof,scope:'access'})});
+      if(!response.ok)throw new Error('Fixture workflow connection start failed');return response.json();
+    },{origin,proof});
+    await post(owner,`/extension-connect/${start.id}/approve`,{confirmed_code:start.code,workspace_id:own.workspace});
+    const access=await worker.evaluate(async({origin,proof,id})=>{
+      const request=path=>fetch(origin+'/api/companion/connect/'+id+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({proof,scope:'access'})});
+      const response=await request('/poll');if(!response.ok)throw new Error('Fixture workflow connection poll failed');
+      const result=await response.json();if(result.status!=='approved')throw new Error('Fixture connection not approved');
+      await request('/ack');return {origin,token:result.token,kind:'access'};
+    },{origin,proof,id:start.id});
+    await worker.evaluate(({access,connection,connections})=>chrome.storage.local.set({accessConnection:access,connection,connections}),{access,connection:ownerConnections[0],connections:ownerConnections});
+    const operator=await companion.context.newPage();
+    await operator.goto(`chrome-extension://${new URL(worker.url()).host}/popup.html`);
+    const home=operator.getByRole('region',{name:'Client access workflows'});
+    await home.getByRole('combobox',{name:'Client',exact:true}).selectOption(client.id);
+    await home.getByRole('combobox',{name:'Person',exact:true}).selectOption(other.id);
+    await home.getByLabel('Preview only; make no changes').uncheck();
+    await home.getByRole('button',{name:'Prepare offboarding plan',exact:true}).click();
+    await expect(home.getByRole('heading',{name:'Review and approve',exact:true})).toBeVisible();
+    const plan=(await get(owner,'/access-workflows')).workflows[0];
+    await home.getByLabel('Current account password',{exact:true}).fill(password);
+    await home.getByLabel('Unused MFA or recovery code',{exact:true}).fill(factors.recovery_codes[0]);
+    await home.getByLabel('I approve this exact access removal plan.').check();
+    await home.getByRole('button',{name:'Approve plan',exact:true}).click();
     const status=async()=>(await get(owner,'/access-workflows')).workflows.find(run=>run.id===plan.id).status;
     await expect.poll(status,{timeout:30000}).toBe('waiting_unlock');
+    await operator.close();
+    await worker.evaluate(connection=>chrome.storage.local.set({connection,connections:[connection]}),companion.connections[1]);
     const revokedPopup=await companion.context.newPage();
     await revokedPopup.goto(`chrome-extension://${new URL(worker.url()).host}/popup.html`);
     await revokedPopup.getByLabel('Sharing passphrase',{exact:true}).fill(master);
@@ -152,11 +185,10 @@ test('two real accounts share two vaults; approved offboarding rotates keys and 
       expect((await member.request.get(origin+'/api/team-vaults/'+id)).status()).toBe(404);
       const connection=companion.connections.find(item=>item.vaultId===id);
       expect((await companion.context.request.get(origin+'/api/companion/vault',{headers:{Authorization:'Bearer '+connection.token}})).status()).toBe(401);
-      await ownerPage.reload();await ownerPage.getByRole('button',{name:'Shared workspace vaults',exact:true}).click();await unlock(ownerPage);
-      await ownerPage.getByRole('button',{name:name+' · owner · rotation needed',exact:true}).click();
-      await ownerPage.getByRole('button',{name:'Verify and open shared vault',exact:true}).click();
-      await ownerPage.getByRole('button',{name:'Rotate vault key for remaining members',exact:true}).click();
-      await expect(ownerPage.getByText(/New vault key distributed only/)).toBeVisible();
+      const ownerConnection=ownerConnections.find(item=>item.vaultId===id);
+      const rotationPopup=await openCompanion(companion,ownerConnection,ownerConnections,ownerIdentity.fingerprint);
+      await expect(rotationPopup.getByText('Approved vault key rotation finished automatically. The server will verify the removal.',{exact:true})).toBeVisible();
+      await rotationPopup.close();
       const team=await get(owner,'/team-vaults/'+id);expect(team.epoch).toBe(2);
       const denied=await cache.evaluate(async({id,payload})=>{
         const handle=window.acceptanceCachedHandles[id];let rejected=0;
@@ -167,6 +199,8 @@ test('two real accounts share two vaults; approved offboarding rotates keys and 
         try{await crypto.subtle.decrypt({name:'AES-GCM',iv:bytes(payload.iv),additionalData:new TextEncoder().encode(`SentinelOps team vault v1:${id}:${payload.epoch}`)},window.acceptanceCachedKeys[id],bytes(payload.ciphertext));}catch{rejected++;}
         return rejected;
       },{id,payload:team.payload});expect(denied).toBe(3);
+      await ownerPage.reload();await ownerPage.getByRole('button',{name:'Shared workspace vaults',exact:true}).click();await unlock(ownerPage);
+      await ownerPage.getByRole('button',{name:name+' · owner',exact:true}).click();
       await ownerPage.getByRole('button',{name:'Verify and open shared vault',exact:true}).click();
       await expect(ownerPage.locator('article.entry-card').getByText('Disposable credential '+(vaults.findIndex(v=>v.id===id)+1),{exact:true})).toBeVisible();
     }
