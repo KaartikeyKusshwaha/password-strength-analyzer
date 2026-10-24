@@ -62,7 +62,7 @@ test('two real accounts share two vaults; approved offboarding rotates keys and 
       await ownerPage.getByLabel('Password',{exact:true}).fill('Disposable-before-removal!'+index);
       await ownerPage.getByRole('button',{name:'Encrypt and save account',exact:true}).click();
       await expect(ownerPage.getByText('Encrypted changes saved.',{exact:true})).toBeVisible();
-      await ownerPage.getByLabel('Teammate',{exact:true}).selectOption(other.id);
+      await ownerPage.getByRole('combobox',{name:/^Teammate/}).selectOption(other.id);
       await ownerPage.getByLabel('Recipient fingerprint verified through another channel',{exact:true}).fill(memberIdentity.fingerprint);
       await ownerPage.getByRole('button',{name:'Send encrypted invitation',exact:true}).click();
       await memberPage.reload();await memberPage.getByRole('button',{name:'Shared workspace vaults',exact:true}).click();await unlock(memberPage);
