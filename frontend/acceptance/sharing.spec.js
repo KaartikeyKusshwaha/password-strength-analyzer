@@ -217,8 +217,8 @@ test('two real accounts share two vaults; approved offboarding rotates keys and 
     const reporting=await companion.context.newPage();
     await reporting.goto(`chrome-extension://${new URL(worker.url()).host}/popup.html`);
     const agency=reporting.getByRole('region',{name:'Client access workflows'});
-    await agency.getByLabel('What needs doing?',{exact:true}).selectOption('proof');
-    await agency.getByLabel('Report client',{exact:true}).selectOption(client.id);
+    await agency.getByRole('combobox',{name:/^What needs doing\?/}).selectOption('proof');
+    await agency.getByRole('combobox',{name:/^Report client/}).selectOption(client.id);
     await agency.getByLabel('Agency / report brand',{exact:true}).fill('Disposable agency proof');
     await agency.getByRole('button',{name:'Preview exact snapshot',exact:true}).click();
     await expect(agency.getByRole('heading',{name:'Review before generation',exact:true})).toBeVisible();
