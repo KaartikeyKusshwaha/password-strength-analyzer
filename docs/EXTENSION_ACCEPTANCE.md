@@ -385,3 +385,22 @@ the local full-stack two-account removal test. It does not close hosted
 Render/Neon, installed Edge, browser-bearer revocation or recovery acceptance.
 No operator browser/profile or cloud credential was used. See
 TWO_ACCOUNT_BROWSER_TEST.md for reproducible scope and limits.
+
+### Built companion against the real local service — 24 October 2026
+
+CI 40102342586 at c1105ee passed the expanded two-account scenario in 33.0
+seconds. A fresh persistent Chromium profile loaded the actual built MV3
+companion, connected to each of the two real shared vaults with separately
+issued member tokens, unlocked with verified owner fingerprints and saved
+encrypted logins through its popup. A disposable authenticator was encrypted
+and saved, then a new popup fetched the stored data, unlocked again and produced
+the independently expected TOTP. After the approved two-vault offboarding,
+both tokens returned 401 and the actual popup switched to Reconnect your vault
+when unlock was attempted. Secrets were absent from extension local storage
+and the actual database/journal files. The retained old-key rejection, owner
+access and audit checks still passed. All other CI jobs passed too.
+
+These are actual extension-to-service requests and client-side encryption,
+not routed mock responses. The scope is disposable Chromium + local SQLite,
+not Render/Neon or the operator's installed Edge profile. Hosted secure-save,
+TOTP, revocation and recovery acceptance remain unverified there.

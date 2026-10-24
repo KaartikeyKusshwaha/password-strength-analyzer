@@ -43,6 +43,12 @@ connections and settings. Scanner and password-manager controls are secondary.
   cached old-key rejection and actual database plaintext checks. It passed
   in 33.0 seconds; all other CI jobs passed. This local full-stack test uses
   no mock API and no operator profile. Hosted/installed acceptance stays open.
+- Expanded CI 40102342586 at c1105ee also loads the real built MV3 companion:
+  encrypted shared-vault saving, reopen/TOTP checked against independent HMAC,
+  both bearer revocations and the popup's refused-unlock/reconnect state pass.
+  No test secrets appeared in extension storage or database/journal files.
+  The full scenario passed in 33.0 seconds; every CI job passed. This covers
+  the local companion/service integration without certifying hosted Edge use.
 - Prior cloud browser evidence proves owner/MFA setup, vault unlock and
   user-confirmed exact-origin autofill. The live client map loads without error;
   the current pilot workspace has no configured clients.
