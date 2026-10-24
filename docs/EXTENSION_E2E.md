@@ -38,6 +38,13 @@ relaxation or modified extension manifest is used.
 | Wrong-origin/unsafe action | Another-origin credentials and a form posting to another origin are rejected; fields remain empty. |
 | Signup/embedded forms | Signup fields and a login confined to an iframe are not selected as a main-page sign-in form. |
 | Explicit code fill | A requested fixture code reaches the single supported exact-origin OTP field without submission. This does not test enrollment or a real TOTP secret. |
+| Agency approval and progress | The real popup prepares a two-vault offboarding plan against a routed mock service, sends approval credentials once, polls queued/running/completed states and opens the scoped report. Only the fixture service reports completion; this case does not perform real revocation or key rotation. |
+
+The agency fixture stores only a disposable workflow token in its isolated
+browser profile. Its API route handles CORS preflight and blocks all non-fixture
+destinations. This is not a connection to the Render installation. Real
+removed-member/new-epoch cryptography and durable execution are separately
+exercised in backend CI, rather than inferred from a mocked browser response.
 
 The tests wait for the installed content-script version before sending an
 operation, and never retry a credential write. Vitest remains scoped to `src`

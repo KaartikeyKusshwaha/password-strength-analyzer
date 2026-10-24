@@ -1,14 +1,14 @@
 # SentinelOps
 
-An access control tower for agencies: know who can touch each client, remove access in one approved run, and report the outcome to the client. This is the product direction; the client access map and durable offboarding workflow are not yet shipped. Existing encrypted vaults and extension workflows form the foundation.
+An access control tower for agencies: know who can touch each client, remove selected vault access in one approved run, and report the outcome to the client. Encrypted vaults support the agency workflow. External platform revocation is not yet implemented.
 
-**Source app/companion 0.25.0 / [published companion 0.23.0 prerelease](https://github.com/KaartikeyKusshwaha/password-strength-analyzer/releases/tag/companion-v0.23.0).** The old Oracle pilot is currently unavailable; its last verified versions were app 0.22.0 and companion download 0.22.1. [Render Free + Neon Free migration](docs/RENDER_NEON_PILOT.md) is live as a new empty installation; owner setup and browser acceptance remain pending. Use disposable credentials until the security and acceptance gates in [the agency master plan](docs/AGENCY_MASTER_PLAN.md) pass. See [actual release and browser evidence](docs/EXTENSION_ACCEPTANCE.md); implementation is not a claim of production readiness.
+**Live pilot: [SentinelOps on Render Free](https://sentinelops-pilot.onrender.com/), app 0.25.0 / companion 0.26.0, deployed code 66f1931.** Owner setup and account MFA are complete; the installed Edge companion was reloaded to 0.26.0. Current source and validation are in [PR #1](https://github.com/KaartikeyKusshwaha/password-strength-analyzer/pull/1). The older GitHub 0.23.0 prerelease and Oracle installation are not the current pilot. Use disposable credentials until the security and acceptance gates in [the agency master plan](docs/AGENCY_MASTER_PLAN.md) pass. See [actual release and browser evidence](docs/EXTENSION_ACCEPTANCE.md); implementation is not a claim of production readiness.
 
 ## Extension-first access workflows
 
 Normal save/fill/authenticator and supported assessment actions run in the
 extension. The website manages vaults, results, connections and settings.
-Unreleased source now adds client access mapping, approved local vault
+The hosted pilot includes client access mapping, approved local vault
 offboarding, extension-side shared-key rotation and opt-in account discovery.
 Shared-password debt now reuses the encrypted rotation operator in this source.
 Encrypted expired/orphaned proposal recovery is implemented in source. Client
@@ -19,8 +19,9 @@ access deadlines and scheduled departure plans. All-client-vault invitations and
 approved expiry can now be issued atomically from the extension. Separately
 approved read-only background reminders poll for expiry status without extending
 the operator token; see [reminder scope](docs/ACCESS_REMINDERS.md). See
-[expiry scope and remaining work](docs/ACCESS_EXPIRY.md). Client proof packs remain
-unfinished.
+[expiry scope and remaining work](docs/ACCESS_EXPIRY.md). Client Proof Pack
+PDF/link generation and weekly metadata-only access reviews are implemented;
+their installed-browser acceptance remains outstanding.
 Existing scanner and investigation engines
 are supporting capabilities; they are not the product's primary proposition.
 Agents do not receive passwords, vault keys or authenticator secrets. CSV import
@@ -30,13 +31,16 @@ Email/phishing detection was removed from the current product at the user's
 request. New email scan, operation and combined-review submissions are rejected.
 Existing historical evidence is preserved.
 
-## Unreleased agency implementation
+## Agency implementation and limits
 
 The client map combines live vault membership with clearly labelled manual
 reports and opt-in domain/account-nickname observations. Discovery does not read
 passwords or claim that a login succeeded. A separate extension capability
 handles approval-bound vault offboarding, local key rotation, progress and
-read-only rechecks. This source has not been deployed to the hosted pilot.
+read-only rechecks. Companion 0.26.0 presents one agency task at a time and
+automatically continues an approved key rotation when its matching shared vault
+is unlocked. A locked vault or failed attempt pauses visibly. Render Free sleeps,
+so scheduled execution is not guaranteed to run at an exact time.
 See [implementation scope](docs/AGENCY_PHASE1.md), [workflow guarantees](docs/ACCESS_WORKFLOWS.md)
 and [discovery privacy/control](docs/ACCESS_DISCOVERY.md). See also
 [shared-password debt and local archival](docs/SHARED_PASSWORD_DEBT.md).
@@ -46,6 +50,19 @@ in [Client handoffs](docs/CLIENT_HANDOFFS.md). Settings can promote an existing
 MFA-enrolled member to a receiving workspace owner with explicit fresh approval;
 promotion grants no vault keys. The [consolidated final browser checklist](docs/FINAL_BROWSER_CHECK.md)
 is prepared but has not passed. Backend, web and extension must ship together.
+
+### Release verification
+
+- 428 frontend tests and 54 backend agency tests passed for 66f1931; root build
+  and CI passed. The built-extension suite uses disposable Chromium profiles;
+  it never needs the operator's installed browser or credentials.
+- Installed Edge evidence covers cloud unlock and user-confirmed exact-origin
+  autofill. Cloud secure-save/TOTP and two-account shared-vault removal with
+  key rotation still require live acceptance; a mock browser test is not a
+  replacement for that security gate.
+- Google/GitHub connectors are gated on agency validation in the master plan.
+  Customer interviews, independent security review, store release and signed
+  helper distribution are not complete.
 
 ## Connected workflows
 
