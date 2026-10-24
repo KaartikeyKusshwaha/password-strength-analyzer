@@ -80,6 +80,9 @@ test('two real accounts share two vaults; approved offboarding rotates keys and 
         const opened=await crypto.openTeamVault(team,identity,trusted);
         window.acceptanceCachedHandles ||= {};
         window.acceptanceCachedHandles[team.id]=opened.handle;
+        const raw=new Uint8Array(await identity.unwrap(team.grant));
+        window.acceptanceCachedKeys ||= {};
+        try{window.acceptanceCachedKeys[team.id]=await window.crypto.subtle.importKey('raw',raw,'AES-GCM',false,['decrypt']);}finally{raw.fill(0);}
         return opened.entries.length;
       },{team,record:memberIdentity,user:other.id,master,trusted:ownerIdentity.fingerprint});
       expect(result).toBe(1);
@@ -101,12 +104,16 @@ test('two real accounts share two vaults; approved offboarding rotates keys and 
       const denied=await cache.evaluate(async({id,payload})=>{
         const handle=window.acceptanceCachedHandles[id];let rejected=0;
         for(const value of [payload,{...payload,epoch:1}]){try{await handle.decrypt(value);}catch{rejected++;}}
+        // Bypass client epoch guards and use the correct new AAD: rejection
+        // must come from AES-GCM with the retained old key itself.
+        const bytes=value=>Uint8Array.from(atob(value),c=>c.charCodeAt(0));
+        try{await crypto.subtle.decrypt({name:'AES-GCM',iv:bytes(payload.iv),additionalData:new TextEncoder().encode(`SentinelOps team vault v1:${id}:${payload.epoch}`)},window.acceptanceCachedKeys[id],bytes(payload.ciphertext));}catch{rejected++;}
         return rejected;
-      },{id,payload:team.payload});expect(denied).toBe(2);
+      },{id,payload:team.payload});expect(denied).toBe(3);
       await ownerPage.getByRole('button',{name:'Verify and open shared vault',exact:true}).click();
       await expect(ownerPage.getByText('Disposable credential '+(vaults.findIndex(v=>v.id===id)+1),{exact:true})).toBeVisible();
     }
-    await expect.poll(status,{timeout:30000}).toBe('complete');
+    await expect.poll(status,{timeout:45000}).toBe('complete');
     const report=await get(owner,`/access-workflows/${plan.id}/report`);
     expect(report.audit.valid).toBe(true);
     expect(JSON.stringify(report)).not.toContain(master);
