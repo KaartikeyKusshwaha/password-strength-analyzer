@@ -112,5 +112,5 @@ test('two real accounts share two vaults; approved offboarding rotates keys and 
     expect(JSON.stringify(report)).not.toContain(master);
     expect(JSON.stringify(report)).not.toContain('Disposable-before-removal');
     expect(own.workspace).toBe(other.workspace);
-  }finally{await member.close();await owner.close();}
+  }finally{await Promise.allSettled([member.close(),owner.close()]);}
 });
