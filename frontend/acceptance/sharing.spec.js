@@ -1,7 +1,7 @@
 // Actual browser crypto and actual API, two registered disposable accounts.
 // No operator profiles, cloud credentials, model calls or public site requests.
 import {test,expect} from '@playwright/test';
-import {readFileSync} from 'node:fs';
+import {readFileSync,readdirSync} from 'node:fs';
 import {join} from 'node:path';
 import {createHmac} from 'node:crypto';
 const origin='http://127.0.0.1:18222';
@@ -120,6 +120,15 @@ test('two real accounts share two vaults; approved offboarding rotates keys and 
     expect(JSON.stringify(report)).not.toContain(master);
     expect(JSON.stringify(report)).not.toContain('Disposable-before-removal');
     expect(own.workspace).toBe(other.workspace);
+    // Inspect both database and journal/WAL files in the fresh installation,
+    // not just the API response, for these known disposable plaintexts.
+    let inspected=0;
+    for(const file of readdirSync(process.env.SENTINELOPS_E2E_DATA,{withFileTypes:true})){
+      if(!file.isFile())continue;
+      const bytes=readFileSync(join(process.env.SENTINELOPS_E2E_DATA,file.name));inspected++;
+      for(const secret of [password,master,'Disposable-before-removal!1','Disposable-before-removal!2'])expect(bytes.includes(Buffer.from(secret)),'Fixture plaintext must be absent from '+file.name).toBe(false);
+    }
+    expect(inspected).toBeGreaterThan(0);
   }catch(error){
     for(const context of [owner,member])for(const page of context.pages()){
       if(!page.isClosed())console.error('Disposable fixture UI alerts:',await page.getByRole('alert').allTextContents().catch(()=>[]));
