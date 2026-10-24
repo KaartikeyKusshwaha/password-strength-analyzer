@@ -1,0 +1,20 @@
+import {it,expect,vi} from 'vitest';
+import {webcrypto} from 'node:crypto';
+import {SaveSession} from '../../companion/extension/vault-session';
+import {signFreelancerVault} from '../../companion/extension/freelancer-invitation';
+import {createSharingIdentity,createTeamVault,openTeamVault,ownershipStateDigest} from './sharing-crypto';
+it('wraps a real client-vault key for the contractor without uploading plaintext',async()=>{
+ vi.stubGlobal('crypto',webcrypto);
+ const ownerID='a'.repeat(24),recipientID='b'.repeat(24),vault='c'.repeat(24),workspace='d'.repeat(24),passphrase='Public-fixture!river-orbit-79';
+ const owner=await createSharingIdentity(ownerID,passphrase),recipient=await createSharingIdentity(recipientID,passphrase),created=await createTeamVault(owner.identity,workspace,'Client',vault);
+ const root={...created.grant,issuer_public:owner.record.public,issuer_grant:null};
+ let team={id:vault,workspace,owner:ownerID,owner_public:owner.record.public,owner_fingerprint:owner.identity.fingerprint,role:'owner',accepted:true,epoch:1,revision:1,rotation_required:false,browser_policy:{browser_enabled:true,browser_save:true,browser_fill:true,origins:[],lock_seconds:180},manifest:{document:{id:vault,workspace,owner:ownerID,owner_fingerprint:owner.identity.fingerprint},signature:created.manifest_signature},grant:root,grants:[{user_id:ownerID,role:'owner',accepted:true,envelope:root}],payload:created.payload};
+ const opened=await openTeamVault(team,owner.identity,owner.identity.fingerprint),entry={id:'fixture',type:'login',title:'Test',origin:'https://example.test',username:'private-fixture-user',password:'private-fixture-password'};
+ team={...team,payload:await opened.handle.encrypt([entry])};
+ const connection={origin:'https://service.example.test'},session=new SaveSession({});session.config={origin:connection.origin,vaultKind:'shared',vaultId:vault,token:'t'.repeat(54)};session.material={kind:'shared',identity:owner.identity,trusted:owner.identity.fingerprint,epoch:1,handle:opened.handle};session.entries=[entry];session.revision=1;
+ const draft={id:'e'.repeat(24),status:'pending',deadline:Date.now()/1000+900,plan_digest:'f'.repeat(64),plan:{person:recipientID,role:'editor',recipient_fingerprint:recipient.identity.fingerprint,vaults:[{vault,state_digest:await ownershipStateDigest(team)}]}};
+ const recipientRecord={id:recipientID,public:recipient.record.public,fingerprint:recipient.identity.fingerprint,role:'reviewer'},request=vi.fn(async()=>({team,recipient:recipientRecord,draft}));
+ const signed=await signFreelancerVault(connection,session,draft,request);session.lock();
+ expect(JSON.stringify(signed)).not.toContain(entry.password);expect(JSON.stringify(signed)).not.toContain(passphrase);expect(JSON.stringify(request.mock.calls)).not.toContain(entry.username);
+ const envelope={...signed.grant,issuer_public:owner.record.public,issuer_grant:null},received=await openTeamVault({...team,role:'editor',grant:envelope},recipient.identity,owner.identity.fingerprint);expect(received.entries).toEqual([entry]);received.handle.close();
+},30000);

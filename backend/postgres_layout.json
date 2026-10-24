@@ -1,0 +1,268 @@
+{
+  "access_grants": [
+    "id",
+    "workspace",
+    "client",
+    "person",
+    "domain",
+    "account_label",
+    "role",
+    "source",
+    "state",
+    "created_by",
+    "created_at",
+    "updated_at"
+  ],
+  "attempts": [
+    "bucket",
+    "started",
+    "count"
+  ],
+  "audit": [
+    "seq",
+    "workspace",
+    "at",
+    "actor",
+    "action",
+    "target",
+    "previous",
+    "digest"
+  ],
+  "client_vaults": [
+    "client",
+    "workspace",
+    "vault"
+  ],
+  "clients": [
+    "id",
+    "workspace",
+    "name",
+    "created_at"
+  ],
+  "companions": [
+    "token",
+    "user",
+    "label",
+    "expires",
+    "vault_id",
+    "kind",
+    "workspace"
+  ],
+  "credential_actions": [
+    "id",
+    "user",
+    "vault_id",
+    "kind",
+    "workspace",
+    "manifest",
+    "entry_count",
+    "status",
+    "items",
+    "lease_hash",
+    "lease_connection",
+    "lease_expires",
+    "created_at",
+    "expires_at"
+  ],
+  "credential_exposures": [
+    "id",
+    "workspace",
+    "client",
+    "vault",
+    "entry_ref",
+    "domain",
+    "label",
+    "platform",
+    "state",
+    "action_id",
+    "action_index",
+    "created_by",
+    "created_at",
+    "updated_at",
+    "verified_at",
+    "retired_at"
+  ],
+  "devices": [
+    "id",
+    "token",
+    "workspace",
+    "user",
+    "label",
+    "targets",
+    "expires",
+    "seen",
+    "allow_posture",
+    "protocol_version",
+    "posture_enabled",
+    "allow_updates",
+    "updates_enabled"
+  ],
+  "entities": [
+    "id",
+    "workspace",
+    "kind",
+    "data"
+  ],
+  "handoff_records": [
+    "id",
+    "workspace",
+    "client",
+    "person",
+    "recipient",
+    "created_by",
+    "kind",
+    "status",
+    "plan",
+    "plan_digest",
+    "approval",
+    "receipt",
+    "workflow",
+    "created_at",
+    "updated_at"
+  ],
+  "invites": [
+    "token",
+    "workspace",
+    "email",
+    "role",
+    "expires"
+  ],
+  "members": [
+    "workspace",
+    "user",
+    "role"
+  ],
+  "notification_reads": [
+    "notification",
+    "user",
+    "read_at"
+  ],
+  "passkey_ceremonies": [
+    "token_hash",
+    "binding_hash",
+    "challenge",
+    "purpose",
+    "origin",
+    "rp_id",
+    "account",
+    "session_hash",
+    "expires"
+  ],
+  "passkey_credentials": [
+    "id",
+    "user",
+    "origin",
+    "rp_id",
+    "credential_id",
+    "public_key",
+    "sign_count",
+    "device_type",
+    "backed_up",
+    "label",
+    "created_at",
+    "last_used",
+    "revoked_at",
+    "revision"
+  ],
+  "schema_migrations": [
+    "version",
+    "applied_at"
+  ],
+  "sessions": [
+    "token",
+    "user",
+    "workspace",
+    "csrf",
+    "expires",
+    "pending"
+  ],
+  "sharing_identities": [
+    "user",
+    "public",
+    "fingerprint",
+    "encrypted",
+    "created_at"
+  ],
+  "team_grants": [
+    "vault",
+    "user",
+    "role",
+    "envelope",
+    "accepted",
+    "created_at"
+  ],
+  "team_vaults": [
+    "id",
+    "workspace",
+    "owner",
+    "name",
+    "manifest",
+    "payload",
+    "epoch",
+    "revision",
+    "rotation_required",
+    "created_at",
+    "browser_policy"
+  ],
+  "users": [
+    "id",
+    "email",
+    "password",
+    "mfa",
+    "mfa_draft",
+    "mfa_step",
+    "recovery"
+  ],
+  "vault_spaces": [
+    "id",
+    "user",
+    "name",
+    "purpose",
+    "color",
+    "lock_seconds",
+    "browser_enabled",
+    "browser_save",
+    "browser_fill",
+    "origins",
+    "archived",
+    "is_default",
+    "revision",
+    "payload",
+    "created_at",
+    "updated_at"
+  ],
+  "vaults": [
+    "user",
+    "revision",
+    "payload"
+  ],
+  "workflow_steps": [
+    "id",
+    "workflow",
+    "position",
+    "vault",
+    "action",
+    "status",
+    "attempts",
+    "outcome",
+    "completed_at"
+  ],
+  "workflows": [
+    "id",
+    "workspace",
+    "client",
+    "person",
+    "created_by",
+    "status",
+    "plan",
+    "plan_digest",
+    "approval",
+    "created_at",
+    "updated_at"
+  ],
+  "workspaces": [
+    "id",
+    "name",
+    "demo"
+  ]
+}

@@ -1,0 +1,19 @@
+import {it,expect,vi} from 'vitest';
+import {createReminderMonitor,reminderRequest,REMINDER_ALARM} from '../../companion/extension/access-reminders';
+const connection={id:'local-id',origin:'https://service.example.test',kind:'reminders',token:'x'.repeat(54)};
+function fixture(){const saved={reminderConnection:connection},events={};return {saved,storage:{local:{get:vi.fn(async()=>({...saved})),set:vi.fn(async value=>Object.assign(saved,value)),remove:vi.fn(async keys=>{for(const key of Array.isArray(keys)?keys:[keys])delete saved[key];})},onChanged:{addListener:vi.fn(fn=>{events.change=fn;})}},alarms:{create:vi.fn(),clear:vi.fn(),onAlarm:{addListener:vi.fn(fn=>{events.alarm=fn;})}},permissions:{contains:vi.fn(async()=>true)},runtime:{onStartup:{addListener:vi.fn()}},action:{setBadgeText:vi.fn(),setBadgeBackgroundColor:vi.fn()},events};}
+it('persists counts only and restores a bounded alarm without operator credentials',async()=>{
+ const browser=fixture(),request=vi.fn(async()=>({alerts:[{id:'lease',client:'Private client name'}],expires:1900000000})),monitor=createReminderMonitor(browser,{request,clock:()=>1234});await monitor.check();expect(browser.saved.reminderStatus).toEqual({connectionId:'local-id',state:'current',count:1,checkedAt:1234,expires:1900000000});expect(JSON.stringify(browser.saved.reminderStatus)).not.toContain('Private client');expect(browser.action.setBadgeText).toHaveBeenCalledWith({text:'R'});monitor.install();await vi.waitFor(()=>expect(browser.alarms.create).toHaveBeenCalledWith(REMINDER_ALARM,{periodInMinutes:15}));
+});
+it('does not publish results after disconnection during a poll',async()=>{
+ const browser=fixture();let resolve;const request=vi.fn(()=>new Promise(done=>{resolve=done;})),monitor=createReminderMonitor(browser,{request});const task=monitor.check();await vi.waitFor(()=>expect(request).toHaveBeenCalled());delete browser.saved.reminderConnection;resolve({alerts:[{}],expires:1900000000});await task;expect(browser.saved.reminderStatus).toBeUndefined();expect(browser.action.setBadgeText).not.toHaveBeenCalled();
+});
+it('stops polling on revoked capability and distinguishes unavailable service',async()=>{
+ const browser=fixture(),request=vi.fn(async()=>{throw Object.assign(new Error('revoked'),{terminal:true});}),monitor=createReminderMonitor(browser,{request});await monitor.check();expect(browser.saved.reminderStatus.state).toBe('reconnect');expect(browser.alarms.clear).toHaveBeenCalledWith(REMINDER_ALARM);expect(browser.action.setBadgeText).toHaveBeenCalledWith({text:'?'});request.mockRejectedValue(new Error('offline'));await monitor.check();expect(browser.saved.reminderStatus.state).toBe('unavailable');
+});
+it('respects host permissions and never hides an active secure-save capture badge',async()=>{
+ const browser=fixture(),request=vi.fn(),monitor=createReminderMonitor(browser,{request});browser.permissions.contains.mockResolvedValue(false);vi.stubGlobal('sentinelCaptureActive',true);await monitor.check();expect(request).not.toHaveBeenCalled();expect(browser.action.setBadgeText).not.toHaveBeenCalled();
+});
+it('restricts reminder transport to its own endpoints and never sends cookies or token URLs',async()=>{
+ const fetcher=vi.fn(async()=>({ok:true,json:async()=>({alerts:[],expires:1900000000})}));await reminderRequest(connection,'context',fetcher);expect(fetcher.mock.calls[0][0]).toBe(connection.origin+'/api/companion/reminders/context');expect(fetcher.mock.calls[0][1]).toMatchObject({credentials:'omit',redirect:'error',method:'GET',headers:{Authorization:'Bearer '+connection.token}});await expect(reminderRequest({...connection,kind:'access'},'context',fetcher)).rejects.toThrow('read-only');await expect(reminderRequest(connection,'../access/workflows',fetcher)).rejects.toThrow('read-only');expect(fetcher).toHaveBeenCalledTimes(1);
+});

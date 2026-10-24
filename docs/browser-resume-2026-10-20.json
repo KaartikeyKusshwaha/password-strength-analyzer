@@ -1,0 +1,31 @@
+{
+  "recorded_at": "2026-10-20T13:41:05.612573+00:00",
+  "browser": {
+    "state": "edge_not_in_available_inventory",
+    "available": [
+      "iab",
+      "mcpapps"
+    ],
+    "attempted_tab": "981325716",
+    "unlock_attempt_reached_page": false
+  },
+  "runtime": {
+    "state": "restarted_after_verified_missing_process_and_listener",
+    "listener": "127.0.0.1:8110",
+    "pid": 17208,
+    "http_status": 200,
+    "setup_required": false,
+    "backup_created": true,
+    "frontend": "existing browser-checked dist",
+    "backend": "current tested advisory grouping source now loaded",
+    "passkey_routes": "not implemented; protocol module not imported by app"
+  },
+  "hashes": {
+    "backend/app.py": "bb7d3f3667a48b34db015e6e8f350d53b8e2149f330f3ce4abe36510f0ecfb49",
+    "backend/scanner.py": "c185b05911dc8ef3cb7865bd427d538bd131e1ed24f191413e35b62dfe4c9aae",
+    "backend/watches.py": "1525b9a1270c1bd872dda99ae6bb4c66ac458fbf747556f39a74def6d11f2fb5",
+    "backend/advisories.py": "21d5bd54225499d66d0eed35e51cdd4fc8d650d995bf27fc5ff82819820f51c3",
+    "frontend/dist/index.html": "6a822c0687f62fa4e7891677f89d49a136ff7fbf1b84dd299962ecc2feb8c843"
+  },
+  "next": "Reconnect Edge, reacquire tab and observe vault state before any unlock attempt. User reports test vault created; incorrect/correct passphrase acceptance not yet executed."
+}

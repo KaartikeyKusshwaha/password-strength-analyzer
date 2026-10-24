@@ -1,0 +1,103 @@
+{
+  "product": "SentinelOps",
+  "version": "0.12.0",
+  "phase": "live Edge check and frontend corrections",
+  "recorded_at": "2026-10-19T20:05:47.268704+00:00",
+  "previous_candidate": "browser-candidate-0.12.0.json",
+  "browser_access": {
+    "state": "connected",
+    "family": "edge",
+    "browser_id": "3",
+    "tab_id": "981325716",
+    "localhost": "http://127.0.0.1:8110/"
+  },
+  "hashes": {
+    "frontend/src/App.jsx": "7a8d195f6a104ca87f37bb4c8b1d4d30142e7c37df657f13d0df85c41d9c9b58",
+    "frontend/src/Companions.jsx": "fe04d9555b9eb991faf3e18f6ee84c66ee1d76a80b27f40c8a46f9b66457c895",
+    "frontend/src/style.css": "33b2323efc3f8eb6acf406f977e0ed622f57a2f89a563499ec58c1a70d87afda",
+    "companion/extension/sentinelops-companion.zip": "70756e4e8ba89f51b54731e2946f6bb7c17d59180b38d6c73f67ae2996308253",
+    "companion/extension/dist/manifest.json": "116846b571c6330b0392ac749cb4568d759fb90d9cf5d94ad3c4132178ff594c",
+    "backend/app.py": "ba86973afb947d3322cf2f5748e52ad324ba6147d200c4960d91a07a15c5cd6e",
+    "backend/scanner.py": "f2fe7577b399b750cbf2e796cc253bd947623d8d286a9499d749ae563cb075e8",
+    "backend/watches.py": "11bcdc2d8bf30b08dbe7bf98b85faa2e9cfbf92aaa75e6eae87b4f156ad76cba",
+    "frontend/dist/index.html": "6a822c0687f62fa4e7891677f89d49a136ff7fbf1b84dd299962ecc2feb8c843",
+    "frontend/dist/assets/AccountActions-MsZ2WRc5.js": "ef949d4c8fa684fa17b129bfc2a542ad2936c20be6b419712931c8e13f0e7303",
+    "frontend/dist/assets/Companions-Dd8OMEmg.js": "4b0d4a1bfbea0cf9052d56648421b97407d41503e03951e89836bcd742384c57",
+    "frontend/dist/assets/ControlCenter-Br48Xmww.js": "8ed8353565f680048d7d91f34e79dea6c026e94244fc1a21b9b6a9b875ea55f0",
+    "frontend/dist/assets/download-BWATRV8M.js": "1b4b801d846de624871119adb9e5aa23e4aa3fb059cacc0752098a0f133778e7",
+    "frontend/dist/assets/index-7N3uWqrq.js": "8e10b7f6c5110b54871af0354c4da2cd53b49b85e890f4ef4548405a51b82dfa",
+    "frontend/dist/assets/index-jLMVj2hi.css": "fc35818eaff85020a369be86c637c3e1bba69344443cc12ae8928a0d06c94b25",
+    "frontend/dist/assets/index.esm-CgNExnv6.js": "a0129a0cfd01edad4bc94bc0654b5c6e5596117d71cefe02b45cb26217d1dccf",
+    "frontend/dist/assets/monitor-DyLft-we.js": "bb3e93782a315407a4a30fa0b5a58055e97798f1de283b118a0d03c6c4feedb5",
+    "frontend/dist/assets/strength-Cnf38iKx.js": "dbc5cbfa39a38dae2e1247acf549de76e807c87f7d9ce0c5b08ed246032901a2",
+    "frontend/dist/assets/vault-v2-BX3j1emP.js": "dc668044e021cc9648dfa40e263440cbc2ba957335e4436c11c6b3c1e3d0a006",
+    "frontend/dist/assets/VaultCollection-D40kryLD.js": "4e70826758e8007e938222893b60477204e6c4fee1bc3cedcc94ec1a37752507",
+    "frontend/dist/assets/Watches-6Q69jOzz.js": "1e28699ea57e1fae478852f85482909f64fc38fc852695c045393ac12b4cf5fc"
+  },
+  "evidence": {
+    "data/browser-acceptance-0.12.0/mobile-navigation-fixed.png": "63416d006382d29de4e9dba7a90b17281810934c7de7fad5ecff0e1ba46145de",
+    "data/browser-acceptance-0.12.0/mobile-vault.png": "33925b21bcabbaa805c95bd4729a078ac669a2a60f828bc9c8e5276d3bb1c7f6",
+    "data/browser-acceptance-0.12.0/port-result.png": "f95a6fda862d016a702276ff2ce99e3782200aea41304a5b23d3937def84b570",
+    "data/browser-acceptance-0.12.0/private-setup-handoff.png": "b8623fdf9c8d2e1a5b8f6a37359b22a3f895a8d3208c0961a4058afc231d0a32",
+    "data/browser-acceptance-0.12.0/watch-result.png": "ecd4a6128afad9496ceb89da32eb1b23168b2cbc62b1de25cc21350f8403c7ec",
+    "data/browser-acceptance-0.12.0/installed-assistant-empty-form.png": "01233a95f6c9420c68c43b7e8a526ba550855719f1fada7b112605c480fbc50b"
+  },
+  "observations": [
+    "Initial connection refused: no Python process/listener existed. Started existing run.py; listener confirmed at 127.0.0.1:8110.",
+    "Owner session remained signed in. No account reset, private vault unlock or credential save performed.",
+    "Live local TCP check: 127.0.0.1 port 8110 complete, 1/1 assessed, open; finding evidence verified.",
+    "Existing public lodash 4.17.20 watch: complete, 1/1 assessed, zero new matches; existing read alert remained read, schedule remains off.",
+    "Dashboard, locked personal vault, properties, shared identity setup, activity, connections, watches, agent desk, remediation, investigations, checks and finding detail rendered.",
+    "Provider correctly reports Groq not connected; no AI model call tested.",
+    "Corrected stale companion label by importing packaged manifest version; verified 0.12.0 on live page.",
+    "Corrected hidden mobile sidebar accessibility with CSS visibility; added expanded/controls attributes and Escape focus restoration. Verified navigation absent while closed, present while open; Escape returned focus.",
+    "390x844 viewport: selected watch/vault pages scrollWidth equals clientWidth 375; scrollbar accounts for difference. Override reset.",
+    "Captured console warnings/errors empty; this is scoped to this tab/run, not all runtime failures.",
+    "Seven existing App/Companions tests passed; frontend production build passed with existing large strength-chunk warning.",
+    "Private Browser acceptance metadata form left open with name only; no new vault created.",
+    "backend/advisories.py is unfinished, unimported development work paused for browser testing; no alias-grouping capability shipped.",
+    "External form detection verified visually on empty registration form; external tab then closed without any credential entry or form submission."
+  ],
+  "cases": {
+    "B01": {
+      "status": "partial",
+      "observations": [
+        "Selected desktop/mobile navigation inspected, two defects fixed and rechecked; full keyboard and all workflow coverage remains."
+      ]
+    },
+    "B19": {
+      "status": "partial",
+      "observations": [
+        "Existing watch rerun complete with no duplicate alert. New setup/failure/unread transitions not exercised this phase."
+      ]
+    },
+    "B20": {
+      "status": "partial",
+      "observations": [
+        "Local operator path complete. Paired remote-device connection/revocation not tested."
+      ]
+    },
+    "S05": {
+      "status": "partial",
+      "observations": [
+        "Closed/open menu accessibility and Escape verified at mobile width; private pairing/approval screens pending."
+      ]
+    },
+    "S07": {
+      "status": "partial",
+      "observations": [
+        "Locked personal timeline correctly separates unavailable encrypted observations; shared/revoked/paginated paths pending."
+      ]
+    },
+    "B04": {
+      "status": "partial",
+      "observations": [
+        "Installed Edge companion opened the in-page SentinelOps password assistant when the empty password field was focused on https://practice.expandtesting.com/register. Screenshot verified; closed-shadow controls were absent from AX tree but visibly present. No password entered, generated, saved or submitted. Installed extension version not independently established; this does not certify current packaged release or weakness estimates."
+      ],
+      "evidence": [
+        "data/browser-acceptance-0.12.0/installed-assistant-empty-form.png"
+      ]
+    }
+  },
+  "private_setup": "Awaiting user: create separate Browser acceptance vault with private passphrase; then test companion pairing. Other private and shared acceptance cases remain unrun."
+}

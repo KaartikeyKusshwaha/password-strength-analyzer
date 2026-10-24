@@ -1,0 +1,83 @@
+{
+  "team": {
+    "id": "333333333333333333333333",
+    "workspace": "222222222222222222222222",
+    "owner": "111111111111111111111111",
+    "owner_public": {
+      "encryption": "MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAsDLLXO38uT/DM6VykXknA/l3CfwNQ75obyHLOmpv98wpKsdkGlGbwajEwAUR1SSjDaxSFC2cfbaDDv7rn0rNnMKgEljoO8fh0e6p3Z5b7moDJ1nFOVLu8KfNUbGftCYe89n1nDRBdEDC4/7nNVrOktAQu9buwQt7s7nGuRDpTHSYxRjXx05UFokhcHb2jaQEaNf4xMf2/iqQdcSNID6azqx827lxf9vEptomb3ORpK3rWunfhh6LLLrzdNsC0x3W3wrdXa5wGGeBD3J6OveI/xZXV5/GZwtZpk9Jm2hTRi9ftlxfwQaUANZ2kGM+JpT4WBIUxiM3l5FgiQnCgEjSugdmKNgvfqKH6njCZyZRTrlEVFRe4nAq6Mg651ExclgcCGw8MBSx2/Xs9ohPk7hq73t87tKa4dMrVHhSxMZS1S3wRLZ75h8Z41e5/Oi6KUmrAH7Ihg5a16VsRXMHbQ/W0iWjJhe1kAV+sWlHmKg0gkb+PzlCVDw1/oAuAo5GXg83AgMBAAE=",
+      "signing": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEWPh/rc72yJVZsNYweWo0lISofKOTlbz1EHLrJp0rRpc4LDeYuN3j/EvEYQb/7FQ/ppVbjMiS/9+Ll720Qdlxdw=="
+    },
+    "owner_fingerprint": "4076668d2a804c0879250ca28465be2a38026ba4c8c740f42a73888bb885d005",
+    "manifest": {
+      "document": {
+        "id": "333333333333333333333333",
+        "workspace": "222222222222222222222222",
+        "owner": "111111111111111111111111",
+        "owner_fingerprint": "4076668d2a804c0879250ca28465be2a38026ba4c8c740f42a73888bb885d005"
+      },
+      "signature": "FVvBG9oSqShQQVWTxnFeA6TRyb4C3P9Xx9LKyOwvjXgGZzr3P1mD/ryBKxSFGINvJPRhI423EPWbFZSZNHbDwQ=="
+    },
+    "epoch": 1,
+    "revision": 1,
+    "rotation_required": false,
+    "role": "owner",
+    "accepted": true,
+    "grant": {
+      "version": 1,
+      "vault_id": "333333333333333333333333",
+      "recipient": "111111111111111111111111",
+      "issuer": "111111111111111111111111",
+      "epoch": 1,
+      "role": "owner",
+      "recipient_fingerprint": "4076668d2a804c0879250ca28465be2a38026ba4c8c740f42a73888bb885d005",
+      "issuer_fingerprint": "4076668d2a804c0879250ca28465be2a38026ba4c8c740f42a73888bb885d005",
+      "wrapped_key": "nBsAANpJ24O2wj8dKiAnaMRgbcWQ4jFqDD2jALL2Q8RT+iQKJeiv5y/mlFIAnA0RVtmZIq7bAUAB/ocn5qSzafxXdnyOtDjXzy3+kdZwjUm80wHxQF8WXBCYCA5IZ07RuMn0rAS6jn/qsSMfOqkRxR7vqMc2dP45TjA+lI+V5qb/wyX6KWI8jICwvfH7Hnt93pIn0NN+JeWb/lZoC9VPxRCAbF7ng+Vp52z1mZtjUnMNRBGLJFE9qPRtcg34BxSktf28gsoc4O9la3QovVBwg9+nRSdp1ngOyp5khsuLgPaTzfzJ2jqh0APLe/Mq87i42c46XPhZqFZcTFT5vrP7u8d7Nw3bax1m5O1FOsQvW5n0Yi0LhVGlnicD/98j0sTSol5zTZmRN29kz8my8ECvmlhKfLkhoASTNVJYAZmBqx7ARguw56M6+A8xON+sHTlOMuHc9Fv4AVzQy5Wj3HF63NC2Vn9LpkAvn+gVmnJxe9BqKy8e6Xmcl7Fo65WNOwpl",
+      "signature": "aE8egGAqDY73qP0ERo7s3AqHtTNgLeqZq0nVV947VjuMqv43ayWXzr22YqTx8IhU11a2r4XxynsWGpa4Cxp2uQ==",
+      "issuer_public": {
+        "encryption": "MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAsDLLXO38uT/DM6VykXknA/l3CfwNQ75obyHLOmpv98wpKsdkGlGbwajEwAUR1SSjDaxSFC2cfbaDDv7rn0rNnMKgEljoO8fh0e6p3Z5b7moDJ1nFOVLu8KfNUbGftCYe89n1nDRBdEDC4/7nNVrOktAQu9buwQt7s7nGuRDpTHSYxRjXx05UFokhcHb2jaQEaNf4xMf2/iqQdcSNID6azqx827lxf9vEptomb3ORpK3rWunfhh6LLLrzdNsC0x3W3wrdXa5wGGeBD3J6OveI/xZXV5/GZwtZpk9Jm2hTRi9ftlxfwQaUANZ2kGM+JpT4WBIUxiM3l5FgiQnCgEjSugdmKNgvfqKH6njCZyZRTrlEVFRe4nAq6Mg651ExclgcCGw8MBSx2/Xs9ohPk7hq73t87tKa4dMrVHhSxMZS1S3wRLZ75h8Z41e5/Oi6KUmrAH7Ihg5a16VsRXMHbQ/W0iWjJhe1kAV+sWlHmKg0gkb+PzlCVDw1/oAuAo5GXg83AgMBAAE=",
+        "signing": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEWPh/rc72yJVZsNYweWo0lISofKOTlbz1EHLrJp0rRpc4LDeYuN3j/EvEYQb/7FQ/ppVbjMiS/9+Ll720Qdlxdw=="
+      },
+      "issuer_grant": null
+    },
+    "grants": [
+      {
+        "user_id": "111111111111111111111111",
+        "role": "owner",
+        "envelope": {
+          "version": 1,
+          "vault_id": "333333333333333333333333",
+          "recipient": "111111111111111111111111",
+          "issuer": "111111111111111111111111",
+          "epoch": 1,
+          "role": "owner",
+          "recipient_fingerprint": "4076668d2a804c0879250ca28465be2a38026ba4c8c740f42a73888bb885d005",
+          "issuer_fingerprint": "4076668d2a804c0879250ca28465be2a38026ba4c8c740f42a73888bb885d005",
+          "wrapped_key": "nBsAANpJ24O2wj8dKiAnaMRgbcWQ4jFqDD2jALL2Q8RT+iQKJeiv5y/mlFIAnA0RVtmZIq7bAUAB/ocn5qSzafxXdnyOtDjXzy3+kdZwjUm80wHxQF8WXBCYCA5IZ07RuMn0rAS6jn/qsSMfOqkRxR7vqMc2dP45TjA+lI+V5qb/wyX6KWI8jICwvfH7Hnt93pIn0NN+JeWb/lZoC9VPxRCAbF7ng+Vp52z1mZtjUnMNRBGLJFE9qPRtcg34BxSktf28gsoc4O9la3QovVBwg9+nRSdp1ngOyp5khsuLgPaTzfzJ2jqh0APLe/Mq87i42c46XPhZqFZcTFT5vrP7u8d7Nw3bax1m5O1FOsQvW5n0Yi0LhVGlnicD/98j0sTSol5zTZmRN29kz8my8ECvmlhKfLkhoASTNVJYAZmBqx7ARguw56M6+A8xON+sHTlOMuHc9Fv4AVzQy5Wj3HF63NC2Vn9LpkAvn+gVmnJxe9BqKy8e6Xmcl7Fo65WNOwpl",
+          "signature": "aE8egGAqDY73qP0ERo7s3AqHtTNgLeqZq0nVV947VjuMqv43ayWXzr22YqTx8IhU11a2r4XxynsWGpa4Cxp2uQ==",
+          "issuer_public": {
+            "encryption": "MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAsDLLXO38uT/DM6VykXknA/l3CfwNQ75obyHLOmpv98wpKsdkGlGbwajEwAUR1SSjDaxSFC2cfbaDDv7rn0rNnMKgEljoO8fh0e6p3Z5b7moDJ1nFOVLu8KfNUbGftCYe89n1nDRBdEDC4/7nNVrOktAQu9buwQt7s7nGuRDpTHSYxRjXx05UFokhcHb2jaQEaNf4xMf2/iqQdcSNID6azqx827lxf9vEptomb3ORpK3rWunfhh6LLLrzdNsC0x3W3wrdXa5wGGeBD3J6OveI/xZXV5/GZwtZpk9Jm2hTRi9ftlxfwQaUANZ2kGM+JpT4WBIUxiM3l5FgiQnCgEjSugdmKNgvfqKH6njCZyZRTrlEVFRe4nAq6Mg651ExclgcCGw8MBSx2/Xs9ohPk7hq73t87tKa4dMrVHhSxMZS1S3wRLZ75h8Z41e5/Oi6KUmrAH7Ihg5a16VsRXMHbQ/W0iWjJhe1kAV+sWlHmKg0gkb+PzlCVDw1/oAuAo5GXg83AgMBAAE=",
+            "signing": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEWPh/rc72yJVZsNYweWo0lISofKOTlbz1EHLrJp0rRpc4LDeYuN3j/EvEYQb/7FQ/ppVbjMiS/9+Ll720Qdlxdw=="
+          },
+          "issuer_grant": null
+        },
+        "accepted": true
+      }
+    ],
+    "payload": {
+      "version": 1,
+      "context": "333333333333333333333333",
+      "epoch": 1,
+      "iv": "ZGRkZGRkZGRkZGRk",
+      "ciphertext": "nrrTpCm4gMNRkGTTuGGkf8+jmZUcdQFFCLjnzdBwUEzulfchi4YxmLqZZjMESrnI6AVroQ6y4iht6YFj+BryXno6tTiBUqIyN+EuIYCu1NdIJn9ugpvCKUyo2qXhPPoZ8YVo2jw8K0668AS3ILFfCt5aARzIHJtPjdY1l2TIS5gQeOvvfE2x+d4RCR5KAOnMEcHB3Fvx/MQwVTdGZWtqKuawP7gFbsPTZeD3AmsGLsR3pKGgDUuV"
+    },
+    "browser_policy": {
+      "browser_enabled": true,
+      "browser_save": true,
+      "browser_fill": true,
+      "origins": [],
+      "lock_seconds": 180
+    }
+  },
+  "state_digest": "af78eb90ca5c403312544df3b187002b3b6d525c76fd28c130e283fcf368fb44",
+  "generator": "Python hashlib.sha256 over canonical JSON; existing synthetic native-sharing fixture."
+}

@@ -1,0 +1,232 @@
+{
+  "product": "SentinelOps",
+  "version": "0.11.0",
+  "recorded_at": "2026-10-19T19:18:58.285227+00:00",
+  "hashes": {
+    "frontend/dist/index.html": "380267179b55a2b99732664fd15844697d1ea9b15897464576bc94a4e23b443d",
+    "companion/extension/sentinelops-companion.zip": "797225f4381d0ab640128c22e90c915226c9858559344cbe6f8f957324c8c27b",
+    "companion/extension/dist/manifest.json": "f00299a0b837265cd75da5512fbc33ac44acae3120d25bab669c29065ab965fd",
+    "backend/app.py": "4218d4ada198dd24af99acec5da7c38194e4e00a9f419d40d10d15fcc4d1ed70",
+    "backend/sharing.py": "bd3865cdaedf8c8b57e13f2a84fa0d206ae7ba5854f15c72ded9acea54308908",
+    "backend/credential_actions.py": "cf9e7aa0e78f51447544bd098afdd4dbba8700af0a52ee43a38dc06c5d22e003",
+    "backend/vault_activity.py": "e0a92376409ad4632a0659a3938dac3d74e69e1019ebfc19b374e9b3ac513bca",
+    "backend/backups.py": "1f030fb447f4f8b9c91206518d8ab30e1c884539c10ca320454a82f3e071f162",
+    "frontend/src/VaultActivity.jsx": "bf480a7ee2beb9d69decccf55e1cd2c591e43d82b14363a5bcffc830938db39a",
+    "frontend/src/Vault.jsx": "403f9d4ee77b963284258901b9654d5d70b1ab7453616eba138e10bd28a03edb",
+    "frontend/src/TeamVaults.jsx": "c76e92b1dc5b559b8089a7aea605f1225a0d3bbfacd7b4e2b5dfa8e9ffc478be",
+    "frontend/dist/assets/AccountActions-BB5oHuDl.js": "958f0e758337a7bcb005ab3658dbf46632325db7fba45fbc63e4dddd52735132",
+    "frontend/dist/assets/Companions-OttfmFfi.js": "7a6aa24191df8699aa1200c0f63e857ad289b3f98cd5b4bd4d00105c0f8c0191",
+    "frontend/dist/assets/ControlCenter-WJK0zA-Q.js": "529ddb82e29bf01d0cb0dffb3c65b727a6778c3a600f74f3fcbae24d37be0c6c",
+    "frontend/dist/assets/download-WEbL-nbX.js": "5355d0699da98b903f0dae2a84816169ef80a3b48ff7c77c6808be879dcfba0e",
+    "frontend/dist/assets/index-BpN40tf5.css": "9c82b99a87b0e6c89703acf799709713793717b7720e41d4ec47fa6fcba27627",
+    "frontend/dist/assets/index-COyu_Ruc.js": "98391f1bb4309b829656f569cffc008d34e961b2dfdab76f4eb74bec286c5c5f",
+    "frontend/dist/assets/index.esm-CgNExnv6.js": "a0129a0cfd01edad4bc94bc0654b5c6e5596117d71cefe02b45cb26217d1dccf",
+    "frontend/dist/assets/monitor-3mWgsIF5.js": "7d89822a32e1cfafd27d3cc81771f012c7fa235b8303b8a9e0b5b3759a6802a9",
+    "frontend/dist/assets/strength-Cnf38iKx.js": "dbc5cbfa39a38dae2e1247acf549de76e807c87f7d9ce0c5b08ed246032901a2",
+    "frontend/dist/assets/vault-v2-DdTLsRfN.js": "0d38a1e5a2a3d0316bb1ddf965d5d5959e17bf6fe4e29b9e0d4c5983df44cdd1",
+    "frontend/dist/assets/VaultCollection-BjzsaH_d.js": "363057c42e7e6cc25712e25481e86f6c1c619f80c112b18ce07ed0b2fa71ed49",
+    "frontend/dist/assets/Watches-B-Pl59j5.js": "21987d592d7a3480f9b78889bded07a10d5869fb2056ecef87da3ac80f91099f"
+  },
+  "browser_access": {
+    "state": "not_retested_this_phase",
+    "family": "edge",
+    "latest_earlier_error": "Local browser use is disabled in Work settings",
+    "localhost": "http://127.0.0.1:8110/"
+  },
+  "private_setup": "Deferred at user request while independent work continues. Notify before browser control.",
+  "prior_candidates": [
+    "browser-candidate-0.9.2.json",
+    "browser-candidate-0.10.0.json"
+  ],
+  "cases": {
+    "B01": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.11.0 acceptance pending; historical observations remain in prior candidate records."
+      ]
+    },
+    "B02": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.11.0 acceptance pending; historical observations remain in prior candidate records."
+      ]
+    },
+    "B03": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.11.0 acceptance pending; historical observations remain in prior candidate records."
+      ]
+    },
+    "B04": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.11.0 acceptance pending; historical observations remain in prior candidate records."
+      ]
+    },
+    "B05": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.11.0 acceptance pending; historical observations remain in prior candidate records."
+      ]
+    },
+    "B06": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.11.0 acceptance pending; historical observations remain in prior candidate records."
+      ]
+    },
+    "B07": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.11.0 acceptance pending; historical observations remain in prior candidate records."
+      ]
+    },
+    "B08": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.11.0 acceptance pending; historical observations remain in prior candidate records."
+      ]
+    },
+    "B09": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.11.0 acceptance pending; historical observations remain in prior candidate records."
+      ]
+    },
+    "B10": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.11.0 acceptance pending; historical observations remain in prior candidate records."
+      ]
+    },
+    "B11": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.11.0 acceptance pending; historical observations remain in prior candidate records."
+      ]
+    },
+    "B12": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.11.0 acceptance pending; historical observations remain in prior candidate records."
+      ]
+    },
+    "B13": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.11.0 acceptance pending; historical observations remain in prior candidate records."
+      ]
+    },
+    "B14": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.11.0 acceptance pending; historical observations remain in prior candidate records."
+      ]
+    },
+    "B15": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.11.0 acceptance pending; historical observations remain in prior candidate records."
+      ]
+    },
+    "B16": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.11.0 acceptance pending; historical observations remain in prior candidate records."
+      ]
+    },
+    "B17": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.11.0 acceptance pending; historical observations remain in prior candidate records."
+      ]
+    },
+    "B18": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.11.0 acceptance pending; historical observations remain in prior candidate records."
+      ]
+    },
+    "B19": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.11.0 acceptance pending; historical observations remain in prior candidate records."
+      ]
+    },
+    "B20": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.11.0 acceptance pending; historical observations remain in prior candidate records."
+      ]
+    },
+    "S01": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.11.0 acceptance pending; historical observations remain in prior candidate records."
+      ]
+    },
+    "S02": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.11.0 acceptance pending; historical observations remain in prior candidate records."
+      ]
+    },
+    "S03": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.11.0 acceptance pending; historical observations remain in prior candidate records."
+      ]
+    },
+    "S04": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.11.0 acceptance pending; historical observations remain in prior candidate records."
+      ]
+    },
+    "S05": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.11.0 acceptance pending; historical observations remain in prior candidate records."
+      ]
+    },
+    "S06": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "Current 0.11.0 acceptance pending; historical observations remain in prior candidate records."
+      ]
+    },
+    "S07": {
+      "status": "not_run",
+      "evidence": [],
+      "observations": [
+        "New activity timeline has automated API/component coverage; no current visual acceptance claimed."
+      ]
+    }
+  }
+}

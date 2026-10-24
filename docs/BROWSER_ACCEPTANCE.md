@@ -1,0 +1,286 @@
+# Browser acceptance — SentinelOps 0.16.0 / companion 0.12.8
+
+Offline recovery kits 0.16.0: cryptographic/API/component acceptance passed,
+but actual setup/download/recovery remains pending. Edge was absent from browser
+inventory. The in-app browser opened the actual 0.16.0 sign-in screen and its
+owner email was prepared for private sign-in. No password was retrieved and no
+recovery credential was created or activated. The tab is retained for sign-in;
+screenshot: `data/browser-acceptance-0.16.0/sign-in-handoff.png`. Do not treat this
+sign-in screen as evidence that the signed-in recovery UI was visually accepted.
+
+
+Windows Update acceptance: actual Edge retained owner sign-in after the backed-up
+schema-10 upgrade. The driver chose the local read-only update scope and ran it.
+The completed operation rendered zero cached pending updates and no update-related
+restart, with cache freshness explicitly unverified and zero findings recorded.
+No AI work was fabricated for zero findings. The driver inspected the final
+coverage table and saved `data/browser-acceptance-0.15.0/windows-update-result.png`.
+This is one local run; paired update consent/leases have automated coverage but
+real remote-device acceptance remains open. No update installation or reboot was
+attempted.
+
+
+Message triage 0.14.1: actual Edge retained owner sign-in after the backed-up
+upgrade. Security reviews offered Suspicious email indicators and explicit RFC
+822 .eml format. The selector was operated and visibly selected. Runtime MIME,
+redaction, per-message identity and approved agent dispatch were tested in
+isolated stores; no fabricated message was added to the owner workspace.
+Screenshot: `data/browser-acceptance-0.14.1/message-format.png`.
+
+
+Combined review acceptance on 21 October: the existing owner app signed in
+normally through Edge. An approved localhost port/posture review displayed
+one open TCP port, enabled firewall/Defender observations and unassessed
+BitLocker (permission denied), so its status remained partial. The linked
+live Groq workflow completed and created one open remediation task. The final
+review UI showed the underlying coverage inline. Screenshot:
+`data/browser-acceptance-0.14.0/combined-review.png`. This verifies one real
+review case, not every assessment, every site or automatic repair.
+
+
+Latest 21 October result: after reload, the user reported the popup's Username
+and password filled acknowledgement. Actual Edge inspection found both fields
+populated; the screenshot visibly shows username practice and a masked password.
+The test driver did not type either credential. Direct DOM equality results are
+not authoritative because the browser tools redact field values. A subsequent
+public-demo login submission reached /authenticate but timed out at the network
+level; provider acceptance was not verified and the POST was not retried.
+Before/after screenshots and the precise result are retained under ignored
+data/browser-acceptance-0.13.3/. This is one installed happy-path fill result,
+not certification of other sites, shared vaults or all negative cases.
+
+Edge access returned on 21 October. The stopped local app was started again;
+the actual signed-out app rendered. Four blank/duplicate/unused tabs were
+closed at the user's request, keeping one app, Extensions and the practice
+login. Both practice fields were observed empty. Their form action is the
+same-origin `/authenticate`; there is one visible password field, one username
+field and an exact Login submit control. The misleading new-password hint is
+already covered by the current sign-in policy and its regression fixture.
+
+The service received a 0.12.7 contact report. A read-only local verification of
+only the disposable Browser acceptance vault confirmed the supplied test
+master and the public practice login. This does not prove installed filling.
+The user reported that clicking Fill did nothing. The extension toolbar popup
+is not exposed to browser control, so its actual message was not observed.
+Companion 0.12.8 adds per-entry progress/errors and bounded page-message waits;
+At that point installed acceptance was pending reload and another user click. Never
+replace that click with direct credential filling by the test driver.
+
+App 0.13.3 adds sourced CVSS severity for dependency findings and separate
+severity coverage in manual-check history and watch runs. Automated provider,
+UI and persistence tests pass; a live public-package API probe passed. The
+backed-up local app runs 0.13.3 with protected records preserved. These checks
+do not establish actual browser rendering or companion autofill acceptance.
+The earlier disabled-browser condition is resolved for website control. The
+installed companion remains unverified; its pairing was retained for the
+pending acceptance workflow. Native desktop windows remain unavailable.
+
+Individual browser disconnection now has an exact named confirmation and Keep
+option. Automated account isolation, other-connection preservation, lease
+interruption/resume and revocation-interleaving cases pass. The new action has
+not been clicked in actual Edge because browser control remains unavailable.
+The full 327-backend/194-frontend regressions and build passed. The backed-up
+local app runs 0.13.2; protected-record comparisons and an unauthenticated-route
+rejection smoke check passed. That HTTP check does not replace the UI case.
+
+The local app now includes account-private connection contact/version reports.
+The encrypted-backup/restart and HTTP header checks passed; data preservation
+comparisons passed. No installed client report or visual panel result is claimed
+while browser control is disabled. Companion 0.12.7 includes the prior 0.12.6
+field-retention checks. See COMPANION_CONNECTION_REPORTS.md. The completed
+disposable passkey service on 8111 is stopped; its data/evidence are retained.
+
+Companion 0.12.6 is built with field-retention receipts, form revalidation between
+writes and clear password-only/rejected-value outcomes. All 189 frontend tests
+passed. Installed-browser acceptance is still open: the latest control inventory
+exposes no apps or browsers and reports local browser use disabled. No extension
+reload or successful actual fill is inferred. See
+companion-0.12.6-autofill-receipts.md.
+
+Latest continuation, 21 October 2026: the backed-up owner store migrated to
+schema 9 with protected account/vault/sharing/connection records unchanged.
+Edge preserved owner sign-in, displayed the new account-passkey card's actual
+unsupported-IP-origin state and unlocked/relocked the existing one-entry test
+vault. The user completed native Edge enrollment in the separate disposable
+localhost app; the actual page confirms "Edge acceptance key". Native passkey
+sign-in also reached the signed-in account and updated the key's Last used time.
+Remaining lifecycle acceptance is pending. See PASSKEY_HTTP.md. The approved
+public dependency watch also completed: 1/1 pins, 5/5 advisory details, no
+overlapping reports grouped, zero new matches, schedule off. Installed companion
+autofill remains unverified.
+
+The user subsequently submitted the disposable key removal. Their screenshot
+shows the removal notice and no enrolled keys. A read-only store check confirmed
+the retained revoked credential at revision 2 and zero pending ceremonies.
+Device-side key cleanup, explicit native cancellation and MFA acceptance remain open.
+
+Following the completed watch's Review findings link initially displayed the
+parent app's cached metadata from the previous day. Navigation now refreshes
+the shared workspace snapshot. A new actual watch run followed by that link
+showed the 21 October 01:13 last-seen time and expanded CVE/GHSA aliases without
+another page reload. The new regression test uses a frozen initial snapshot
+and a background finding added before navigation.
+
+Passkey sign-in cancellation initially remained busy. The client now bounds its
+native wait independently of the authenticator promise, and discards late proofs.
+A fresh actual Edge request reached the expiry message, restored sign-in controls,
+and left zero pending server ceremonies and unchanged credential last-use/revision.
+Explicit Cancel interaction while native UI is active still needs acceptance.
+
+Status: **partial live Edge verification**, 20 October 2026. Browser access now
+works. The backend initially was not running and returned connection refused;
+the existing local server was started successfully. Selected navigation, a real
+local port-8110 assessment and a rerun of the public-package watch were verified.
+A stale companion version label and mobile closed-navigation accessibility were
+fixed, rebuilt and verified in Edge. Seven focused frontend tests passed.
+
+Current hashes, screenshots and exact limits are recorded in
+`browser-candidate-0.12.0-browser-check.json`; the prior candidate is retained.
+This is partial acceptance, not certification of private vault or shared flows.
+The user created a disposable Browser acceptance vault, and its dashboard unlock
+was verified. Valuable existing vaults remain outside this run. Historical 0.9.2
+observations remain in their original candidate record. Automated results in
+VERIFICATION.md do not substitute for the remaining browser cases.
+
+Latest results: the user confirmed encrypted saving through the 0.12.3 private
+window; dashboard decryption, lock/reopen persistence and ciphertext-only payload
+checks succeeded for the one disposable login. Archive preview/cancel, archive,
+restore and encrypted account history also passed in the dashboard. See
+`browser-save-persistence-0.12.3.md` and `browser-archive-restore-0.12.3.md`.
+Autofill then failed: actual practice-page DOM labeled its login field
+`autocomplete=new-password`. Companion 0.12.4 corrects that conflicting hint
+only for explicit unambiguous sign-in forms and includes the expiry countdown.
+All 150 frontend tests and production builds passed. Reload and actual fill
+verification are pending; see `companion-0.12.4-autofill.md`.
+
+Follow-up: the user still reported autofill failure and showed the SentinelOps
+new-password assistant on the login form. A live Edge refresh and password-field
+focus reproduced that suggestion, while read-only form metadata still showed
+the explicit Login button and single password field. The installed extension's
+version was not established. Version 0.12.5 rechecks field classification at
+focus time, closes obsolete suggestions and adds a versioned, main-frame-only
+autofill preflight with specific failure messages. See
+`companion-0.12.5-autofill-diagnostics.md`. Installed fill success remains pending.
+
+Historical continuation before that acceptance: Edge reconnected and saved sign-in succeeded. The user
+created the disposable Browser acceptance vault. Dashboard incorrect/correct
+unlock was observed with zero entries, and a user-approved scoped companion
+token was created. Save securely on the public practice login opened a blank
+private panel in the installed, unversioned companion; no save was established.
+Companion 0.12.1 added bounded startup diagnostics; 0.12.2 corrected a native-fetch
+receiver error. The user subsequently supplied a successful popup-unlock
+screenshot, but embedded saving still failed in the actual browser. Version
+0.12.3 replaces embedding with a dedicated extension save window, binds captures
+to that exact window/tab, removes public access to the private page/assets and
+clarifies rejected-token reconnection. The user reloaded 0.12.3, and an actual
+practice-site click created a private save window. Its unlock/save result needs
+the user's observation because browser-control tools omit extension pages.
+Never mark B06 passed from source tests, popup unlock or window creation alone.
+Remediation and investigation checks are recorded separately in
+`browser-remediation-2026-10-20.md` and `browser-investigation-2026-10-20.md`.
+
+## Preconditions and private setup
+
+1. In the ChatGPT desktop app, open **Settings > Computer Use**, enable your
+   browser and check **Manage** for blocked websites. Confirm `127.0.0.1` is
+   allowed. If connection state is stale, restart the browser and desktop app.
+   This is the [documented setup path](https://learn.chatgpt.com/docs/chrome-extension);
+   the prior generic “Work settings” instruction was imprecise. Codex announces
+   browser-control attempts before accessing tabs.
+2. Open the local dashboard at `http://127.0.0.1:8110/` and sign in yourself.
+   Keep the sign-in password and authenticator codes in the app, not in chat.
+3. In Chrome/Edge extension management, reload **SentinelOps Security Companion**
+   and verify **0.12.4**. Load the **dist folder**, not its `assets` subfolder:
+   `C:\Users\LENONO\Documents\Password-Strength-Analyzer\companion\extension\dist`.
+   Internal extension-management pages may require the user's own clicks.
+4. Use a user-created personal vault named Browser acceptance and only disposable
+   test credentials. Choose its master passphrase privately. This is an isolated
+   test vault inside the real product, not a fictional application workspace.
+   Do not unlock, alter or export valuable existing entries for this run.
+5. Pair that vault through Browser & devices. Enter the exact local app origin
+   and freshly generated scoped token in the companion; grant its requested
+   localhost permission, then unlock locally. Tokens and master passphrases must
+   never appear in evidence, chat or screenshots.
+
+The external [registration](https://practice.expandtesting.com/register) and
+[login](https://practice.expandtesting.com/login) pages are provided for automation
+practice and currently expose ordinary username/password fields. Their visible
+page/form structure must be rechecked in the browser; a web fetch is not visual
+verification. Do not submit an external registration or change an account until
+the user chooses to do so. Use only disposable site credentials if submitted.
+
+## Core browser run
+
+Record browser/version, extension version, UTC time and case ID for each result.
+Use `pass`, `fail`, `partial`, `blocked` or `not_run`. `partial` means specific
+steps were observed but the full case has not been established. Unsupported is a truthful product
+outcome to inspect, not permission to mark an unexecuted case passed.
+
+Browser tooling redacts password values. Do not treat a returned masked value's
+length or comparisons between masked values as evidence of actual password
+length/equality, and do not bypass that redaction. Verify visible field filling,
+the local estimate, no-submit behavior and user-reported confirmation separately.
+Record the installed companion version before claiming that observed behavior
+certifies the current packaged release. A local archive matching dist does not
+prove which version is installed in the user's browser.
+
+| ID | Action | Required visible result |
+| --- | --- | --- |
+| B01 | Open dashboard, visit core navigation and resize to a narrow window. | No blank page, overlapping controls, clipped approval text or inaccessible primary action. Empty states describe missing real data. |
+| B02 | Pair the test vault; close/reopen the popup after its host-permission prompt. | Pairing persists; it opens Unlock rather than an unexplained pairing loop. No token is shown in clear text afterward. |
+| B03 | Enter an incorrect test-vault passphrase, then the correct one. | Wrong value shows an error and exposes no entries; correct value unlocks only the paired vault. |
+| B04 | Open the practice registration form, focus a password field and enter a disposable weak candidate. | The in-page assistant appears on the form and provides a local estimate. No separate password-lab page is necessary. |
+| B05 | Generate a suggested password. | Recognized password/confirmation fields are filled consistently where supported. The form is never submitted and no account is claimed created. Unsupported constraints remain visible. |
+| B06 | Select Save in my vault, unlock the test vault locally and approve saving. | Confirmation appears; dashboard sync shows one saved test login. Network evidence, if inspected, contains an encrypted envelope rather than its plaintext fields. Never capture authorization headers. |
+| B07 | Close the popup and reopen the dashboard vault; lock and unlock it again. | The saved entry survives reopening. Locking removes visible credentials and hides private operator content. |
+| B08 | Open the practice login page and explicitly select the saved exact-origin login. | Only the selected login is filled. No automatic submission or claim of successful login. An invalid disposable credential failing at the website is not a vault failure. |
+| B09 | Open a different HTTPS origin and inspect the companion. | The saved login is not offered as a matching-origin login. It cannot be filled by selecting an unrelated website. |
+| B10 | Save a new password for the same exact origin and username. | Explicit replacement confirmation is required. Cancelling retains the saved password. Accepted saving records a local save, not independent website-change verification. |
+| B11 | Create a second personal test vault and save the same website with a distinct disposable password. Switch companion connections. | Switching locks the old vault. Unlocking the second gives its own entry/password; no cross-vault mixing or forced website uniqueness. |
+| B12 | Set a restrictive website scope or disable browser filling for one test vault. Reopen/reconnect if the policy revoked its token. | Current policy is enforced. A denied/revoked connection produces an actionable error and cannot silently keep filling. |
+| B13 | Select test entries in Account review, preview Archive, then cancel. Repeat with explicit approval. | Preview/cancel changes nothing. Approved archival retains encrypted data and moves entries into Archived view. No website account is closed. |
+| B14 | Reopen/unlock the updated companion after archival. | Archived logins and authenticator entries are not offered for fills/codes or new password-change plans. Previously approved work cannot use an archived login. Old installed clients must not be used to certify this case. |
+| B15 | Preview and approve Restore on one archived entry. | Only the selected entry becomes active and available according to its vault's browser permissions. History records archive/restore without old password values. |
+| B16 | Approve a disposable account-change preparation plan and open it in the companion. | Selected scope survives popup reopening; a replacement is encrypted alongside the original. No external form is submitted. Unsupported forms show needs-attention. |
+| B17 | Attempt to archive an entry with a pending replacement. Cancel/discard that proposal only if it was never used. | Archive is refused while recovery is pending; neither old nor staged secret is lost. Explicit discard retains the old login. |
+| B18 | Hide the tab, wait for lock timeout, and revoke a test companion token. | Hidden/idle vaults lock; revoked connections cannot read or save. A late response does not reopen a locked vault. |
+| B19 | Create an explicitly consented exact-pin dependency watch, choose Check now, and open its alert. | Queued/running/final states are truthful, package coverage is shown, and the per-user unread state updates. A provider failure is partial/unassessed, never a clean result. Pause before removing test setup. |
+| B20 | Pair a disposable owned-device connection and run a small approved local/private TCP check. | Only allowed target/ports run, progress/results return to the central dashboard, and open ports are observations rather than proven vulnerabilities. Revoke the test connection afterward. |
+
+## Additional release cases
+
+Use a second separately authenticated **test** teammate for shared-vault cases.
+Verify identity fingerprints through a trusted channel. Never use a real client's
+vault as a permission-test fixture.
+
+| ID | Action | Required visible result |
+| --- | --- | --- |
+| S01 | Invite/accept a shared vault, open in the dashboard and pair its companion scope. | Verified grant opens only the accepted vault; identity passphrase remains local. |
+| S02 | Test a shared viewer and an editor in separate sessions. | Viewer can read permitted entries but cannot save, archive, review or prepare changes. Editor actions require preview/approval and obey browser policy. |
+| S03 | Revoke a test recipient, rotate the shared key and retry the old companion. | Old grant/token cannot revive access; remaining members must open the current epoch. Cached copies cannot be erased and are not claimed erased. |
+| S04 | Disable shared browser access, edit scope and test a stale save. | Current restrictions apply; stale changes cannot overwrite the current revision. |
+| S05 | Open the app with one viewport around 390 CSS pixels wide and keyboard-only navigation. | Pair/unlock/approval errors and focused controls remain usable. Check actual layout rather than relying on DOM unit tests. |
+| S06 | In a disposable shared-vault identity, change the sharing passphrase, then lock/unlock and re-pair. Test a second signed-in dashboard too. | Current keys/fingerprint and shared contents remain; new passphrase unlocks, old passphrase fails, own shared connections are revoked and unfinished shared actions cancelled. Personal/other-user connections survive. Other idle dashboard locks on its next identity poll. Wrong confirmation/current passphrase and stale conflicts do not replace protection. |
+| S07 | Open personal/shared vault activity; page older events, refresh, lock and switch vaults. Remove a disposable teammate's access and refresh their activity. | Only current authorized vault records appear. No private account observations before unlock or after lock. Older service pages remain stable as new events arrive. Revoked reads show an error, never an invented clean history. Service records and bounded encrypted account observations remain separately labelled; no website-change proof is inferred. |
+| S08 | With two disposable accepted teammates, propose ownership from the current owner and accept/decline from the addressed successor. Include a policy-change/reversal and a fresh successful handoff. | The central inbox opens shared review. No owner/key change before acceptance; invalidation cannot revive. Explicit acceptance preserves entries/staged recovery and other roles, applies the chosen former-owner access, changes the root/key epoch and revokes old browser connections. Remaining members verify the new owner. Workspace ownership remains separate. |
+
+Cross-origin forms/iframes, ambiguous or hidden fields, custom/password-change
+constraints and network races have automated tests, but require controlled
+browser fixtures for full visual/browser claims. If no suitable owned fixture
+is available, record that browser coverage as blocked. Passing the public
+practice form alone does not certify compatibility with Google or all services.
+
+## Evidence and cleanup
+
+- Record the candidate archive/build hashes from `browser-candidate-0.12.0-browser-check.json`.
+  A changed package invalidates prior evidence for the changed behavior.
+- Keep screenshots limited to labels, states and masked fields. Do not include
+  bearer tokens, master passphrases, recovery codes, seed keys or unlocked values.
+- Record an exact failure trigger and actual result. A backend HTTP response or
+  simulated DOM test cannot substitute for a visible browser result.
+- Revoke test companion/device connections, pause test schedules, and archive
+  disposable test vaults through the normal UI after the run. Retain evidence;
+  do not delete real user data or silently reset any account/vault.
+- Keep the production gates in PRODUCT_PLAN.md open: browser acceptance is not
+  an independent cryptographic audit, recovery design, mobile/store release,
+  production restore drill or universal website automation certification.

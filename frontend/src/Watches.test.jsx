@@ -1,0 +1,43 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+import {fireEvent,render,screen,waitFor,cleanup} from '@testing-library/react';
+import Watches from './Watches';
+import {api} from './api';
+vi.mock('./api',()=>({api:vi.fn()}));
+const preview={packages:[{id:'pin',ecosystem:'PyPI',name:'requests',version:'2.32.3'}],coverage:{unique_packages:1,selected:1,excluded:0,skipped_records:0,root_records:0,duplicate_records:0}};
+const watch={id:'watch1',name:'Portal',format:'requirements',packages:[{ecosystem:'PyPI',name:'requests',version:'2.32.3'}],revision:3,interval_hours:24,enabled:false,create_tasks:false,last_status:'partial'};
+beforeEach(()=>{cleanup();api.mockReset();api.mockImplementation(async path=>path==='/dependency-inventory/preview'?preview:path==='/notifications'?{notifications:[]}:{watches:[],runs:[]});});
+it('requires provider approval and leaves schedules/tasks off by default',async()=>{
+  render(<Watches canWrite go={vi.fn()}/>);
+  await screen.findByText('No registered watches yet.');
+  fireEvent.change(screen.getByLabelText('Watch name'),{target:{value:'Portal'}});
+  fireEvent.change(screen.getByLabelText('Dependency source'),{target:{value:'requests==2.32.3'}});
+  expect(screen.getByRole('button',{name:'Create watch'})).toBeDisabled();
+  fireEvent.click(screen.getByRole('button',{name:'Preview package scope'}));
+  await screen.findByLabelText('PyPI · requests@2.32.3');
+  fireEvent.click(screen.getByLabelText(/I approve storing/));
+  fireEvent.click(screen.getByRole('button',{name:'Create watch'}));
+  await waitFor(()=>expect(api).toHaveBeenCalledWith('/watches',expect.objectContaining({consent:true,enabled:false,create_tasks:false,content:'requests==2.32.3'})));
+});
+it('resumption needs a reviewable approval and edits include the current revision',async()=>{
+  api.mockImplementation(async path=>path==='/dependency-inventory/preview'?preview:path==='/notifications'?{notifications:[]}:{watches:[watch],runs:[]});
+  render(<Watches canWrite go={vi.fn()}/>);
+  fireEvent.click(await screen.findByRole('button',{name:'Enable schedule'}));
+  expect(api.mock.calls.some(([p])=>p.endsWith('/schedule'))).toBe(false);
+  fireEvent.click(screen.getByRole('button',{name:'Confirm resume'}));
+  await waitFor(()=>expect(api).toHaveBeenCalledWith('/watches/watch1/schedule',{revision:3,enabled:true,consent:true}));
+  fireEvent.click(screen.getByRole('button',{name:'Edit inventory'}));
+  expect(JSON.parse(screen.getByLabelText('Dependency source').value).packages).toEqual(watch.packages);
+  fireEvent.click(screen.getByRole('button',{name:'Preview package scope'}));
+  await screen.findByLabelText('PyPI · requests@2.32.3');
+  fireEvent.click(screen.getByLabelText(/I approve storing/));
+  fireEvent.click(screen.getByRole('button',{name:'Save updated watch'}));
+  await waitFor(()=>expect(api).toHaveBeenCalledWith('/watches/watch1/update',expect.objectContaining({revision:3,consent:true})));
+});
+it('viewers can acknowledge their own alerts without watch mutation controls',async()=>{
+  api.mockImplementation(async path=>path==='/dependency-inventory/preview'?preview:path==='/notifications'?{notifications:[{id:'n1',kind:'coverage_lost',watch_name:'Portal',at:'2026-10-19T12:00:00Z',read:false,finding_ids:[]}]}:{watches:[watch],runs:[{id:'run1',watch_id:'watch1',status:'partial',created_at:'2026-10-19T12:00:00Z',checked:0,total:1,new_matches:0,error:'Provider unavailable; coverage incomplete.'}]});
+  render(<Watches canWrite={false} go={vi.fn()}/>);
+  expect(await screen.findByText('Provider unavailable; coverage incomplete.')).toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:'Check now'})).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Mark read'}));
+  await waitFor(()=>expect(api).toHaveBeenCalledWith('/notifications/read',{ids:['n1']}));
+});

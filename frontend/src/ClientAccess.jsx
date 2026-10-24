@@ -1,0 +1,50 @@
+import React,{useEffect,useRef,useState} from 'react';
+import {api} from './api';
+
+export default function ClientAccess(){
+  const [map,setMap]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+  const [client,setClient]=useState(''),[person,setPerson]=useState('');
+  const live=useRef(true);
+  async function load(){const value=await api('/clients/access-map');if(live.current)setMap(value);}
+  useEffect(()=>{live.current=true;load().catch(e=>{if(live.current)setError(e.message);});return()=>{live.current=false;};},[]);
+  async function run(action){setBusy(true);setError('');try{await action();await load();}catch(e){if(live.current)setError(e.message);}finally{if(live.current)setBusy(false);}}
+  const people=[...new Map((map?.grants||[]).map(row=>[row.person_id,row.email])).entries()];
+  const rows=(map?.grants||[]).filter(row=>(!client||row.client===client)&&(!person||row.person_id===person));
+  const clientName=id=>map.clients.find(item=>item.id===id)?.name||'Unavailable client';
+  const vaultName=id=>map.systems.find(item=>item.id===id)?.name||'Unavailable vault';
+  return <section aria-label="Client access map">
+    {error&&<p role="alert" className="notice error">{error}</p>}
+    <div className="panel"><h2>Who can touch each client?</h2>
+      <p>Link shared vaults and report other account access. Vault memberships are read live; manual reports and extension login observations keep their own evidence labels. Credential contents are never loaded by this map.</p>
+      <button className="button secondary" disabled={busy} onClick={()=>run(async()=>{})}>Refresh access map</button>
+      {!map&&!error&&<p role="status">Loading access metadata…</p>}
+      {map&&<><p className="notice">{map.coverage}</p>
+        {map.debt&&<div><h3>Reported shared-password debt</h3><p>Rotation alone does not retire a shared login. Retirement and verification are owner confirmations, not independent checks of external services.</p>{map.clients.map(item=>{const count=map.debt.counts[item.id];return count?<p key={item.id}>{item.name}: {count.peak} → {count.active} active shared-login record(s)</p>:null;})}<p>Register, rotate and retire shared logins from the extension. An empty registry is not proof that no shared passwords exist.</p></div>}
+        {!map.clients.length&&<p>No clients yet. Create a client record, then link an existing shared vault.</p>}
+        <div className="inline"><label>Client<select value={client} onChange={e=>setClient(e.target.value)}><option value="">All clients</option>{map.clients.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+          <label>Person<select value={person} onChange={e=>setPerson(e.target.value)}><option value="">All people</option>{people.map(([id,email])=><option key={id} value={id}>{email}</option>)}</select></label></div>
+        {map.systems.filter(item=>(!client||item.client===client)&&item.rotation_required).map(item=><p className="notice" key={item.client+item.id}>Key rotation required: {clientName(item.client)} / {item.name}. Removed members may retain old credentials; new access is not fully secured until rotation and affected website password changes are completed.</p>)}
+        <table><caption>Client access and reported accounts</caption><thead><tr><th>Client</th><th>Person</th><th>System source</th><th>Role</th><th>Evidence</th></tr></thead>
+          <tbody>{rows.map(row=><tr key={row.id||row.client+row.person_id+row.system_id}><td>{clientName(row.client)}</td><td>{row.email}</td><td>{vaultName(row.system_id)}{row.account_label&&<p>{row.account_label}</p>}</td><td>{row.role}</td><td>{row.source==='manual'?'Manual report · external access not verified':row.source==='extension_discovery'?'Opt-in login attempt · sign-in not verified':row.state==='accepted'?'Accepted vault membership':'Invitation pending · not accepted access'}{row.id&&<button className="button secondary" disabled={busy} onClick={()=>run(()=>api('/clients/access-records/'+row.id+'/retire',{}))}>Retire report: {row.account_label}</button>}</td></tr>)}</tbody></table>
+        {!rows.length&&<p>No matching memberships. This is not proof that no external account access exists.</p>}
+      </>}
+    </div>
+    <div className="panel"><h2>Manage client links</h2><p>These links organize metadata. Unlinking does not revoke anyone’s access.</p>
+      <form onSubmit={e=>{e.preventDefault();const form=e.currentTarget,name=new FormData(form).get('name');run(async()=>{await api('/clients',{name});if(live.current)form.reset();});}}>
+        <label>Client name<input name="name" required minLength={2} maxLength={100}/></label><button className="button" disabled={busy}>Create client record</button>
+      </form>
+      {map?.clients.length>0&&<form onSubmit={e=>{e.preventDefault();const fields=new FormData(e.currentTarget);run(()=>api('/clients/'+fields.get('client')+'/vaults',{vault_id:fields.get('vault')}));}}>
+        <label>Client to link<select name="client" required>{map.clients.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+        <label>Existing shared vault<select name="vault" required>{!map.available_vaults.length&&<option value="">No shared vaults available</option>}{map.available_vaults.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+        <button className="button" disabled={busy||!map.available_vaults.length}>Link shared vault</button>
+      </form>}
+      {map?.systems.filter(item=>!item.kind||item.kind==='shared_vault').map(item=><div className="member-row" key={item.client+item.id}><p>{clientName(item.client)} / {item.name}</p><button className="button secondary" disabled={busy} onClick={()=>run(()=>api('/clients/'+item.client+'/vaults/'+item.id+'/unlink',{}))}>Unlink metadata: {item.name}</button></div>)}
+      {map?.clients.length>0&&map.people?.length>0&&<details><summary>Report account access without a connector</summary><p>This records a person's reported access; it does not create, verify or revoke an external account. Use a nickname, never a password or API key.</p><form onSubmit={event=>{event.preventDefault();const form=event.currentTarget,data=new FormData(form);run(async()=>{await api('/clients/access-records',Object.fromEntries(data));form.reset();});}}>
+        <label>Reported client<select name="client_id" required>{map.clients.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+        <label>Reported person<select name="person_id" required>{map.people.map(item=><option key={item.id} value={item.id}>{item.email}</option>)}</select></label>
+        <label>Exact hostname<input name="domain" required maxLength={253} placeholder="app.example.com"/></label><label>Account nickname<input name="account_label" required maxLength={100}/></label><label>Reported role<select name="role" defaultValue="member">{['owner','admin','editor','viewer','member'].map(role=><option key={role}>{role}</option>)}</select></label><button className="button" disabled={busy}>Save reported access</button>
+      </form></details>}
+      {map?.retired_records?.length>0&&<p>{map.retired_records.length} reported account record(s) retired. Retiring metadata does not revoke external access.</p>}
+    </div>
+  </section>;
+}

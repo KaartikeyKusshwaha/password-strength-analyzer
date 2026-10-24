@@ -1,0 +1,137 @@
+"""Separately authorized extension operators. Vault tokens cannot use these routes."""
+import re
+import time
+from fastapi import Depends, HTTPException, Request
+from .security import digest
+from .store import Store,now
+from .admin_mfa import enforce as enforce_admin_mfa
+from .extension_connect import SECURITY_SCOPE,SECURITY_KIND
+from .scanner import RULES
+from . import helper_status
+from .dependency_inventory import DependencyFormat, preview
+from pydantic import BaseModel, SecretStr, ConfigDict, Field
+
+class FilePreview(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    content: SecretStr = Field(min_length=1,max_length=65536)
+    format: DependencyFormat
+
+def register(app,store,settings,throttle,executor,validate_operation,queue_operation,run_operation,OperationRequest,auth,cipher):
+    def require(condition,message,status=403):
+        if not condition:raise HTTPException(status,message)
+    def security_auth(request:Request):
+        origin=request.headers.get('origin','')
+        require(re.fullmatch(r'chrome-extension://[a-p]{32}',origin),'Extension origin required')
+        bearer=request.headers.get('authorization','')
+        require(bearer.startswith('Bearer '),'Security connection required',401)
+        with store.connect() as c:
+            grant=Store.get(c,SECURITY_SCOPE,SECURITY_KIND,digest(bearer[7:]))
+            require(grant and grant['expires']>time.time() and grant['origin']==origin,'Security connection expired or revoked',401)
+            member=c.execute('SELECT u.email,m.role FROM members m JOIN users u ON u.id=m.user WHERE m.user=? AND m.workspace=?',(grant['user'],grant['workspace'])).fetchone()
+            require(member and member['role'] in {'owner','analyst','reviewer'},'Assessment permission removed')
+            enforce_admin_mfa(c,grant['user'],store)
+        return {**grant,'email':member['email'],'role':member['role']}
+
+    @app.get('/api/companion/security/context')
+    def context(session=Depends(security_auth)):
+        with store.connect() as c:
+            devices=[{key:row[key] for key in ('id','label','targets','allow_posture','allow_updates','seen')} for row in c.execute('SELECT * FROM devices WHERE workspace=? AND expires>?',(session['workspace'],time.time()))]
+            import json
+            for device in devices:device['targets']=json.loads(device['targets'])
+            name=c.execute('SELECT name FROM workspaces WHERE id=?',(session['workspace'],)).fetchone()[0]
+        return {'workspace':name,'scan_hosts':sorted(settings.scan_hosts),'devices':devices,'device_pairing':session.get('device_pairing',False),'helper':helper_status.status(),'mac_helper':helper_status.macos_status(),'ai_available':bool(settings.groq_key),'local_device':not settings.secure and settings.host in {'localhost','127.0.0.1'}}
+
+    @app.get('/api/device-helper/windows')
+    def helper_download():
+        from fastapi.responses import FileResponse
+        require(helper_status.status()['available'],'Windows helper build unavailable',404)
+        return FileResponse(helper_status.ROOT/'SentinelOpsDeviceHelper.exe',filename='SentinelOpsDeviceHelper.exe',media_type='application/octet-stream')
+
+    @app.get('/api/device-helper/macos')
+    def macos_helper_download():
+        from fastapi.responses import FileResponse
+        status=helper_status.macos_status();require(status['available'],'macOS helper build unavailable',404)
+        return FileResponse(helper_status.ROOT.parent/'helper-macos-dist'/status['filename'],filename=status['filename'],media_type='application/zip')
+
+    from . import device_pairing
+    device_pairing.register(app,store,settings,cipher,throttle,security_auth)
+
+    @app.post('/api/companion/security/inventory-preview')
+    def file_preview(body:FilePreview,session=Depends(security_auth)):
+        throttle('extension-inventory:'+session['workspace'],60)
+        content=body.content.get_secret_value()
+        require(len(content.encode('utf-8'))<=65536,'Use a file up to 64 KiB',422)
+        try:return preview(content,body.format)
+        except ValueError as error:raise HTTPException(422,str(error)) from None
+
+    @app.post('/api/companion/security/operations')
+    def run(body:OperationRequest,session=Depends(security_auth)):
+        throttle('operation:'+session['workspace'],30)
+        validate_operation(body,session)
+        with store.connect(write=True) as c:operation=queue_operation(c,body,session)
+        if body.action not in {'device','posture','updates'} or body.device_id=='local':executor.submit(run_operation,session['workspace'],session['user'],operation['id'],body)
+        return {'id':operation['id'],'status':operation['status']}
+
+    @app.get('/api/companion/security/operations/{identifier}')
+    def result(identifier:str,session=Depends(security_auth)):
+        with store.connect() as c:
+            operation=Store.get(c,session['workspace'],'operations',identifier)
+            require(operation and operation['created_by']==session['user'],'Operation unavailable',404)
+            output={key:operation[key] for key in ('id','action','target','status','error') if key in operation}
+            scan=Store.get(c,session['workspace'],'scans',operation.get('scan_id',''))
+            output['coverage']=scan.get('limits','') if scan else ''
+            job=Store.get(c,session['workspace'],'jobs',operation.get('agent_job',''))
+            output['ai_status']=job['status'] if job else None
+            output['actions']=[{'title':recommendation['priority_reason'],'steps':recommendation['actions'],'verification':recommendation['verification']} for recommendation in (job or {}).get('plan',{}).get('recommendations',[])[:5]]
+            output['summary']=(job or {}).get('plan',{}).get('summary','')
+            if job and job['status']=='failed':output['ai_error']='The AI plan failed. No plan was accepted.'
+            output['finding_count']=len(scan.get('finding_ids',[])) if scan else None
+            ids=set(scan.get('finding_ids',[])) if scan else set()
+            output['observations']=[]
+            for finding in Store.all(c,session['workspace'],'findings'):
+                if finding['id'] not in ids or finding['rule'] not in RULES:continue
+                item={'title':finding['title'],'severity':finding['severity'],'guidance':RULES[finding['rule']][3],'line':finding.get('line',0),'reference':RULES[finding['rule']][4]}
+                if finding['rule']=='DEP001':
+                    item['package']={key:finding.get('package',{}).get(key,'') for key in ('ecosystem','name','version')}
+                    advisory=finding.get('advisory','')
+                    if re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,99}',advisory):item.update(advisory=advisory,reference='https://osv.dev/vulnerability/'+advisory)
+                output['observations'].append(item)
+                if len(output['observations'])==5:break
+            output['dependency_coverage']=scan.get('dependency_inventory') if scan else None
+            labels={'firewall_domain':'Domain firewall profile','firewall_private':'Private firewall profile','firewall_public':'Public firewall profile','defender':'Microsoft Defender','system_disk':'System-drive BitLocker','application_firewall':'macOS application firewall','filevault':'FileVault','gatekeeper':'Gatekeeper'}
+            output['posture_checks']=[{'id':item['id'],'title':labels[item['id']],'state':item['state'],'reason':item.get('reason',''),'guidance':'Review this disabled protection with the device owner before changing settings.' if item['state']=='disabled' else 'This status does not establish overall device security.'} for item in (scan or {}).get('posture',{}).get('checks',[]) if item.get('id') in labels]
+        return output
+
+    @app.post('/api/companion/security/operations/{identifier}/cancel')
+    def cancel(identifier:str,session=Depends(security_auth)):
+        with store.connect(write=True) as c:
+            operation=Store.get(c,session['workspace'],'operations',identifier)
+            require(operation and operation['created_by']==session['user'],'Operation unavailable',404)
+            if operation['status'] in {'queued','running'}:
+                operation.update(status='cancelled',finished_at=now(),error='Cancelled from the extension. An in-flight device check may finish locally; its result will be rejected.')
+                operation.pop('lease',None);Store.put(c,session['workspace'],'operations',operation)
+            job=Store.get(c,session['workspace'],'jobs',operation.get('agent_job',''))
+            if job and job['status'] in {'queued','running'}:
+                job.update(status='cancelled',finished_at=now());Store.put(c,session['workspace'],'jobs',job)
+            Store.event(c,session['workspace'],session['user'],'extension.operation_cancelled',identifier)
+        return {'ok':True}
+
+    @app.post('/api/companion/security/revoke')
+    def disconnect(session=Depends(security_auth)):
+        with store.connect(write=True) as c:
+            c.execute('DELETE FROM entities WHERE id=? AND workspace=? AND kind=?',(session['id'],SECURITY_SCOPE,SECURITY_KIND))
+            Store.event(c,session['workspace'],session['user'],'extension.security_revoked','extension-disconnect')
+        return {'ok':True}
+
+    @app.get('/api/security-connections')
+    def connections(session=Depends(auth)):
+        with store.connect() as c:return {'connections':[{'id':grant['id'],'expires':grant['expires'],'origin':grant['origin']} for grant in Store.all(c,SECURITY_SCOPE,SECURITY_KIND) if grant['user']==session['user'] and grant['workspace']==session['workspace'] and grant['expires']>time.time()]}
+
+    @app.post('/api/security-connections/{identifier}/revoke')
+    def revoke(identifier:str,session=Depends(auth)):
+        with store.connect(write=True) as c:
+            grant=Store.get(c,SECURITY_SCOPE,SECURITY_KIND,identifier)
+            require(grant and grant['user']==session['user'] and grant['workspace']==session['workspace'],'Connection unavailable',404)
+            c.execute('DELETE FROM entities WHERE id=? AND workspace=? AND kind=?',(identifier,SECURITY_SCOPE,SECURITY_KIND))
+            Store.event(c,session['workspace'],session['user'],'extension.security_revoked','control-room')
+        return {'ok':True}

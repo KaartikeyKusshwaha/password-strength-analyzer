@@ -1,0 +1,33 @@
+{
+  "name": "sentinelops",
+  "private": true,
+  "version": "0.25.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5174",
+    "build": "vite build",
+    "test": "vitest run",
+    "build:companion": "vite build --config ../companion/extension/vite.content.config.js && vite build --config ../companion/extension/vite.popup.config.js && vite build --config ../companion/extension/vite.background.config.js",
+    "test:extension": "playwright test --config playwright.extension.config.js",
+    "test:acceptance": "playwright test --config playwright.acceptance.config.js"
+  },
+  "dependencies": {
+    "@zxcvbn-ts/core": "4.2.0",
+    "@zxcvbn-ts/language-common": "4.1.3",
+    "@zxcvbn-ts/language-en": "4.1.1",
+    "hash-wasm": "4.12.0",
+    "lucide-react": "0.468.0",
+    "qrcode": "1.5.4",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.0",
+    "@vitejs/plugin-react": "5.0.4",
+    "jsdom": "26.1.0",
+    "vite": "7.3.7",
+    "vitest": "4.1.11"
+  }
+}

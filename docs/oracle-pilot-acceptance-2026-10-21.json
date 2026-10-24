@@ -1,0 +1,47 @@
+{
+  "date": "2026-10-21",
+  "status": "hosted-awaiting-private-owner-setup",
+  "runtime_revision": "43e54dd95423264f3dc93e4194c21a13e2d34a94",
+  "release_sha256": "079be3f1aedef77c01b6db5a9986c4698790f10b564ecf627e808b145c7a75bb",
+  "platform": "Oracle Cloud Always Free eligible E2.1.Micro, Ubuntu 24.04, 1 GB RAM",
+  "provisioning": {
+    "arm_attempt": "Rejected by Oracle: out of capacity",
+    "amd_attempt": "Running; create work request succeeded",
+    "existing_policylens_instance": "Preserved",
+    "paid_resources_or_account_upgrade": false
+  },
+  "verified": [
+    "SSH ED25519 fingerprint matched trusted Oracle boot console",
+    "Transferred release SHA-256 matched local archive",
+    "Installer completed on Ubuntu x86_64",
+    "Unprivileged single Python worker and Caddy active",
+    "Python port 8110 and Caddy admin port 2019 bind loopback only",
+    "OCI and persistent host firewall restrict SSH to operator IP; permit public TCP 80/443",
+    "Public HTTPS certificate validates; /api/status returned HTTP 200 and setup_required true",
+    "Edge rendered the public owner setup screen",
+    "Groq returned a schema-valid, citation-complete plan for one transient deployment header observation",
+    "Daily encrypted backup timer enabled; first backup service exit status zero",
+    "Encrypted backup restored into an isolated directory: schema 10 and SQLite integrity ok",
+    "Protected off-VM recovery-key copy saved without printing key material",
+    "First encrypted backup copied to operator computer separately from its key",
+    "HTTP redirects to HTTPS; unauthenticated /api/me returns 401",
+    "Pre-owner service restart preserved account count, ten schema migrations and encryption key; SQLite integrity remained ok",
+    "Hosted companion preflight from a syntactically valid extension origin returned 204 with matching origin",
+    "Untrusted website companion preflight returned 403 without a CORS grant",
+    "Invalid companion bearer token returned 401 over public HTTPS",
+    "Off-VM encrypted backup restored on the operator computer; SQLite integrity ok"
+  ],
+  "pending": [
+    "User creates cloud owner account privately",
+    "Authenticated public-browser acceptance and companion pairing to the HTTPS origin",
+    "Post-owner restart/persistence and backup verification",
+    "Recurring off-device backup transfer and retention",
+    "Independent security review before valuable credentials or production reliance"
+  ],
+  "notes": [
+    "Fresh cloud database; local accounts and vault contents were not migrated",
+    "The empty-evidence AI diagnostic was rejected; a single-observation diagnostic passed",
+    "Backup timer supplements deployment and was installed separately from the runtime archive",
+    "A free micro VM is a constrained pilot; this record does not establish production readiness"
+  ]
+}

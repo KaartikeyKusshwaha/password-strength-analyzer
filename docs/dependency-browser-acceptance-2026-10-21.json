@@ -1,0 +1,52 @@
+{
+  "date": "2026-10-21",
+  "app": "0.17.0",
+  "browser": "Microsoft Edge",
+  "actual_owner_session": true,
+  "checks": {
+    "real_lockfile_upload": true,
+    "preview_versions": 205,
+    "preview_source_roots": 1,
+    "preview_unsupported_records": 0,
+    "scope_change_resets_consent": true,
+    "selected_subset_checked": 1,
+    "selected_subset_excluded": 2,
+    "selected_subset_result": "partial",
+    "watch_versions_checked": 205,
+    "watch_versions_total": 205,
+    "watch_advisory_matches": 0,
+    "watch_recurring_checks": false,
+    "watch_automatic_tasks": false,
+    "normalized_watch_editor_versions": 205,
+    "watch_edit_saved": false,
+    "combined_review_checks": [
+      "127.0.0.1 TCP 8110",
+      "actual frontend package-lock.json"
+    ],
+    "combined_review_status": "complete",
+    "groq_planning_status": "complete",
+    "groq_included_findings": 1,
+    "tasks_created": 0,
+    "existing_tasks_linked": 1
+  },
+  "automated": {
+    "backend_full_passed": 425,
+    "react_full_passed": 227,
+    "final_dependency_backend_passed": 9,
+    "final_focused_react_passed": 21,
+    "production_build": "passed",
+    "startup_preservation_checks": 15
+  },
+  "limitations": [
+    "No matches is not a safety certification.",
+    "Port observation is not a proven vulnerability.",
+    "Runtime dependency reachability and installation were not assessed.",
+    "Shared-vault/recovery lifecycle native acceptance remains separate."
+  ],
+  "screenshots": [
+    "data/browser-acceptance-0.17.0/live-selected-osv.png",
+    "data/browser-acceptance-0.17.0/full-lockfile-watch.png",
+    "data/browser-acceptance-0.17.0/combined-review-ai.png",
+    "data/browser-acceptance-0.17.0/agent-workflow.png"
+  ]
+}

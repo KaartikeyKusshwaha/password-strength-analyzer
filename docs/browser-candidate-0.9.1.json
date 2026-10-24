@@ -1,0 +1,143 @@
+{
+  "product": "SentinelOps",
+  "version": "0.9.1",
+  "recorded_at": "2026-10-19T16:05:36.443196+00:00",
+  "purpose": "Candidate fingerprints; not browser execution evidence",
+  "hashes": {
+    "frontend/dist/index.html": "b54c518fbb4a24513d73673fa0449a96b80c2fe9fbd422ef7f68b3053a073a87",
+    "companion/extension/public/manifest.json": "73f66057c587ddc5ae133562b3ee76da3fdc3dc1a330d5ff0714c0669ee5ea07",
+    "companion/extension/dist/manifest.json": "73f66057c587ddc5ae133562b3ee76da3fdc3dc1a330d5ff0714c0669ee5ea07",
+    "companion/extension/sentinelops-companion.zip": "cc1f0bbb4429eac291d1251b47745edea9eaa4ff2bfb6a1452e0321cdc4ae2b3",
+    "frontend/dist/assets/AccountActions-COBWwmTo.js": "c11a64f321a6b11ac18a032aa243c72964b6d8c76fd7d31e82f73c43b58d4c78",
+    "frontend/dist/assets/Companions-D2Dugh0m.js": "9bcd48a0a3443f684f400189c51719aeecf47bc1ddc8131f8d67f59a6eeb7ac0",
+    "frontend/dist/assets/ControlCenter-mVLK2cXK.js": "b4fa598eda8334cf2a17f5e43192c6429dcf280e2fb06976349105e913fdb0a0",
+    "frontend/dist/assets/download-DBCyFAmR.js": "b1c9a8fa4d46f7eadbe5f9dc557a2b834231424368bb1315d27b5589e28c475a",
+    "frontend/dist/assets/index-BseIy-bB.css": "33d909cb3b19295f364ea8b277b9e186fd91d46faf061ac082e7192f5f1ab1fe",
+    "frontend/dist/assets/index-BYFHabmB.js": "ec11fbc467b0cb245525a9c5c9108480cee89547a174af3aedae8adf61f54f6d",
+    "frontend/dist/assets/index.esm-CgNExnv6.js": "a0129a0cfd01edad4bc94bc0654b5c6e5596117d71cefe02b45cb26217d1dccf",
+    "frontend/dist/assets/monitor-DIbcz5eE.js": "3232df28b2529ba0eaab9a7163a65c644ca22de102657e7a53cf525d5ebef6bf",
+    "frontend/dist/assets/strength-Cnf38iKx.js": "dbc5cbfa39a38dae2e1247acf549de76e807c87f7d9ce0c5b08ed246032901a2",
+    "frontend/dist/assets/vault-v2-C8MLQcdC.js": "919887d09126c878c21b63fec0c3be5db805f648e7fbb652a8b1044dfa7f9100",
+    "frontend/dist/assets/VaultCollection-D4MxiD4M.js": "0b092792c4a686dec29ebe582a74638d4336a8f4140fa5197c217a254c281187",
+    "frontend/dist/assets/Watches-CO_MFt3s.js": "db383d47e0b9bc96d2a65edc106cc2d2c0e816c7b969a5daeecff48fd1b3c0c5"
+  },
+  "browser_access": {
+    "state": "blocked",
+    "reason": "Local browser use is disabled in Work settings"
+  },
+  "manual_control": {
+    "state": "blocked",
+    "reason": "Computer Use could not determine the current browser URL with enough confidence to enforce policy"
+  },
+  "cases": {
+    "B01": {
+      "status": "not_run",
+      "evidence": null
+    },
+    "B02": {
+      "status": "not_run",
+      "evidence": null
+    },
+    "B03": {
+      "status": "not_run",
+      "evidence": null
+    },
+    "B04": {
+      "status": "not_run",
+      "evidence": null
+    },
+    "B05": {
+      "status": "not_run",
+      "evidence": null
+    },
+    "B06": {
+      "status": "not_run",
+      "evidence": null
+    },
+    "B07": {
+      "status": "not_run",
+      "evidence": null
+    },
+    "B08": {
+      "status": "not_run",
+      "evidence": null
+    },
+    "B09": {
+      "status": "not_run",
+      "evidence": null
+    },
+    "B10": {
+      "status": "not_run",
+      "evidence": null
+    },
+    "B11": {
+      "status": "not_run",
+      "evidence": null
+    },
+    "B12": {
+      "status": "not_run",
+      "evidence": null
+    },
+    "B13": {
+      "status": "not_run",
+      "evidence": null
+    },
+    "B14": {
+      "status": "not_run",
+      "evidence": null
+    },
+    "B15": {
+      "status": "not_run",
+      "evidence": null
+    },
+    "B16": {
+      "status": "not_run",
+      "evidence": null
+    },
+    "B17": {
+      "status": "not_run",
+      "evidence": null
+    },
+    "B18": {
+      "status": "not_run",
+      "evidence": null
+    },
+    "B19": {
+      "status": "not_run",
+      "evidence": null
+    },
+    "B20": {
+      "status": "not_run",
+      "evidence": null
+    },
+    "S01": {
+      "status": "not_run",
+      "evidence": null
+    },
+    "S02": {
+      "status": "not_run",
+      "evidence": null
+    },
+    "S03": {
+      "status": "not_run",
+      "evidence": null
+    },
+    "S04": {
+      "status": "not_run",
+      "evidence": null
+    },
+    "S05": {
+      "status": "not_run",
+      "evidence": null
+    }
+  },
+  "preflight": {
+    "archive_matches_dist": true,
+    "extension_version": "0.9.1",
+    "local_dashboard_http": 200,
+    "served_index_matches_candidate": true,
+    "anonymous_vault_api_http": 401,
+    "encrypted_records_preserved": true
+  },
+  "superseded_by": "browser-candidate-0.9.2.json"
+}

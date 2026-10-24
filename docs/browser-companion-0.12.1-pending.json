@@ -1,0 +1,56 @@
+{
+  "recorded_at": "2026-10-20T14:00:54.707257+00:00",
+  "app_version": "0.12.0",
+  "companion_candidate": "0.12.1",
+  "installed_version": "unverified; reload requested",
+  "frontend_tests": {
+    "passed": 135,
+    "files": 32
+  },
+  "builds": [
+    "frontend passed",
+    "companion content passed",
+    "companion popup/frame passed",
+    "archive byte-matches dist"
+  ],
+  "hashes": {
+    "companion/extension/content.js": "32b15f826025283c052fd91fbd60e42e1c0ba0675be118d3e5fe1b23c076271b",
+    "companion/extension/frame-status.js": "fda08d15a8574a4705a8125ac54c34e650d79ca09868614437c68e1bbd757d59",
+    "companion/extension/public/background.js": "a411c4890855ccfbed9020bb075fee9128aa8ad95e5ce4c31e674e4f0396bf98",
+    "companion/extension/public/manifest.json": "9b8264295c1bbfafeffcd1108034f0c95f8b45aea58755d29ca18d939799afb8",
+    "companion/extension/sentinelops-companion.zip": "54cf145ffdbb6ef805465887f9240efa31cfd0c294421d6124940448478da8d8",
+    "frontend/dist/index.html": "8541c081427f6c7afa01ea7e105112bdd68ca039a0b4ec3a0716f8108ad779bf",
+    "companion/extension/dist/background.js": "a411c4890855ccfbed9020bb075fee9128aa8ad95e5ce4c31e674e4f0396bf98",
+    "companion/extension/dist/content.js": "d9fa8747a5e60785269e4ad102075fb6fcd8408073d61022dc289b9b260a6604",
+    "companion/extension/dist/manifest.json": "9b8264295c1bbfafeffcd1108034f0c95f8b45aea58755d29ca18d939799afb8",
+    "companion/extension/dist/popup.html": "b6d70daf965c9fdc5492572171071f34d07157014d84a86b3544734b9f1adb98",
+    "companion/extension/dist/vault-frame.html": "dd7a88e908bdb15da3135b99d24202b8dc3f7d6ff5789d529ae3d4f92b1c9dc7",
+    "companion/extension/dist/assets/index.esm-CgNExnv6.js": "a0129a0cfd01edad4bc94bc0654b5c6e5596117d71cefe02b45cb26217d1dccf",
+    "companion/extension/dist/assets/popup-5IwHPd7J.css": "719c20d079233ea38de51a73838f9f122e8d0ffb8cee4b9e274e16654f58c27a",
+    "companion/extension/dist/assets/popup-DmND4St0.js": "bf29aff5baf8dc3e6e8e5f6becce709588bb9fcff6c34d80f9f2aa7dde709f76",
+    "companion/extension/dist/assets/popup-DNFzkwqT.js": "17650a0c8a958deaa1153ae02189393f932fda9150f94c87ce37fc6cc62f5774",
+    "companion/extension/dist/assets/sharing-crypto-BsRI-9Zq.js": "63472b044064555e46688e91451074ad66bf9986c7d974205179c21d02c67013",
+    "companion/extension/dist/assets/vault-frame-5edUwAof.js": "5abe517c747d14d71384e975ebaeb6cef096b137cf4911045d298656f01a59fa",
+    "companion/extension/dist/assets/vault-v2-DTbFv7E8.js": "e0046a84db873fa8cb76ef7a6e660516a3e51ac6b9fbf5f32fd77087e7c35e33"
+  },
+  "observations": [
+    "Dashboard wrong/correct disposable-vault unlock verified, zero entries.",
+    "User approved and created a grant scoped to Browser acceptance only, default 30 days. Token hidden and not written into evidence.",
+    "Public demo login entered on practice.expandtesting.com/login; no website form submission.",
+    "Installed assistant showed local estimate. Save securely twice opened a blank private panel in automated screenshots. Installed version/cause unknown.",
+    "0.12.1 adds explicit startup acknowledgement/timeout diagnostics; not a proven root-cause fix.",
+    "Manual reload/pairing requested; saving/reopening/autofill/revocation remain pending."
+  ],
+  "evidence": [
+    "data/browser-acceptance-0.12.0/test-vault-unlocked-empty.png",
+    "data/browser-acceptance-0.12.0/private-frame-blank-before-0.12.1.png"
+  ],
+  "cases": {
+    "B02": "pending reload/pair",
+    "B03": "dashboard verified; companion pending",
+    "B06": "save not established; installed panel blank before verified update",
+    "B07": "not run",
+    "B08": "not run",
+    "B18": "test grant still active; revoke after workflow"
+  }
+}

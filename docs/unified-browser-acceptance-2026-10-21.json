@@ -1,0 +1,108 @@
+{
+  "date": "2026-10-21",
+  "app": "0.18.0",
+  "companion_build": "0.13.0",
+  "browser": "Microsoft Edge",
+  "tools": [
+    "password management and encrypted vaults",
+    "two-factor authentication",
+    "vulnerability checks"
+  ],
+  "retired_feature": "email/phishing detection",
+  "automated_checks": {
+    "backend": 423,
+    "react": 245,
+    "direct_operator_navigation_focused_react": 13,
+    "scope_approval_and_navigation_focused_react": 15,
+    "website_operator_focused_react": 13,
+    "website_scanner_and_operations_backend": 36,
+    "final_focused_react": 21,
+    "app_build": "passed",
+    "extension_build_and_package": "passed"
+  },
+  "personal_login_csv_export": {
+    "implemented": true,
+    "plaintext_requires_explicit_approval": true,
+    "locked_vault_controls_absent_tested": true,
+    "exact_values_round_trip_tested": true,
+    "totp_and_pending_passwords_excluded_tested": true,
+    "actual_browser_download": "pending",
+    "third_party_manager_import": "pending"
+  },
+  "actual_browser": {
+    "three_tools_home": true,
+    "phishing_buttons": 0,
+    "advanced_checks_collapsed": true,
+    "automatic_review_status": "partial",
+    "checks": [
+      {
+        "action": "device",
+        "status": "partial"
+      },
+      {
+        "action": "posture",
+        "status": "partial"
+      },
+      {
+        "action": "updates",
+        "status": "complete"
+      }
+    ],
+    "finding_count": 2,
+    "ai_planning": "complete",
+    "two_factor_shortcut_reaches_locked_vault": true,
+    "companion_reload_confirmation": "pending",
+    "website_operator_setup": {
+      "approved_hosts_in_current_installation": 0,
+      "empty_scope_explanation_visible": true,
+      "run_disabled_without_approved_hosts": true,
+      "actual_website_assessment": "pending authorized hostname",
+      "fixture_scope_and_evidence_integration": "passed"
+    },
+    "automatic_scope_approval": {
+      "initial_run_disabled": true,
+      "explicit_approval_enables_run": true,
+      "changing_ai_option_clears_approval": true,
+      "returning_to_original_option_requires_fresh_approval": true,
+      "scan_submitted_during_this_test": false
+    },
+    "dashboard_shortcut_checks": {
+      "website_operator_direct_access": true,
+      "dependency_operator_direct_access": true,
+      "password_url_reaches_locked_vault": true,
+      "authenticator_url_reaches_locked_vault_and_enrollment_instructions": true,
+      "vulnerability_url_reaches_device_and_other_operator_choices": true,
+      "new_scans_executed_by_navigation": false
+    },
+    "current_frontend_watch": {
+      "source_sha256": "d07ff590920748f366b4f80bb17c5ee316ac1b78a0c49b159c5d0b1f9f3569b6",
+      "imported_through_edge_file_chooser": true,
+      "previous_pins": 205,
+      "current_pins": 233,
+      "assessed_pins": 233,
+      "excluded_pins": 0,
+      "unsupported_records": 0,
+      "status": "complete",
+      "new_matches": 0,
+      "requested_at_local": "2026-10-21 18:14:37 Asia/Calcutta",
+      "schedule_enabled": false,
+      "automatic_tasks_enabled": false
+    }
+  },
+  "boundaries": [
+    "14 selected TCP probes timed out; kept unassessed.",
+    "Two local listeners are observations, not proven vulnerabilities.",
+    "System-drive BitLocker status permission denied.",
+    "Windows Update cache freshness unverified.",
+    "No password, MFA-provider or OS setting changes performed."
+  ],
+  "screenshots": [
+    "data/browser-acceptance-0.18.0/three-tools-home.png",
+    "data/browser-acceptance-0.18.0/automatic-review.png",
+    "data/browser-acceptance-0.18.0/agent-follow-up.png",
+    "data/browser-acceptance-0.18.0/current-lockfile-watch.png",
+    "data/browser-acceptance-0.18.0/direct-dependency-operator.png",
+    "data/browser-acceptance-0.18.0/scope-approval-reset.png",
+    "data/browser-acceptance-0.18.0/website-scope-setup.png"
+  ]
+}
