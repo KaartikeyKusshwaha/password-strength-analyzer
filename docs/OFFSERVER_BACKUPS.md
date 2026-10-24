@@ -205,3 +205,16 @@ local drill database afterward. Evidence:
 This proves ciphertext and account-protection preservation, not successful
 restored-browser decryption, real shared-vault recovery, old Oracle migration,
 independent audit or the first timed 04:00 backup. Those gates remain open.
+
+## First scheduled export observed — 24 October 2026
+
+Windows Task Scheduler reports the daily task ran at 04:00:00 IST on 24 October,
+with LastTaskResult 0 and the next trigger on 25 October at 04:00 IST. It produced
+`20261023T223022Z-ed2b231991d29105.sentinelbackup` at 04:00:22 IST. The adjacent
+receipt reports authenticated archive, SQLite/schema/MFA-key and audit validation
+at 04:00:23 IST, schema 15. A separate file SHA-256 check matched the receipt:
+`ed2b231991d29105d5909632080c308f6e819e9dc5bd643c49ed69abc32e16c7`.
+
+This closes the first timed-run observation gate. It does not replace the
+isolated restore drills above or provide continuous coverage while the operator
+computer is asleep or signed out. The daily task remains local and free.
