@@ -1,12 +1,12 @@
 import React,{useEffect,useState} from 'react';
 
-export default function ClientHandoffs({connection,map,runs,request}){
+export default function ClientHandoffs({connection,map,runs,request,expanded=false}){
   const [records,setRecords]=useState([]),[client,setClient]=useState(''),[person,setPerson]=useState(''),[recipient,setRecipient]=useState(''),[kind,setKind]=useState('person_handoff'),[busy,setBusy]=useState(false),[error,setError]=useState('');
   async function refresh(){const result=await request(connection,'handoffs');setRecords(result.handoffs||[]);}
   useEffect(()=>{let live=true;request(connection,'handoffs').then(result=>{if(live)setRecords(result.handoffs||[]);}).catch(e=>{if(live)setError(e.message);});return()=>{live=false;};},[connection]);
   async function act(work){setBusy(true);setError('');try{await work();await refresh();}catch(e){setError(e.message);}finally{setBusy(false);}}
   function confirm(event,row,mode){event.preventDefault();const form=event.currentTarget,values=new FormData(form);form.reset();const body={confirmed:true,password:values.get('password'),code:values.get('code'),digest:mode==='approve'?row.plan_digest:row.evidence.digest};if(mode==='signoff')for(const key of ['external_access','device_return','device_wipe'])body[key]=values.get(key);act(()=>request(connection,`handoffs/${row.id}/${mode}`,body));}
-  return <details><summary>Client handoffs · receiving-owner sign-off</summary><p>Prepare a fixed vault scope, complete the existing offboarding or ownership-transfer steps, then ask a separate workspace owner to sign off. This record never changes access itself.</p>
+  return <details open={expanded || undefined}><summary>Client handoffs · receiving-owner sign-off</summary><p>Prepare a fixed vault scope, complete the existing offboarding or ownership-transfer steps, then ask a separate workspace owner to sign off. This record never changes access itself.</p>
     <button className="secondary" disabled={busy} onClick={()=>act(async()=>{})}>Refresh handoffs</button>
     <form onSubmit={event=>{event.preventDefault();act(()=>request(connection,'handoffs',{client_id:client,person_id:person,recipient_id:recipient,kind}));}}>
       <label>Handoff client<select required value={client} onChange={e=>{setClient(e.target.value);setPerson('');}}><option value="">Choose client</option>{map.clients.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>

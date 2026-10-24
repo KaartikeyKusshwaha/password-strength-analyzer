@@ -134,14 +134,10 @@ export function Popup() {
         <span className="logo">S</span>
         <div>
           <h1>SentinelOps</h1>
-          <small>YOUR SECURITY COMPANION · {versions.loaded}</small>
+          <small>CLIENT ACCESS · {versions.loaded}</small>
         </div>
       </header>
-      <AccessReminders/>
-      <AccessWorkflows onTransferred={verified=>{lockVault();setNotice(verified?'Vault ownership transferred. Reconnect this vault and verify the new owner fingerprint before reopening.':'Ownership acceptance could not be confirmed. Vault locked; refresh the handoff and reconnect if its browser connection was revoked.');}} vaultSession={session.current} selectedVault={config} vaultUnlocked={!!entries} onApproved={approvedAction} onVaultChanged={()=>{setEntries(session.current.entries);setRevision(session.current.revision);}} onRotated={()=>{lockVault();setNotice('Shared vault key rotated. Unlock again for its new key.');}}/>
-      <AccountDiscovery active={active}/>
-      <SecurityAssistant/>
-      <LoginSaveOffers browser={chrome} origin={active?.origin}/>
+      <AccessWorkflows primary onTransferred={verified=>{lockVault();setNotice(verified?'Vault ownership transferred. Reconnect this vault and verify the new owner fingerprint before reopening.':'Ownership acceptance could not be confirmed. Vault locked; refresh the handoff and reconnect if its browser connection was revoked.');}} vaultSession={session.current} selectedVault={config} vaultUnlocked={!!entries} onApproved={approvedAction} onVaultChanged={()=>{setEntries(session.current.entries);setRevision(session.current.revision);}} onRotated={()=>{lockVault();setNotice('Shared vault key rotated. Unlock again for its new key.');}}/>
       <details><summary>Control room · vault administration and history</summary><p className="fine">Manage vaults, shared access, results history and account settings. Everyday checks and credential actions stay here.</p><button className="secondary" onClick={()=>chrome.tabs.create({url:(config?.origin||pendingConnection?.origin||CLOUD_ORIGIN)+'/#tool=passwords'})}>Open control room</button></details>
       {connections.length > 0 && <label>Connected vault<select value={config ? connections.findIndex(item=>item.token===config.token) : ''} disabled={busy} onChange={async event=>{const next=connections[Number(event.target.value)];if(!next)return;lockVault();setVaultPolicy(null);await chrome.storage.local.set({connection:next});await chrome.storage.local.remove('pendingConnection');setPendingConnection(null);setConfig(next);setReconnectRequired(false);setError('');}}><option value="" disabled>Choose a connected vault</option>{connections.map((item,index)=><option key={index} value={index}>{item.vaultName || 'Vault name not verified'}{item.vaultKind==='shared'?' · shared':''} · {new URL(item.origin).host}</option>)}</select></label>}
       {error && (
@@ -225,9 +221,8 @@ export function Popup() {
       ) : reconnectRequired ? (
         <>
           <h2>Reconnect your vault</h2>
-          <p>This connection cannot access the encrypted vault. A master passphrase cannot renew it.</p>
-          <p>In Browser &amp; devices, create a scoped token for the vault you intend to use. Then enter it here. Your encrypted vault is unchanged.</p>
-          <button onClick={reconnect}>Enter a new pairing token</button>
+          <p>This vault connection expired or was revoked. Sign in to connect it again; your encrypted contents are unchanged.</p>
+          <button onClick={reconnect}>Sign in and reconnect</button>
         </>
       ) : entries === null ? (
         <>
@@ -294,8 +289,6 @@ export function Popup() {
               </button>
             </section>
           )}
-          <VaultHealth entries={entries} session={session.current} browser={chrome} onApproved={approvedAction} onVaultChanged={()=>{setEntries(session.current.entries);setRevision(session.current.revision);}}/>
-          <ActionQueue session={session.current} browser={chrome} refresh={actionRefresh} autoAction={autoAction} onChange={()=>{if(session.current.entries){setEntries(session.current.entries);setRevision(session.current.revision);}}}/>
           <h2>This website</h2>
           <p className="fine">
             {active?.origin ||
@@ -382,6 +375,10 @@ export function Popup() {
               <button disabled={busy}>Encrypt and save</button>
             </form>
           </details>}
+          <details><summary>Password health and approved password changes</summary>
+          <VaultHealth entries={entries} session={session.current} browser={chrome} onApproved={approvedAction} onVaultChanged={()=>{setEntries(session.current.entries);setRevision(session.current.revision);}}/>
+          <ActionQueue session={session.current} browser={chrome} refresh={actionRefresh} autoAction={autoAction} onChange={()=>{if(session.current.entries){setEntries(session.current.entries);setRevision(session.current.revision);}}}/>
+          </details>
           <h2>Authenticator codes</h2>
           {vaultPolicy?.browser_save!==false&&<AuthenticatorSetup session={session.current} active={active} disabled={busy} onUpdated={()=>{setEntries([...session.current.entries]);setRevision(session.current.revision);}}/>}
           {entries
@@ -422,6 +419,7 @@ export function Popup() {
           </p>
         </>
       )}
+      <details className="secondary-tools"><summary>More tools and automation settings</summary><AccessReminders/><AccountDiscovery active={active}/><SecurityAssistant/><LoginSaveOffers browser={chrome} origin={active?.origin}/></details>
       {config && (
         <footer>
           <p className="fine">

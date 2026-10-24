@@ -1,6 +1,6 @@
 import React,{useEffect,useState} from 'react';
 import {accessRequest} from './access-client';
-export default function ProofPacks({connection,map,request=accessRequest}){
+export default function ProofPacks({connection,map,request=accessRequest,expanded=false}){
  const [assets,setAssets]=useState([]),[packs,setPacks]=useState([]),[options,setOptions]=useState({client_id:'',brand:'Client access review',asset_ids:[],include_posture:false}),[preview,setPreview]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[share,setShare]=useState(null),[link,setLink]=useState(null);
  useEffect(()=>{setPreview(null);setPacks([]);setAssets([]);setShare(null);setLink(null);setError('');setNotice('');},[connection.origin,connection.token]);
  function change(value){setOptions({...options,...value});setPreview(null);}
@@ -9,7 +9,7 @@ export default function ProofPacks({connection,map,request=accessRequest}){
  function factor(event){event.preventDefault();const form=event.currentTarget,body={approved:true,password:form.elements.password.value,code:form.elements.code.value};form.reset();return body;}
  const fields=<><label>Current account password<input name="password" type="password" autoComplete="current-password" required maxLength={256}/></label><label>Unused MFA or recovery code<input name="code" autoComplete="one-time-code" required maxLength={80}/></label></>;
  function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
- return <details><summary>Client Proof Pack · PDF and revocable sharing</summary><p>Create a point-in-time client access report with your agency name. Staff identities, account labels and selected posture are confidential metadata. No vault contents or raw scan evidence are included. Reports are encrypted at rest by this service; they are not zero-knowledge vault records.</p>
+ return <details open={expanded || undefined}><summary>Client Proof Pack · PDF and revocable sharing</summary><p>Create a point-in-time client access report with your agency name. Staff identities, account labels and selected posture are confidential metadata. No vault contents or raw scan evidence are included. Reports are encrypted at rest by this service; they are not zero-knowledge vault records.</p>
  <button className="secondary" disabled={busy} onClick={()=>action(load)}>Load Proof Pack history and check systems</button>
  <form onSubmit={event=>{event.preventDefault();setShare(null);setLink(null);const scope={...options,asset_ids:[...options.asset_ids]};action(async()=>{const result=await request(connection,'proof-packs/preview',scope);setPreview({...result,options:scope});});}}><fieldset disabled={busy}><legend>Report scope</legend>
  <label>Report client<select required value={options.client_id} onChange={e=>change({client_id:e.target.value})}><option value="">Choose client</option>{map.clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>

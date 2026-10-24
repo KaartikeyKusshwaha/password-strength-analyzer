@@ -147,6 +147,10 @@ footer {
   padding-top: 12px;
 }
 .fingerprint { display: block; overflow-wrap: anywhere; padding: 8px; font-size: 11px; }
+.agency-home { border-top: 4px solid #28684c; }
+.agency-home > h2 { margin-top: 0; font-size: 20px; }
+select { display: block; width: 100%; padding: 9px; margin-top: 6px; border: 1px solid #d0dcc6; border-radius: 5px; background: white; color: #25392d; }
+.secondary-tools { margin-top: 26px; }
 
 .security-hub { margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid #dce4d5; }
 .hub-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }

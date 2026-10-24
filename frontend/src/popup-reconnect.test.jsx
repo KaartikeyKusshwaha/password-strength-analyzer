@@ -18,7 +18,7 @@ it('replaces an invalid connection unlock form with a scoped re-pairing path wit
   await screen.findByRole('heading',{name:'Reconnect your vault'});
   expect(screen.queryByLabelText('Master passphrase')).not.toBeInTheDocument();
   expect(JSON.stringify(fetcher.mock.calls)).not.toContain('disposable-test-only');
-  fireEvent.click(screen.getByRole('button',{name:'Enter a new pairing token'}));
+  fireEvent.click(screen.getByRole('button',{name:'Sign in and reconnect'}));
   await screen.findByRole('heading',{name:'Pair your private vault'});
   expect(remove).toHaveBeenCalledWith('connection');
   expect(saved.connections).toEqual([connection]);

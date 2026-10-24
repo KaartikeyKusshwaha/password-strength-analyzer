@@ -1,14 +1,14 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {loadConnectedOwnership,changeConnectedOwnership} from './ownership-operator';
 
-export default function VaultOwnership({connection,session,selectedVault,unlocked,request,onTransferred=()=>{}}){
+export default function VaultOwnership({connection,session,selectedVault,unlocked,request,onTransferred=()=>{},expanded=false}){
  const [context,setContext]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const generation=useRef(0),shared=selectedVault?.vaultKind==='shared'&&unlocked&&session?.material?.kind==='shared';
  useEffect(()=>{generation.current++;setContext(null);setBusy(false);setError('');setNotice('');return()=>{generation.current++;};},[connection,selectedVault?.id,selectedVault?.vaultId,unlocked]);
  async function action(work){const mark=generation.current;setBusy(true);setError('');setNotice('');try{await work(()=>mark===generation.current);}catch(e){if(mark===generation.current){setError(e.message);if(e.ownershipAttempted)onTransferred(false);}}finally{if(mark===generation.current)setBusy(false);}}
  const proposal=context?.proposal,pending=proposal?.status==='pending',self=session?.material?.identity?.user;
  const eligible=context?.directory.filter(person=>person.id!==context.team.owner&&person.role!=='viewer'&&context.team.grants.some(grant=>grant.user_id===person.id&&grant.accepted))||[];
- return <details><summary>Transfer a client vault · signed ownership</summary><p>The current owner proposes a successor; that teammate accepts in their own extension. Acceptance rotates the key, revokes this vault’s browser connections and cancels its unfinished password-action plans. Copies already decrypted cannot be erased.</p>
+ return <details open={expanded || undefined}><summary>Transfer a client vault · signed ownership</summary><p>The current owner proposes a successor; that teammate accepts in their own extension. Acceptance rotates the key, revokes this vault’s browser connections and cancels its unfinished password-action plans. Copies already decrypted cannot be erased.</p>
  {!shared?<p>Select and unlock the intended shared vault above. A separate owner workflow connection is also required.</p>:<><button className="secondary" disabled={busy} onClick={()=>action(async active=>{const value=await loadConnectedOwnership(connection,session,request);if(active())setContext(value);})}>Load ownership for selected vault</button>
  {context&&<><p>{context.team.name||'Selected vault'} · {context.team.grants.length} members · key epoch {context.team.epoch}</p>
  {proposal&&<p>Proposal {proposal.status}. Receiving owner: {context.directory.find(person=>person.id===proposal.document.recipient)?.email||proposal.document.recipient}. Former owner: {proposal.document.former_owner_role==='removed'?'no vault access':proposal.document.former_owner_role+' access'}. Deadline: {new Date(proposal.document.expires_at*1000).toLocaleString()}.</p>}

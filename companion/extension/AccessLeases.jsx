@@ -1,13 +1,13 @@
 import React,{useEffect,useRef,useState} from 'react';
 
-export default function AccessLeases({connection,map,request,onChanged=()=>{}}){
+export default function AccessLeases({connection,map,request,onChanged=()=>{},expanded=false}){
  const [records,setRecords]=useState([]),[client,setClient]=useState(''),[person,setPerson]=useState(''),[mode,setMode]=useState('auto_revoke'),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');const generation=useRef(0);
  async function refresh(active=()=>true){const result=await request(connection,'leases');if(active())setRecords(result.leases||[]);}
  useEffect(()=>{const mark=++generation.current;refresh(()=>mark===generation.current).catch(e=>{if(mark===generation.current)setError(e.message);});return()=>{generation.current++;};},[connection]);
  useEffect(()=>{if(error||busy||!records.some(row=>!['complete','cancelled','blocked','awaiting_approval'].includes(row.status)))return;let live=true;const timer=setInterval(()=>refresh(()=>live).catch(e=>{if(live)setError(e.message);}),records.some(row=>['executing','waiting_unlock'].includes(row.status))?5000:30000);return()=>{live=false;clearInterval(timer);};},[records,connection,busy,error]);
  async function act(work){const mark=generation.current,active=()=>mark===generation.current;setBusy(true);setError('');setNotice('');try{await work(active);if(active()){await refresh(active);await onChanged();}}catch(e){if(active())setError(e.message);}finally{if(active())setBusy(false);}}
  const people=[...new Map((map.grants||[]).filter(grant=>grant.client===client&&grant.source==='shared_vault_membership'&&['accepted','invited'].includes(grant.state)).map(grant=>[grant.person_id,grant])).values()].filter(grant=>map.people?.find(person=>person.id===grant.person_id)?.role!=='owner');
- return <details><summary>Freelancer access · expiry and departures</summary><p>Time-box an existing client-vault membership or invitation, or schedule a departure plan for fresh approval. The reminder is recorded three days before expiry. External SaaS accounts remain separate.</p>
+ return <details open={expanded || undefined}><summary>Freelancer access · expiry and departures</summary><p>Time-box an existing client-vault membership or invitation, or schedule a departure plan for fresh approval. The reminder is recorded three days before expiry. External SaaS accounts remain separate.</p>
  <button className="secondary" disabled={busy} onClick={()=>act(async()=>{})}>Refresh expiry policies</button>
  <form onSubmit={event=>{event.preventDefault();const fields=new FormData(event.currentTarget),days=Number(fields.get('days'));act(async active=>{await request(connection,'leases',{client_id:client,person_id:person,mode,expires_at:Math.floor(Date.now()/1000)+days*86400});if(active())setNotice('Expiry scope prepared. Review and approve before it can run.');});}}>
  <label>Expiry client<select required value={client} onChange={event=>{setClient(event.target.value);setPerson('');}}><option value="">Choose client</option>{map.clients.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>

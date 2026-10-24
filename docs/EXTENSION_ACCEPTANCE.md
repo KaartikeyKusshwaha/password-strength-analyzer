@@ -323,3 +323,28 @@ shows the current website is the SentinelOps app itself, with no saved login
 for that exact origin; the public practice entry belongs to a different origin.
 That message is expected and does not establish data loss or failed pairing.
 Cloud secure-save and TOTP remain pending separate installed-browser tests.
+
+### Agency-first companion 0.26.0 — implementation verification
+
+The popup now opens with Client access and one selected task: offboarding,
+handoff, access review, freelancer expiry, proof pack or shared-password debt.
+Only the selected specialist mounts and requests its data. Scanner, discovery,
+reminder and login-save settings are secondary; password health and rotation
+tools follow matching-site logins instead of preceding them.
+
+Approved server workflows refresh their progress automatically. When a real
+approved run reaches `waiting_unlock`, the matching connected and unlocked
+shared vault continues local key rotation automatically, once per run/vault
+epoch in that popup. Locked vaults pause, and a failed attempt requires an
+explicit retry. The existing rotation worker still verifies origin, owner,
+epoch and scoped capabilities; no cryptographic format or approval bypass was
+introduced. Completion copy distinguishes selected vault verification from
+external platform removal and copied-password follow-up.
+
+Verification: 54 backend agency tests passed (offboarding, leases, handoffs,
+reviews and proof packs), and all 428 frontend tests passed. Extension tests cover task selection,
+read-only progress polling, automatic rotation after unlock, ineligible-context
+refusal and failed-attempt retry. Root build passed. This is implementation
+evidence, not installed Edge or two-account cloud acceptance. No Google/Meta
+revocation, customer validation, independent audit or unattended scheduling
+guarantee on sleeping Render Free is claimed.

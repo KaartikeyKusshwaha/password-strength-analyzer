@@ -2,12 +2,12 @@ import React,{useState} from 'react';
 import {isArchived} from '../../frontend/src/entry-history';
 import {delegatedAccess} from '../../frontend/src/delegated-access';
 import {registerSharedLogins,approveDebtRotation,recoverDebtBinding,retireSharedLogin,restoreDebtLogin} from './debt-operator';
-export default function CredentialDebt({connection,map,session,unlocked,request,refresh,onApproved,onVaultChanged=()=>{}}){
+export default function CredentialDebt({connection,map,session,unlocked,request,refresh,onApproved,onVaultChanged=()=>{},expanded=false}){
   const [client,setClient]=useState(''),[platform,setPlatform]=useState('other'),[entries,setEntries]=useState([]),[chosen,setChosen]=useState([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
   const rows=(map.debt?.exposures||[]).filter(row=>!client||row.client===client),logins=unlocked&&session?.material?.kind==='shared'?session.entries.filter(entry=>entry.type==='login'&&!isArchived(entry)):[];
   const clients=map.clients.filter(item=>map.systems.some(system=>system.client===item.id&&system.id===session?.policy?.id));
   async function run(work){setBusy(true);setError('');setNotice('');try{await work();await refresh();}catch(e){setError(e.message);}finally{setBusy(false);}}
-  return <details><summary>Reduce shared-password debt</summary><p>Track shared logins, rotate them with the encrypted account operator, then move to official delegated access. Rotating a password alone does not retire shared-login debt.</p>
+  return <details open={expanded || undefined}><summary>Reduce shared-password debt</summary><p>Track shared logins, rotate them with the encrypted account operator, then move to official delegated access. Rotating a password alone does not retire shared-login debt.</p>
     {map.clients.map(item=>{const count=map.debt?.counts[item.id];return count?<p key={item.id}>{item.name}: shared logins {count.peak} → {count.active}</p>:null;})}
     <button className="secondary" disabled={busy} onClick={()=>run(async()=>{})}>Refresh debt progress</button>
     <label>Debt client<select value={client} onChange={e=>{setClient(e.target.value);setChosen([]);setEntries([]);}}><option value="">Choose client</option>{clients.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>

@@ -3,7 +3,7 @@ import AccessReviews from './AccessReviews';
 import FreelancerInvite from './FreelancerInvite';
 import AccessLeases from './AccessLeases';
 import VaultOwnership from './VaultOwnership';
-import React,{useEffect,useState} from 'react';
+import React,{useEffect,useState,useRef} from 'react';
 import CredentialDebt from './CredentialDebt';
 import ClientHandoffs from './ClientHandoffs';
 import CloudConnect from './CloudConnect';
@@ -13,7 +13,9 @@ import {rotateConnectedVault} from './workflow-rotation';
 const terminal=new Set(['complete','dry_run_complete','cancelled','blocked']);
 const labels={awaiting_approval:'Review and approve',queued:'Queued',running:'Removing selected access',waiting_unlock:'Access removed; vault key rotation needed',complete:'Selected vault steps verified',dry_run_complete:'Preview complete; no access changed',cancelled:'Cancelled',blocked:'Stopped; review required'};
 
-export default function AccessWorkflows({browser=chrome,request=accessRequest,vaultSession=null,selectedVault=null,vaultUnlocked=false,onRotated=()=>{},onTransferred=onRotated,onApproved=()=>{},onVaultChanged=()=>{}}){
+export default function AccessWorkflows({browser=chrome,request=accessRequest,vaultSession=null,selectedVault=null,vaultUnlocked=false,onRotated=()=>{},onTransferred=onRotated,onApproved=()=>{},onVaultChanged=()=>{},primary=false}){
+  const [task,setTask]=useState('offboard');
+  const rotationAttempts=useRef(new Set());
   const [connection,setConnection]=useState(null),[ready,setReady]=useState(false),[map,setMap]=useState(null),[runs,setRuns]=useState([]),[client,setClient]=useState(''),[person,setPerson]=useState(''),[preview,setPreview]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[report,setReport]=useState(null);
   async function refresh(value=connection){
     const [context,result]=await Promise.all([request(value,'context'),request(value,'workflows')]);setMap(context);setRuns(result.workflows);
@@ -22,27 +24,43 @@ export default function AccessWorkflows({browser=chrome,request=accessRequest,va
   useEffect(()=>{if(!connection||!runs.some(run=>!terminal.has(run.status)&&run.status!=='awaiting_approval')&&!map?.debt?.exposures.some(item=>['queued','running','awaiting_confirmation'].includes(item.action_status)))return;const timer=setInterval(()=>refresh().catch(e=>setError(e.message)),5000);return()=>clearInterval(timer);},[connection,runs]);
   const people=[...new Map((map?.grants||[]).filter(grant=>grant.client===client).map(grant=>[grant.person_id,grant])).values()];
   async function action(work,reload=true){setBusy(true);setError('');setNotice('');try{await work();if(reload)await refresh();}catch(e){setError(e.message);}finally{setBusy(false);}}
-  return <details><summary>Client access · offboarding workflows</summary><p>Remove selected client vault memberships with one approved plan. Website sessions and copied passwords require separate follow-up.</p>
+  useEffect(()=>{
+    if(busy||!connection||!vaultUnlocked||vaultSession?.material?.kind!=='shared'||selectedVault?.origin!==connection.origin)return;
+    const run=runs.find(item=>item.status==='waiting_unlock'&&item.plan.dry_run===false&&item.plan.vaults.some(vault=>vault.vault===selectedVault.vaultId));
+    if(!run||!map?.systems.some(system=>system.id===selectedVault.vaultId&&system.rotation_required))return;
+    const attempt=[connection.origin,run.id,selectedVault.vaultId,vaultSession.material.epoch].join(':');
+    if(rotationAttempts.current.has(attempt))return;
+    // One attempt per approved run/vault epoch. Failures require an explicit retry.
+    rotationAttempts.current.add(attempt);
+    action(async()=>{
+      await rotateConnectedVault(connection,vaultSession,run.id,selectedVault.vaultId,request);
+      onRotated();setNotice('Approved vault key rotation finished automatically. The server will verify the removal.');
+    });
+  },[busy,connection,runs,map,vaultUnlocked,vaultSession,selectedVault]);
+  const Container=primary?'section':'details';
+  return <Container className={primary?'agency-home':undefined} aria-label="Client access workflows">{primary?<><h2>Client access</h2><p>Remove a departing person, hand over a client, or review who still has access.</p></>:<summary>Client access · offboarding workflows</summary>}<p className="fine">Approved vault removals and verification run automatically while the server is available. Vault key rotation needs a connected, unlocked shared vault. External website accounts are not removed by this connector.</p>
     {!ready?<p>Loading workflow connection…</p>:!connection?<CloudConnect browser={browser} scope="access" onConnected={value=>{setConnection(value);refresh(value).catch(e=>setError(e.message));}}/>:<>
       <button className="secondary" disabled={busy} onClick={()=>action(async()=>{})}>Refresh workflows</button>
       <button className="secondary" disabled={busy} onClick={()=>action(async()=>{await request(connection,'revoke',{});await browser.storage.local.remove('accessConnection');setConnection(null);setMap(null);setRuns([]);},false)}>Disconnect workflows</button>
-      {map&&<form onSubmit={event=>{event.preventDefault();action(async()=>{await request(connection,'workflows',{client_id:client,person_id:person,dry_run:preview});setNotice('Plan prepared. Review its vaults before approving.');});}}>
+      {map&&<label>What needs doing?<select value={task} onChange={event=>setTask(event.target.value)}><option value="offboard">Offboard a person</option><option value="handoff">Hand over a client</option><option value="review">Review client access</option><option value="freelancer">Time-box freelancer access</option><option value="proof">Create a client proof pack</option><option value="debt">Reduce shared passwords</option></select></label>}
+      {map&&task==='offboard'&&<form onSubmit={event=>{event.preventDefault();action(async()=>{await request(connection,'workflows',{client_id:client,person_id:person,dry_run:preview});setNotice('Plan prepared. Review its vaults before approving.');});}}>
         <label>Client<select required value={client} onChange={event=>{setClient(event.target.value);setPerson('');}}><option value="">Choose client</option>{map.clients.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
         <label>Person<select required value={person} onChange={event=>setPerson(event.target.value)}><option value="">Choose person</option>{people.map(item=><option key={item.person_id} value={item.person_id}>{item.email}</option>)}</select></label>
         <label><input type="checkbox" checked={preview} onChange={event=>setPreview(event.target.checked)}/>Preview only; make no changes</label>
         <button disabled={busy||!person||!client}>Prepare offboarding plan</button>
         {!map.clients.length&&<p>Link client vaults in the control room before preparing your first plan.</p>}
       </form>}
-      {map&&<CredentialDebt connection={connection} map={map} session={vaultSession} unlocked={vaultUnlocked} request={request} refresh={refresh} onApproved={onApproved} onVaultChanged={onVaultChanged}/>}
-      <VaultOwnership connection={connection} session={vaultSession} selectedVault={selectedVault} unlocked={vaultUnlocked} request={request} onTransferred={onTransferred}/>
-      {map&&<FreelancerInvite connection={connection} map={map} session={vaultSession} selectedVault={selectedVault} unlocked={vaultUnlocked} request={request} onChanged={refresh}/>}
-      {map&&<ProofPacks connection={connection} map={map} request={request}/>}
-      {map&&<AccessReviews connection={connection} map={map} request={request}/>}
-      {map&&<AccessLeases connection={connection} map={map} request={request} onChanged={refresh}/>}
-      {map&&<ClientHandoffs connection={connection} map={map} runs={runs} request={request}/>}
+      {map&&task==='debt'&&<CredentialDebt expanded connection={connection} map={map} session={vaultSession} unlocked={vaultUnlocked} request={request} refresh={refresh} onApproved={onApproved} onVaultChanged={onVaultChanged}/>}
+      {map&&task==='handoff'&&<><ClientHandoffs expanded connection={connection} map={map} runs={runs} request={request}/><VaultOwnership expanded connection={connection} session={vaultSession} selectedVault={selectedVault} unlocked={vaultUnlocked} request={request} onTransferred={onTransferred}/></>}
+      {map&&task==='freelancer'&&<><FreelancerInvite expanded connection={connection} map={map} session={vaultSession} selectedVault={selectedVault} unlocked={vaultUnlocked} request={request} onChanged={refresh}/><AccessLeases expanded connection={connection} map={map} request={request} onChanged={refresh}/></>}
+      {map&&task==='proof'&&<ProofPacks expanded connection={connection} map={map} request={request}/>}
+      {map&&task==='review'&&<AccessReviews expanded connection={connection} map={map} request={request}/>}
       {runs.map(run=><section key={run.id} aria-label="Offboarding plan"><h3>{labels[run.status]||run.status}</h3><p>{map?.clients.find(item=>item.id===run.client)?.name||'Client'} · {map?.grants.find(item=>item.person_id===run.person)?.email||'Selected member'}</p><p>{run.plan.dry_run?'Preview only.':'Real access removal.'} {run.plan.vaults.length} vault(s). {run.steps.filter(step=>['complete','simulated'].includes(step.status)).length}/{run.steps.length} steps.</p>
         <ul>{run.plan.vaults.map(item=><li key={item.vault}>{map?.systems.find(system=>system.id===item.vault)?.name||item.vault}</li>)}</ul>
         <p className="fine">{run.coverage}</p>
+        {['queued','running'].includes(run.status)&&<p role="status" aria-live="polite">{run.status==='queued'?'Approved. Waiting for the server worker.':'Running approved steps automatically.'} Progress refreshes here; you do not need to start each removal.</p>}
+        {run.status==='waiting_unlock'&&<p role="status">Server access removal finished. New vault encryption keys are still pending; this offboarding is not complete.</p>}
+        {run.status==='complete'&&<p role="status">The selected vault steps are verified. Review external-account and copied-password follow-up in the report.</p>}
         {run.rechecks?.some(check=>check.status==='attention')&&<p role="alert">A scheduled vault recheck needs attention. Access may have reappeared or the vault could not be verified. Review the evidence report; nothing was automatically removed.</p>}
         {run.status==='waiting_unlock'&&<><p>Select and unlock each affected shared vault below. Rotation runs locally in this extension and distributes a new key only to remaining members. Website passwords still need changing separately.</p>{run.plan.vaults.filter(item=>map?.systems.some(system=>system.id===item.vault&&system.rotation_required)).map(item=><div key={item.vault}>{selectedVault?.vaultId===item.vault&&vaultUnlocked?<button disabled={busy} onClick={()=>action(async()=>{await rotateConnectedVault(connection,vaultSession,run.id,item.vault,request);onRotated();setNotice('Vault key rotated. The workflow will verify remaining access. Unlock again before further vault actions.');})}>Rotate connected vault key</button>:<p className="fine">Connect and unlock: {map?.systems.find(system=>system.id===item.vault)?.name||item.vault}</p>}</div>)}</>}
         {run.status==='awaiting_approval'&&<form onSubmit={event=>{event.preventDefault();const form=event.currentTarget;const password=form.elements.password.value,code=form.elements.code.value;form.reset();action(async()=>{await request(connection,'workflows/'+run.id+'/approve',{plan_digest:run.plan_digest,approved:true,password,code});});}}>
@@ -57,5 +75,5 @@ export default function AccessWorkflows({browser=chrome,request=accessRequest,va
         <h4>Device evidence at removal</h4>{report.posture_snapshot?<><p>Captured {report.posture_snapshot.captured_at} · {report.posture_snapshot.devices.length} paired device(s).</p><p className="fine">{report.posture_snapshot.limitations}</p>{!report.posture_snapshot.devices.length&&<p>No paired device evidence was available at removal.</p>}{report.posture_snapshot.device_limit_reached&&<p>More than 100 devices were registered; this snapshot is incomplete.</p>}{report.posture_snapshot.devices.map(device=><details key={device.device}><summary>{device.platform} · {device.freshness.replaceAll('_',' ')}</summary><p>{device.connection_expired?'Connection expired at capture.':'Connection unexpired at capture.'} Recorded {device.recorded_at||'never'}.</p>{device.checks.map(check=><p key={check.id}>{check.id}: {check.state}{check.reason?' · '+check.reason:''}</p>)}{!device.checks.length&&<p>No assessed protection states were recorded.</p>}</details>)}</>:<p>No retained snapshot. Preview, pending and older removal runs do not establish device posture.</p>}
         <textarea readOnly aria-label="Offboarding evidence JSON" value={JSON.stringify(report,null,2)} rows={12}/><button className="secondary" onClick={()=>setReport(null)}>Close report</button></section>}
     </>}{notice&&<p role="status">{notice}</p>}{error&&<><p role="alert" className="error">{error}</p>{connection&&<button className="secondary" disabled={busy} onClick={async()=>{await browser.storage.local.remove('accessConnection');setConnection(null);setMap(null);setRuns([]);setError('');setReport(null);setNotice('Local workflow connection forgotten. An unreachable server grant may remain valid until expiry; forgetting does not cancel approved plans.');}}>Forget local workflow connection</button>}</>}
-  </details>;
+  </Container>;
 }
