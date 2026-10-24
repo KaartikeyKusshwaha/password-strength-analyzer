@@ -40,8 +40,12 @@ def translate(query):
     parts=re.split(r"('(?:''|[^'])*'|\"(?:\"\"|[^\"])*\")",query)
     for index in range(0,len(parts),2):
         fragment=parts[index].replace('%','%%').replace('?','%s')
-        fragment=re.sub(r'\buser\b','"user"',fragment,flags=re.I)
-        fragment=re.sub(r'\browid\b','"_sentinel_order"',fragment,flags=re.I)
+        # Named bind keys are not SQL identifiers, even when called user.
+        fragment=re.sub(r'(?<!:)\buser\b','"user"',fragment,flags=re.I)
+        fragment=re.sub(r'(?<!:)\browid\b','"_sentinel_order"',fragment,flags=re.I)
+        # Preserve PostgreSQL ::type casts and quoted strings. Values remain
+        # driver-bound; never interpolate the supplied parameter dictionary.
+        fragment=re.sub(r'(?<!:):([a-z_][a-z_0-9]*)\b',r'%(\1)s',fragment,flags=re.I)
         parts[index]=fragment
     for index in range(1,len(parts),2):parts[index]=parts[index].replace('%','%%')
     query=''.join(parts)

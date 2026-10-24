@@ -12,6 +12,7 @@ import test_handoffs as handoffs
 import test_extension_ownership as extension_ownership
 import test_access_reviews as access_reviews
 import test_access_leases as access_leases
+import test_vault_activity as vault_activity
 
 
 @pytest.fixture
@@ -47,6 +48,15 @@ def test_postgres_login_bootstrap_and_scope_survive_reopen(pg_system):
     client_access.test_live_map_tracks_invites_revocation_and_rotation_without_payloads,
 ],ids=lambda case:case.__name__)
 def test_existing_offboarding_cases_on_postgres(pg_system,case):
+    case(pg_system)
+
+
+@pytest.mark.parametrize('case',[
+    vault_activity.test_personal_lifecycle_is_private_vault_scoped_and_contains_no_ciphertext,
+    vault_activity.test_keyset_pagination_is_bounded_and_stable_while_new_events_arrive,
+    vault_activity.test_shared_activity_requires_current_membership_accepted_grant_and_workspace,
+],ids=lambda case:case.__name__)
+def test_existing_vault_activity_cases_on_postgres(pg_system,case):
     case(pg_system)
 
 

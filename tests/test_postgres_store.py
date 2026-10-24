@@ -26,6 +26,11 @@ def test_hosted_tls_is_required_before_connecting():
     with pytest.raises(ValueError,match='verify-full'):PostgresStore('postgresql://test.invalid/database?sslmode=require')
 
 
+def test_named_parameters_preserve_casts_literals_and_reserved_names():
+    query="SELECT user FROM members WHERE user=:user AND workspace=:workspace AND role=':user 50%' AND :user::text<>'' LIMIT :limit"
+    assert translate(query)=="SELECT \"user\" FROM members WHERE \"user\"=%(user)s AND workspace=%(workspace)s AND role=':user 50%%' AND %(user)s::text<>'' LIMIT %(limit)s"
+
+
 def test_store_retrieval_scope_and_json_types(postgres_schema):
     _,_,_,schema=postgres_schema;store=store_for(schema)
     with store.connect(write=True) as c:
