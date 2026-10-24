@@ -348,3 +348,19 @@ refusal and failed-attempt retry. Root build passed. This is implementation
 evidence, not installed Edge or two-account cloud acceptance. No Google/Meta
 revocation, customer validation, independent audit or unattended scheduling
 guarantee on sleeping Render Free is claimed.
+
+### Render deployment and native Edge reload — 24 October 2026
+
+Render Free deployment `dep-dbeak3jrjlhs73f2didg` of 66f1931 completed Live in
+54.7 seconds. Reloading the existing authenticated Connections page retained
+the owner session and showed downloadable companion 0.26.0. No plan, permission,
+environment or database migration change was made by this deployment.
+
+Native Edge control then reached the installed extension management card and
+reloaded the existing unpacked companion from 0.25.1 to 0.26.0. Its actual popup
+rendered the Client access section first, retained the Render Browser acceptance
+vault selection, and hid secondary settings behind More tools. The new workflow
+connection request opened successfully, and its comparison code matched the
+native popup. Approval was left pending for the user because it grants a new
+eight-hour workflow capability. These observations prove reload and initial
+workflow connection UI, not execution, key rotation or two-account acceptance.

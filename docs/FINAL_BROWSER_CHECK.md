@@ -1,7 +1,7 @@
 # Consolidated final browser acceptance
 
-This is the single planned live acceptance session, **not a passed checklist**.
-No browser control was used to prepare it. Finish implementation and release
+This is the remaining live acceptance checklist, **not a passed checklist**.
+Partial browser results are recorded in EXTENSION_ACCEPTANCE.md. Finish release
 preflight first; native prompts, MFA and consent remain user actions when needed.
 Use disposable accounts/credentials and retain no secrets in screenshots/logs.
 
@@ -21,9 +21,11 @@ it does not complete any installed Edge/cloud-vault gate below.
   acceptance pass. External connector development is
   gated by three agency pain reports in the master plan; interviews are pending.
 - Verify encrypted backup/restore and deployment health, HTTPS and free-resource
-  limits. Render Free + Neon Free is live at app/companion 0.25.0 (83b3a1a).
-  A fresh empty-installation Neon export and isolated SQLite/PostgreSQL restore
-  passed; populated vault recovery and the next timed backup remain pending.
+  limits. Render Free + Neon Free is live at 66f1931, app 0.25.0/companion 0.26.0.
+  Populated encrypted backups and isolated SQLite/PostgreSQL restores passed;
+  the first scheduled off-server backup completed successfully on 24 October.
+  Restored-vault browser decryption remains unverified. See the backup receipts
+  and EXTENSION_ACCEPTANCE.md rather than inferring recovery from export alone.
   Oracle SSH remains unavailable; old data is preserved.
 - Use two separate browser profiles, two real disposable accounts, MFA, one
   client and two shared vaults. Keep only these tabs and the practice login page.
@@ -41,6 +43,9 @@ it does not complete any installed Edge/cloud-vault gate below.
 3. Verify duplicate domains in different vaults stay separate; share with the
    second account, accept and read; edit/reopen; test both roles' restrictions.
 4. Remove the second account through one approved two-vault offboarding run.
+   Confirm that the matching unlocked shared vault rotates automatically after
+   approval. Locked vaults pause; unlock each affected vault to continue. A
+   failed rotation must not loop or silently mark the workflow complete.
    Verify revoked tokens, inability to fetch new data, rotation to new keys and
    remaining-member access. Attempt decrypting a new payload with the old member
    key locally; retained copies of older data cannot be erased.
