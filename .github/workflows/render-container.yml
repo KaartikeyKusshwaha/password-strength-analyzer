@@ -68,6 +68,8 @@ jobs:
         run: python -m pytest tests/test_postgres_schema.py tests/test_postgres_store.py tests/test_postgres_app.py tests/test_postgres_backups.py tests/test_postgres_backup_pull.py tests/test_backups.py tests/test_offserver_backup.py -q
       - name: Verify helper source binding and release stale-build guards
         run: python -m pytest tests/test_helper_status.py tests/test_deploy_release.py tests/test_build_provenance.py -q
+      - name: Verify agency execution, crash recovery and removed-member cryptography
+        run: python -m pytest tests/test_access_workflows.py tests/test_access_leases.py tests/test_handoffs.py tests/test_access_reviews.py tests/test_proof_packs.py tests/test_shared_offboarding_crypto.py -q
   container:
     if: github.event.repository.private == false
     runs-on: ubuntu-24.04

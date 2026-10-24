@@ -99,3 +99,60 @@ test('explicit OTP fill stays within its exact origin and never submits',async({
   await expect(page.getByLabel('Code')).toHaveValue('123456');
   expect(await page.evaluate(()=>window.submissions)).toBe(0);
 });
+
+test('agency popup approves one two-vault plan and follows it to its report without repeat approval',async({installed})=>{
+  const {context,worker,page}=installed;
+  const client='c'.repeat(24),person='d'.repeat(24),workflow='a'.repeat(24);
+  const vaults=['b'.repeat(24),'e'.repeat(24)];
+  const connection={origin,kind:'access',token:'fixtureOnlyAccessToken'.repeat(3)};
+  const calls=[];
+  let run=null,reads=0;
+  const map={clients:[{id:client,name:'Disposable agency client'}],systems:vaults.map((id,index)=>({id,name:`Client vault ${index+1}`})),grants:vaults.map(vault=>({client,person_id:person,email:'departing@example.test',system:vault}))};
+  // This route is deliberately mock-only; it never contacts a deployed app.
+  await context.route(origin+'/api/companion/access/**',async route=>{
+    const req=route.request(),url=new URL(req.url()),action=url.pathname.split('/api/companion/access/')[1];
+    const body=req.postDataJSON();calls.push({action,method:req.method(),body});
+    expect(req.headers().authorization).toBe('Bearer '+connection.token);
+    expect(req.headers().cookie).toBeUndefined();
+    let result;
+    if(action==='context')result=map;
+    else if(action==='workflows'&&req.method()==='POST'){
+      expect(body).toEqual({client_id:client,person_id:person,dry_run:false});
+      run={id:workflow,client,person,status:'awaiting_approval',plan_digest:'f'.repeat(64),plan:{dry_run:false,vaults:vaults.map(vault=>({vault}))},steps:vaults.map(id=>({id,action:'revoke',status:'pending'})),coverage:'Selected vault memberships only.'};result=run;
+    }else if(action===`workflows/${workflow}/approve`){
+      expect(body).toEqual({plan_digest:'f'.repeat(64),approved:true,password:'Disposable-approval-fixture!',code:'123456'});
+      run.status='queued';result={ok:true};
+    }else if(action==='workflows'){
+      if(run&&run.status!=='awaiting_approval'){
+        reads++;
+        if(reads===2)run.status='running';
+        if(reads>=3){run.status='complete';run.steps.forEach(step=>{step.status='complete';});}
+      }
+      result={workflows:run?[run]:[]};
+    }else if(action===`workflows/${workflow}/report`)result={audit:{valid:true},limitations:'Fixture server reports selected vault steps only. External accounts are unverified.'};
+    else throw new Error('Unexpected agency fixture request: '+action);
+    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(result)});
+  });
+  await worker.evaluate(connection=>chrome.storage.local.set({accessConnection:connection}),connection);
+  await page.goto(`chrome-extension://${new URL(worker.url()).host}/popup.html`);
+  const home=page.getByRole('region',{name:'Client access workflows'});
+  await expect(home).toBeVisible();
+  await home.getByLabel('Client',{exact:true}).selectOption(client);
+  await home.getByLabel('Person',{exact:true}).selectOption(person);
+  await home.getByLabel('Preview only; make no changes').uncheck();
+  await home.getByRole('button',{name:'Prepare offboarding plan'}).click();
+  await expect(home.getByText('Client vault 1',{exact:true})).toBeVisible();
+  await expect(home.getByText('Client vault 2',{exact:true})).toBeVisible();
+  await home.getByLabel('Current account password').fill('Disposable-approval-fixture!');
+  await home.getByLabel('Unused MFA or recovery code').fill('123456');
+  await home.getByLabel('I approve this exact access removal plan.').check();
+  await home.getByRole('button',{name:'Approve plan'}).click();
+  await expect(home.getByText(/Approved. Waiting for the server worker/)).toBeVisible();
+  await expect(home.getByText(/Running approved steps automatically/)).toBeVisible({timeout:10000});
+  await expect(home.getByText(/The selected vault steps are verified/)).toBeVisible({timeout:10000});
+  await home.getByRole('button',{name:'View evidence report'}).click();
+  await expect(home.getByRole('heading',{name:'Vault offboarding evidence'})).toBeVisible();
+  await expect(home.getByText('Fixture server reports selected vault steps only. External accounts are unverified.',{exact:true})).toBeVisible();
+  expect(calls.filter(call=>call.method==='POST').map(call=>call.action)).toEqual(['workflows',`workflows/${workflow}/approve`]);
+  expect(calls.filter(call=>JSON.stringify(call.body||{}).includes('Disposable-approval-fixture!'))).toHaveLength(1);
+});
