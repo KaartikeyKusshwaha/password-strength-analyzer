@@ -111,6 +111,8 @@ test('agency popup approves one two-vault plan and follows it to its report with
   // This route is deliberately mock-only; it never contacts a deployed app.
   await context.route(origin+'/api/companion/access/**',async route=>{
     const req=route.request(),url=new URL(req.url()),action=url.pathname.split('/api/companion/access/')[1];
+    const cors={'access-control-allow-origin':'*','access-control-allow-headers':'Authorization, Content-Type','access-control-allow-methods':'GET, POST, OPTIONS'};
+    if(req.method()==='OPTIONS')return route.fulfill({status:204,headers:cors});
     const body=req.postDataJSON();calls.push({action,method:req.method(),body});
     expect(req.headers().authorization).toBe('Bearer '+connection.token);
     expect(req.headers().cookie).toBeUndefined();
@@ -131,14 +133,15 @@ test('agency popup approves one two-vault plan and follows it to its report with
       result={workflows:run?[run]:[]};
     }else if(action===`workflows/${workflow}/report`)result={audit:{valid:true},limitations:'Fixture server reports selected vault steps only. External accounts are unverified.'};
     else throw new Error('Unexpected agency fixture request: '+action);
-    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(result)});
+    await route.fulfill({status:200,headers:cors,contentType:'application/json',body:JSON.stringify(result)});
   });
   await worker.evaluate(connection=>chrome.storage.local.set({accessConnection:connection}),connection);
   await page.goto(`chrome-extension://${new URL(worker.url()).host}/popup.html`);
   const home=page.getByRole('region',{name:'Client access workflows'});
   await expect(home).toBeVisible();
-  await home.getByLabel('Client',{exact:true}).selectOption(client);
-  await home.getByLabel('Person',{exact:true}).selectOption(person);
+  await expect(home).toContainText('What needs doing?');
+  await home.getByRole('combobox',{name:'Client',exact:true}).selectOption(client);
+  await home.getByRole('combobox',{name:'Person',exact:true}).selectOption(person);
   await home.getByLabel('Preview only; make no changes').uncheck();
   await home.getByRole('button',{name:'Prepare offboarding plan'}).click();
   await expect(home.getByText('Client vault 1',{exact:true})).toBeVisible();
