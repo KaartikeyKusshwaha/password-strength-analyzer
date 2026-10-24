@@ -150,4 +150,6 @@ jobs:
           npm --prefix frontend ci
           npm --prefix frontend exec -- playwright install --with-deps chromium
       - name: Verify two-account sharing and new-key isolation against the real local application
-        run: npm --prefix frontend run test:acceptance
+        run: |
+          npm --prefix frontend run build:companion
+          npm --prefix frontend run test:acceptance
