@@ -364,3 +364,24 @@ connection request opened successfully, and its comparison code matched the
 native popup. Approval was left pending for the user because it grants a new
 eight-hour workflow capability. These observations prove reload and initial
 workflow connection UI, not execution, key rotation or two-account acceptance.
+
+### Real local two-account browser removal — 24 October 2026
+
+CI 40101677179 at 948cfd9 passed a real FastAPI/Vite/Chromium scenario with two
+registered accounts and separate browser contexts. Default owner MFA remained
+enabled. Both sharing identities, both encrypted vaults, signed invitations,
+fingerprint verification, acceptance, decryption and owner rotation used the
+actual client UI/crypto. A single real API-approved two-vault workflow ran on
+the existing worker, reached waiting_unlock, then completed after both keys
+rotated. The removed member received 404 for both vaults. Cached handles and a
+direct old AES-key probe using the correct new AAD all rejected the new payload;
+the owner reopened both vaults. Audit validation passed, and known passphrases
+and entry passwords were absent from the actual database/journal files.
+
+Result: one browser scenario passed in 33.0 seconds. Six isolated built-extension
+cases, 77 PostgreSQL/backup tests (one skipped), 42 helper/release tests, 55
+agency/crypto tests and container checks passed in the same CI run. This closes
+the local full-stack two-account removal test. It does not close hosted
+Render/Neon, installed Edge, browser-bearer revocation or recovery acceptance.
+No operator browser/profile or cloud credential was used. See
+TWO_ACCOUNT_BROWSER_TEST.md for reproducible scope and limits.

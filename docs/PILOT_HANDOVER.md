@@ -37,6 +37,12 @@ connections and settings. Scanner and password-manager controls are secondary.
 - The backend CI layer separately covers 55 agency/crypto cases, including
   removed-member cached-key rejection against a new encrypted payload. This is
   protocol verification, not two-account installed-browser acceptance.
+- CI 40101677179 at 948cfd9 adds a real local FastAPI/Vite/Chromium scenario:
+  two registered accounts, two UI-created shared vaults, signed invitations,
+  one approved removal workflow, both key rotations, retained-owner access,
+  cached old-key rejection and actual database plaintext checks. It passed
+  in 33.0 seconds; all other CI jobs passed. This local full-stack test uses
+  no mock API and no operator profile. Hosted/installed acceptance stays open.
 - Prior cloud browser evidence proves owner/MFA setup, vault unlock and
   user-confirmed exact-origin autofill. The live client map loads without error;
   the current pilot workspace has no configured clients.

@@ -37,3 +37,13 @@ the same client crypto; release bundles are verified by the other CI jobs.
 Only public disposable fixture credentials are used. External browser requests
 are blocked. No browser profile, trace, secret or database is uploaded as a CI
 artifact; ephemeral runner storage is discarded with the job.
+
+## Verified result
+
+CI run [40101677179](https://github.com/KaartikeyKusshwaha/password-strength-analyzer/actions/runs/40101677179),
+commit 948cfd9: **1 passed in 33.0 seconds**, including storage plaintext checks
+and direct AES-GCM rejection with the correct new authenticated context.
+The same run passed six built-extension cases, 77 PostgreSQL/backup tests
+(one skip), 42 helper/release tests, 55 agency/crypto tests and container startup.
+The first attempts exposed test selector/acceptance-form timing issues; they
+were corrected without changing the production app or weakening security.

@@ -60,6 +60,12 @@ is prepared but has not passed. Backend, web and extension must ship together.
   autofill. Cloud secure-save/TOTP and two-account shared-vault removal with
   key rotation still require live acceptance; a mock browser test is not a
   replacement for that security gate.
+- The separate real local two-account browser scenario passed in CI run
+  [40101677179](https://github.com/KaartikeyKusshwaha/password-strength-analyzer/actions/runs/40101677179):
+  UI-created encrypted sharing, a real approved two-vault removal, rotation,
+  remaining-owner access, cached old-key rejection and database plaintext checks.
+  [Scope and reproduction](docs/TWO_ACCOUNT_BROWSER_TEST.md). No operator browser
+  or cloud account is used; hosted acceptance remains separate.
 - Google/GitHub connectors are gated on agency validation in the master plan.
   Customer interviews, independent security review, store release and signed
   helper distribution are not complete.
